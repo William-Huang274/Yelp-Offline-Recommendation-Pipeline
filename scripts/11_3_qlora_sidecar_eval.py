@@ -1,8 +1,10 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
+import gc
 import json
 import math
 import os
+import inspect
 import time
 from datetime import datetime
 from pathlib import Path
@@ -19,12 +21,17 @@ from pyspark.sql.window import Window
 os.environ.setdefault("USE_TF", "0")
 os.environ.setdefault("TRANSFORMERS_NO_TF", "1")
 # Reduce fragmentation risk on small VRAM GPUs.
-os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+os.environ.setdefault(
+    "PYTORCH_CUDA_ALLOC_CONF",
+    os.getenv("QLORA_EVAL_CUDA_ALLOC_CONF", "expandable_segments:True,max_split_size_mb:128").strip()
+    or "expandable_segments:True,max_split_size_mb:128",
+)
 
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 import transformers.modeling_utils as _tf_modeling_utils
 
 
+from pipeline.project_paths import env_or_project_path, normalize_legacy_project_path, project_path
 from pipeline.qlora_prompting import (
     build_binary_prompt,
     build_binary_prompt_semantic,
@@ -37,16 +44,16 @@ from pipeline.spark_tmp_manager import SparkTmpContext, build_spark_tmp_context
 
 RUN_TAG = "stage11_3_qlora_sidecar_eval"
 INPUT_09_RUN_DIR = os.getenv("INPUT_09_RUN_DIR", "").strip()
-INPUT_09_ROOT = Path(r"D:/5006_BDA_project/data/output/09_candidate_fusion")
+INPUT_09_ROOT = env_or_project_path("INPUT_09_ROOT_DIR", "data/output/09_candidate_fusion")
 INPUT_09_SUFFIX = "_stage09_candidate_fusion"
 
 INPUT_11_2_RUN_DIR = os.getenv("INPUT_11_2_RUN_DIR", "").strip()
-INPUT_11_2_ROOT = Path(r"D:/5006_BDA_project/data/output/11_qlora_models")
+INPUT_11_2_ROOT = env_or_project_path("INPUT_11_2_ROOT_DIR", "data/output/11_qlora_models")
 INPUT_11_2_SUFFIX = "_stage11_2_qlora_train"
 INPUT_11_DATA_RUN_DIR = os.getenv("INPUT_11_DATA_RUN_DIR", "").strip()
 
-OUTPUT_ROOT = Path(r"D:/5006_BDA_project/data/output/11_qlora_sidecar_eval")
-METRICS_PATH = Path(r"D:/5006_BDA_project/data/metrics/recsys_stage11_qlora_sidecar_results.csv")
+OUTPUT_ROOT = env_or_project_path("OUTPUT_11_SIDECAR_ROOT_DIR", "data/output/11_qlora_sidecar_eval")
+METRICS_PATH = env_or_project_path("METRICS_STAGE11_SIDECAR_PATH", "data/metrics/recsys_stage11_qlora_sidecar_results.csv")
 
 BUCKETS_OVERRIDE = os.getenv("BUCKETS_OVERRIDE", "10").strip()
 TOP_K = int(os.getenv("RANK_EVAL_TOP_K", "10").strip() or 10)
@@ -59,13 +66,16 @@ MAX_SEQ_LEN = int(os.getenv("QLORA_EVAL_MAX_SEQ_LEN", "768").strip() or 768)
 INFER_BATCH_SIZE = int(os.getenv("QLORA_EVAL_BATCH_SIZE", "12").strip() or 12)
 PROMPT_CHUNK_ROWS = int(os.getenv("QLORA_EVAL_PROMPT_CHUNK_ROWS", "4096").strip() or 4096)
 ITER_COALESCE_PARTITIONS = int(os.getenv("QLORA_EVAL_ITER_COALESCE", "8").strip() or 8)
-INTERMEDIATE_FLUSH_ROWS = int(os.getenv("QLORA_EVAL_INTERMEDIATE_FLUSH_ROWS", "6000").strip() or 6000)
+INTERMEDIATE_FLUSH_ROWS = int(os.getenv("QLORA_EVAL_INTERMEDIATE_FLUSH_ROWS", "8192").strip() or 8192)
 RANDOM_SEED = int(os.getenv("QLORA_RANDOM_SEED", "42").strip() or 42)
 USE_STAGE11_EVAL_SPLIT = os.getenv("QLORA_EVAL_USE_STAGE11_SPLIT", "true").strip().lower() == "true"
 
 ENFORCE_STAGE09_GATE = os.getenv("QLORA_ENFORCE_STAGE09_GATE", "true").strip().lower() == "true"
 STAGE09_GATE_METRICS_PATH = Path(
-    os.getenv("QLORA_STAGE09_GATE_METRICS_PATH", "D:/5006_BDA_project/data/metrics/stage09_recall_audit_summary_latest.csv").strip()
+    os.getenv(
+        "QLORA_STAGE09_GATE_METRICS_PATH",
+        project_path("data/metrics/stage09_recall_audit_summary_latest.csv").as_posix(),
+    ).strip()
 )
 STAGE09_GATE_MIN_TRUTH_IN_PRETRIM = float(os.getenv("QLORA_GATE_MIN_TRUTH_IN_PRETRIM", "0.82").strip() or 0.82)
 STAGE09_GATE_MAX_PRETRIM_CUT_LOSS = float(os.getenv("QLORA_GATE_MAX_PRETRIM_CUT_LOSS", "0.08").strip() or 0.08)
@@ -74,7 +84,10 @@ STAGE09_GATE_MAX_HARD_MISS = float(os.getenv("QLORA_GATE_MAX_HARD_MISS", "0.10")
 ENABLE_SHORT_TEXT_SUMMARY = os.getenv("QLORA_ENABLE_SHORT_TEXT_SUMMARY", "true").strip().lower() == "true"
 ENABLE_RAW_REVIEW_TEXT = os.getenv("QLORA_ENABLE_RAW_REVIEW_TEXT", "true").strip().lower() == "true"
 REVIEW_TABLE_PATH = Path(
-    os.getenv("QLORA_REVIEW_TABLE_PATH", "D:/5006_BDA_project/data/parquet/yelp_academic_dataset_review").strip()
+    os.getenv(
+        "QLORA_REVIEW_TABLE_PATH",
+        project_path("data/parquet/yelp_academic_dataset_review").as_posix(),
+    ).strip()
 )
 USER_REVIEW_TOPN = int(os.getenv("QLORA_USER_REVIEW_TOPN", "2").strip() or 2)
 ITEM_REVIEW_TOPN = int(os.getenv("QLORA_ITEM_REVIEW_TOPN", "2").strip() or 2)
@@ -82,15 +95,28 @@ REVIEW_SNIPPET_MAX_CHARS = int(os.getenv("QLORA_REVIEW_SNIPPET_MAX_CHARS", "220"
 
 USE_4BIT = os.getenv("QLORA_EVAL_USE_4BIT", "true").strip().lower() == "true"
 USE_BF16 = os.getenv("QLORA_EVAL_USE_BF16", "true").strip().lower() == "true"
+QWEN35_MAMBA_SSM_DTYPE = os.getenv("QLORA_QWEN35_MAMBA_SSM_DTYPE", "auto").strip().lower()
 TRUST_REMOTE_CODE = os.getenv("QLORA_TRUST_REMOTE_CODE", "true").strip().lower() == "true"
 DISABLE_ALLOC_WARMUP = os.getenv("QLORA_DISABLE_ALLOC_WARMUP", "true").strip().lower() == "true"
+EVAL_DEVICE_MAP = os.getenv("QLORA_EVAL_DEVICE_MAP", "auto").strip() or "auto"
+EVAL_MAX_MEMORY_CUDA = os.getenv("QLORA_EVAL_MAX_MEMORY_CUDA", "").strip()
+EVAL_MAX_MEMORY_CPU = os.getenv("QLORA_EVAL_MAX_MEMORY_CPU", "").strip()
+EVAL_OFFLOAD_FOLDER = os.getenv("QLORA_EVAL_OFFLOAD_FOLDER", "").strip()
+EVAL_OFFLOAD_STATE_DICT = os.getenv("QLORA_EVAL_OFFLOAD_STATE_DICT", "true").strip().lower() == "true"
+DISABLE_PARALLEL_LOADING = os.getenv("QLORA_EVAL_DISABLE_PARALLEL_LOADING", "true").strip().lower() == "true"
+PARALLEL_LOADING_WORKERS = int(os.getenv("QLORA_EVAL_PARALLEL_LOADING_WORKERS", "1").strip() or 1)
+LOAD_MODEL_BEFORE_SPARK = os.getenv("QLORA_EVAL_LOAD_MODEL_BEFORE_SPARK", "true").strip().lower() == "true"
 INVERT_PROB = os.getenv("QLORA_INVERT_PROB", "false").strip().lower() == "true"
 PROMPT_MODE = os.getenv("QLORA_PROMPT_MODE", "full").strip().lower() or "full"  # "full" | "semantic"
+QWEN35_NO_THINK = os.getenv("QLORA_EVAL_QWEN35_NO_THINK", "false").strip().lower() == "true"
 
 SPARK_DRIVER_MEMORY = os.getenv("SPARK_DRIVER_MEMORY", "6g").strip() or "6g"
 SPARK_EXECUTOR_MEMORY = os.getenv("SPARK_EXECUTOR_MEMORY", "6g").strip() or "6g"
 SPARK_MASTER = os.getenv("SPARK_MASTER", "local[2]").strip() or "local[2]"
-SPARK_LOCAL_DIR = os.getenv("SPARK_LOCAL_DIR", "D:/5006_BDA_project/data/spark-tmp").strip() or "D:/5006_BDA_project/data/spark-tmp"
+SPARK_LOCAL_DIR = (
+    os.getenv("SPARK_LOCAL_DIR", project_path("data/spark-tmp").as_posix()).strip()
+    or project_path("data/spark-tmp").as_posix()
+)
 SPARK_SQL_SHUFFLE_PARTITIONS = os.getenv("SPARK_SQL_SHUFFLE_PARTITIONS", "12").strip() or "12"
 SPARK_DEFAULT_PARALLELISM = os.getenv("SPARK_DEFAULT_PARALLELISM", "12").strip() or "12"
 SPARK_NETWORK_TIMEOUT = os.getenv("SPARK_NETWORK_TIMEOUT", "600s").strip() or "600s"
@@ -119,6 +145,53 @@ def parse_bucket_override(raw: str) -> list[int]:
         except Exception:
             continue
     return sorted(list(set(out)))
+
+
+def is_qwen35_model_type(model_type: str) -> bool:
+    mt = str(model_type or "").strip().lower()
+    return mt.startswith("qwen3_5")
+
+
+def detect_final_token_logits_arg(model: Any) -> str:
+    seen: set[int] = set()
+    candidates: list[Any] = [model]
+
+    get_base = getattr(model, "get_base_model", None)
+    if callable(get_base):
+        try:
+            base_obj = get_base()
+            if base_obj is not None:
+                candidates.append(base_obj)
+        except Exception:
+            pass
+
+    base_model_obj = getattr(model, "base_model", None)
+    if base_model_obj is not None:
+        candidates.append(base_model_obj)
+        nested_model = getattr(base_model_obj, "model", None)
+        if nested_model is not None:
+            candidates.append(nested_model)
+
+    for obj in candidates:
+        if obj is None or id(obj) in seen:
+            continue
+        seen.add(id(obj))
+        try:
+            sig = inspect.signature(obj.forward)
+        except Exception:
+            continue
+        if "num_logits_to_keep" in sig.parameters:
+            return "num_logits_to_keep"
+        if "logits_to_keep" in sig.parameters:
+            return "logits_to_keep"
+
+    model_type = str(getattr(getattr(model, "config", None), "model_type", "")).strip().lower()
+    if is_qwen35_model_type(model_type):
+        # PeftModelForCausalLM.forward hides this kwarg behind **kwargs,
+        # but it is forwarded to the underlying Qwen3.5 base model.
+        return "logits_to_keep"
+
+    return ""
 
 
 def pick_latest_run(root: Path, suffix: str) -> Path:
@@ -260,14 +333,9 @@ def load_eval_users_from_stage11_data(spark: SparkSession, stage11_data_run: Pat
 
 
 def resolve_stage09_meta_path(raw_path: str) -> Path:
-    p = Path(str(raw_path or "").strip())
+    p = normalize_legacy_project_path(str(raw_path or "").strip())
     if p.exists():
         return p
-    legacy = str(raw_path or "").replace("\\", "/")
-    if "D:/5006 BDA project" in legacy:
-        alt = Path(legacy.replace("D:/5006 BDA project", "D:/5006_BDA_project"))
-        if alt.exists():
-            return alt
     return p
 
 
@@ -734,7 +802,16 @@ def score_yes_probability(
     max_seq_len: int,
     yes_id: int,
     no_id: int,
-) -> np.ndarray:
+) -> tuple[np.ndarray, int]:
+    def _next_fallback_bs(cur_bs: int) -> int:
+        b = int(cur_bs)
+        if b <= 1:
+            return 1
+        # User-requested path: if batch=3 fails, fallback to 2 first.
+        if b == 3:
+            return 2
+        return max(1, b // 2)
+
     def _safe_cuda_empty_cache() -> None:
         if not torch.cuda.is_available():
             return
@@ -745,7 +822,24 @@ def score_yes_probability(
             print(f"[WARN] torch.cuda.empty_cache failed: {short}")
 
     out: list[np.ndarray] = []
+    template_enable_thinking_supported = False
+    template_use_chat = bool(QWEN35_NO_THINK and hasattr(tokenizer, "apply_chat_template"))
+    if template_use_chat:
+        try:
+            sig = inspect.signature(tokenizer.apply_chat_template)  # type: ignore[attr-defined]
+            template_enable_thinking_supported = "enable_thinking" in sig.parameters
+        except Exception:
+            template_enable_thinking_supported = False
+
     model.eval()
+    forward_kwargs_base: dict[str, Any] = {"use_cache": False}
+    final_token_logits_arg = detect_final_token_logits_arg(model)
+    if final_token_logits_arg:
+        # Only score the final token position; avoids allocating full seq_len logits.
+        forward_kwargs_base[final_token_logits_arg] = 1
+        print(f"[CONFIG] final_token_logits_arg={final_token_logits_arg}")
+    else:
+        print("[CONFIG] final_token_logits_arg=<unsupported>")
     effective_bs = max(1, int(batch_size))
     t0 = time.monotonic()
     scored_total = 0
@@ -757,6 +851,19 @@ def score_yes_probability(
             bs = min(effective_bs, n - i)
             batch = prompts[i : i + bs]
             try:
+                if template_use_chat:
+                    wrapped: list[str] = []
+                    for p in batch:
+                        messages = [{"role": "user", "content": str(p)}]
+                        kwargs: dict[str, Any] = {
+                            "tokenize": False,
+                            "add_generation_prompt": True,
+                        }
+                        if template_enable_thinking_supported:
+                            kwargs["enable_thinking"] = False
+                        txt = tokenizer.apply_chat_template(messages, **kwargs)  # type: ignore[attr-defined]
+                        wrapped.append(str(txt))
+                    batch = wrapped
                 enc = tokenizer(
                     batch,
                     padding=True,
@@ -765,7 +872,10 @@ def score_yes_probability(
                     return_tensors="pt",
                 )
                 enc = {k: v.to(model.device) for k, v in enc.items()}
-                logits = model(**enc).logits[:, -1, :]
+                outputs = model(**enc, **forward_kwargs_base)
+                logits = outputs.logits
+                if logits.ndim == 3:
+                    logits = logits[:, -1, :]
                 pair = logits[:, [yes_id, no_id]]
                 probs = torch.softmax(pair, dim=1)[:, 0]
                 out.append(probs.detach().float().cpu().numpy())
@@ -791,7 +901,7 @@ def score_yes_probability(
                         "QLoRA sidecar inference OOM at batch_size=1. "
                         "Try lowering QLORA_EVAL_MAX_SEQ_LEN or disabling 4bit eval fallback."
                     ) from oom
-                effective_bs = max(1, bs // 2)
+                effective_bs = _next_fallback_bs(bs)
                 print(f"[WARN] QLoRA eval OOM: batch={bs}, fallback_batch={effective_bs}")
             except RuntimeError as rte:
                 msg = str(rte).lower()
@@ -813,7 +923,7 @@ def score_yes_probability(
                         "QLoRA sidecar inference CUDA runtime failure at batch_size=1. "
                         "Try lowering QLORA_EVAL_MAX_SEQ_LEN or setting QLORA_EVAL_USE_4BIT=false."
                     ) from rte
-                effective_bs = max(1, bs // 2)
+                effective_bs = _next_fallback_bs(bs)
                 short = str(rte).splitlines()[0][:180]
                 print(
                     f"[WARN] QLoRA eval CUDA failure: batch={bs}, "
@@ -822,7 +932,8 @@ def score_yes_probability(
     total_time = time.monotonic() - t0
     if n > 0:
         print(f"[TIMING] inference done: {n} rows in {total_time:.1f}s ({n / total_time:.1f} rows/s)")
-    return np.concatenate(out, axis=0) if out else np.zeros(0, dtype=np.float32)
+    merged = np.concatenate(out, axis=0) if out else np.zeros(0, dtype=np.float32)
+    return merged, int(effective_bs)
 
 
 def _ndcg_from_rank(rank_1_based: int) -> float:
@@ -902,15 +1013,24 @@ def main() -> None:
         f"use_eval_split={USE_STAGE11_EVAL_SPLIT} invert_prob={INVERT_PROB}"
     )
 
-    spark = build_spark()
-    spark.sparkContext.setLogLevel("WARN")
     stage09_meta = json.loads((stage09_run / "run_meta.json").read_text(encoding="utf-8"))
     buckets = parse_bucket_override(BUCKETS_OVERRIDE) or [10]
     gate_result = enforce_stage09_gate(stage09_run, buckets)
-    user_profile_df = build_user_profile_df(spark, stage09_meta)
-    item_sem_df = build_item_sem_df(spark, stage09_meta)
-    cluster_profile_df = build_cluster_profile_df(spark, stage09_meta)
-    print(f"[CONFIG] PROMPT_MODE={PROMPT_MODE} (driver-side prompt generation, no Spark UDF)")
+    spark: SparkSession | None = None
+    user_profile_df: DataFrame | None = None
+    item_sem_df: DataFrame | None = None
+    cluster_profile_df: DataFrame | None = None
+
+    def ensure_spark_runtime() -> tuple[SparkSession, DataFrame, DataFrame, DataFrame]:
+        nonlocal spark, user_profile_df, item_sem_df, cluster_profile_df
+        if spark is None:
+            spark = build_spark()
+            spark.sparkContext.setLogLevel("WARN")
+            user_profile_df = build_user_profile_df(spark, stage09_meta)
+            item_sem_df = build_item_sem_df(spark, stage09_meta)
+            cluster_profile_df = build_cluster_profile_df(spark, stage09_meta)
+            print(f"[CONFIG] PROMPT_MODE={PROMPT_MODE} (driver-side prompt generation, no Spark UDF)")
+        return spark, user_profile_df, item_sem_df, cluster_profile_df
 
 
     has_cuda = torch.cuda.is_available()
@@ -924,21 +1044,78 @@ def main() -> None:
             bnb_4bit_compute_dtype=compute_dtype,
         )
 
-    model_kwargs: dict[str, Any] = {"trust_remote_code": TRUST_REMOTE_CODE}
+    model_kwargs: dict[str, Any] = {
+        "trust_remote_code": TRUST_REMOTE_CODE,
+        "low_cpu_mem_usage": True,
+    }
     if has_cuda:
-        model_kwargs["device_map"] = "auto"
+        model_kwargs["device_map"] = EVAL_DEVICE_MAP
+        max_memory: dict[Any, str] = {}
+        if EVAL_MAX_MEMORY_CUDA:
+            max_memory[0] = str(EVAL_MAX_MEMORY_CUDA)
+        if EVAL_MAX_MEMORY_CPU:
+            max_memory["cpu"] = str(EVAL_MAX_MEMORY_CPU)
+        if max_memory:
+            model_kwargs["max_memory"] = max_memory
+        if EVAL_OFFLOAD_FOLDER:
+            offload_dir = Path(EVAL_OFFLOAD_FOLDER).expanduser()
+            offload_dir.mkdir(parents=True, exist_ok=True)
+            model_kwargs["offload_folder"] = offload_dir.as_posix()
+            if EVAL_OFFLOAD_STATE_DICT:
+                # Keep final placement unchanged while spilling transient load-time state dict tensors.
+                model_kwargs["offload_state_dict"] = True
     if bnb_config is not None:
         model_kwargs["quantization_config"] = bnb_config
         model_kwargs["torch_dtype"] = compute_dtype
 
+    # Align qwen3.5 eval with train-time dtype path to avoid float32-heavy load/memory spikes.
+    try:
+        model_cfg = AutoConfig.from_pretrained(base_model, trust_remote_code=TRUST_REMOTE_CODE)
+        model_type = str(getattr(model_cfg, "model_type", "")).strip().lower()
+        if is_qwen35_model_type(model_type):
+            target_mamba_dtype = str(QWEN35_MAMBA_SSM_DTYPE or "auto").strip().lower()
+            if target_mamba_dtype in {"", "auto"} and compute_dtype == torch.bfloat16:
+                target_mamba_dtype = "bfloat16"
+            if target_mamba_dtype not in {"", "auto"}:
+                txt_cfg = getattr(model_cfg, "text_config", None)
+                if isinstance(txt_cfg, dict):
+                    txt_cfg["mamba_ssm_dtype"] = target_mamba_dtype
+                elif txt_cfg is not None:
+                    setattr(txt_cfg, "mamba_ssm_dtype", target_mamba_dtype)
+                model_kwargs["config"] = model_cfg
+                print(f"[CONFIG] qwen3.5 mamba_ssm_dtype={target_mamba_dtype}")
+    except Exception as cfg_exc:
+        short = str(cfg_exc).splitlines()[0][:180]
+        print(f"[WARN] qwen3.5 dtype config override skipped: {short}")
+
     if DISABLE_ALLOC_WARMUP and hasattr(_tf_modeling_utils, "caching_allocator_warmup"):
         _tf_modeling_utils.caching_allocator_warmup = lambda *args, **kwargs: None  # type: ignore[assignment]
         print("[CONFIG] disable_transformers_alloc_warmup=true")
+    if DISABLE_PARALLEL_LOADING:
+        os.environ["HF_ENABLE_PARALLEL_LOADING"] = "false"
+        os.environ["HF_PARALLEL_LOADING_WORKERS"] = str(max(1, int(PARALLEL_LOADING_WORKERS)))
+    print(
+        f"[CONFIG] model_load device_map={EVAL_DEVICE_MAP} "
+        f"max_memory_cuda={EVAL_MAX_MEMORY_CUDA or '<none>'} "
+        f"max_memory_cpu={EVAL_MAX_MEMORY_CPU or '<none>'} "
+        f"offload_folder={EVAL_OFFLOAD_FOLDER or '<none>'} "
+        f"offload_state_dict={bool(model_kwargs.get('offload_state_dict', False))} "
+        f"disable_parallel_loading={DISABLE_PARALLEL_LOADING}"
+    )
+    print(f"[CONFIG] PYTORCH_CUDA_ALLOC_CONF={os.environ.get('PYTORCH_CUDA_ALLOC_CONF', '<unset>')}")
+    print(f"[CONFIG] qwen35_no_think={QWEN35_NO_THINK}")
 
     tokenizer = AutoTokenizer.from_pretrained(base_model, trust_remote_code=TRUST_REMOTE_CODE)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token if tokenizer.eos_token else tokenizer.unk_token
     tokenizer.padding_side = "left"
+
+    if has_cuda and LOAD_MODEL_BEFORE_SPARK:
+        gc.collect()
+        try:
+            torch.cuda.empty_cache()
+        except Exception:
+            pass
 
     try:
         base = AutoModelForCausalLM.from_pretrained(base_model, **model_kwargs)
@@ -951,7 +1128,17 @@ def main() -> None:
             ) from exc
         raise
     model = PeftModel.from_pretrained(base, adapter_dir.as_posix())
-    model = model.to(model.device)
+    # This eval path only needs final-token logits, not generation KV cache.
+    try:
+        if getattr(getattr(model, "config", None), "use_cache", None):
+            model.config.use_cache = False
+    except Exception:
+        pass
+    if torch.cuda.is_available():
+        try:
+            torch.cuda.empty_cache()
+        except Exception:
+            pass
     yes_id, no_id = build_yes_no_token_ids(tokenizer)
 
     resume_target = os.getenv("QLORA_EVAL_RESUME_DIR", "").strip()
@@ -1014,6 +1201,7 @@ def main() -> None:
             print(f"[WARN] skip bucket={bucket}: missing truth.parquet")
             continue
         cand_path = pick_candidate_file(bdir)
+        spark, user_profile_df, item_sem_df, cluster_profile_df = ensure_spark_runtime()
 
         truth = (
             spark.read.parquet(truth_path.as_posix())
@@ -1162,6 +1350,7 @@ def main() -> None:
         pre_rank_buf: list[int] = []
         label_true_buf: list[int] = []
         pre_score_buf: list[float] = []
+        adaptive_batch_size = max(1, int(INFER_BATCH_SIZE))
 
         def _append_partial_scores() -> None:
             nonlocal flushed_rows
@@ -1188,17 +1377,25 @@ def main() -> None:
             pending_qlora_prob.clear()
 
         def _flush_prompt_buf() -> None:
+            nonlocal adaptive_batch_size
             if not prompt_buf:
                 return
-            q_prob_local = score_yes_probability(
+            prev_bs = int(adaptive_batch_size)
+            q_prob_local, adaptive_batch_size = score_yes_probability(
                 model=model,
                 tokenizer=tokenizer,
                 prompts=prompt_buf,
-                batch_size=INFER_BATCH_SIZE,
+                batch_size=adaptive_batch_size,
                 max_seq_len=MAX_SEQ_LEN,
                 yes_id=yes_id,
                 no_id=no_id,
-            ).astype(np.float32)
+            )
+            q_prob_local = q_prob_local.astype(np.float32)
+            if int(adaptive_batch_size) != int(prev_bs):
+                print(
+                    f"[CONFIG] adaptive_eval_batch_size update: "
+                    f"{int(prev_bs)} -> {int(adaptive_batch_size)}"
+                )
             if INVERT_PROB:
                 q_prob_local = np.clip(1.0 - q_prob_local, 0.0, 1.0)
             if len(q_prob_local) != len(user_idx_buf):
@@ -1443,11 +1640,13 @@ def main() -> None:
     }
     (out_dir / "run_meta.json").write_text(json.dumps(meta, ensure_ascii=True, indent=2), encoding="utf-8")
 
-    spark.stop()
+    if spark is not None:
+        spark.stop()
     print(f"[DONE] qlora sidecar metrics: {out_csv}")
     print(f"[DONE] merged metrics: {METRICS_PATH}")
 
 
 if __name__ == "__main__":
     main()
+
 

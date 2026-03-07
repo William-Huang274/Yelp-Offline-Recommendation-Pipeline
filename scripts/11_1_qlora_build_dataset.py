@@ -4,6 +4,7 @@ import json
 import math
 import os
 import shutil
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -13,6 +14,7 @@ from pyspark import StorageLevel
 from pyspark.sql import DataFrame, SparkSession, functions as F
 from pyspark.sql.window import Window
 
+from pipeline.project_paths import env_or_project_path, normalize_legacy_project_path, project_path
 from pipeline.qlora_prompting import (
     build_binary_prompt,
     build_binary_prompt_semantic,
@@ -25,9 +27,9 @@ from pipeline.spark_tmp_manager import SparkTmpContext, build_spark_tmp_context
 
 RUN_TAG = "stage11_1_qlora_build_dataset"
 INPUT_09_RUN_DIR = os.getenv("INPUT_09_RUN_DIR", "").strip()
-INPUT_09_ROOT = Path(r"D:/5006_BDA_project/data/output/09_candidate_fusion")
+INPUT_09_ROOT = env_or_project_path("INPUT_09_ROOT_DIR", "data/output/09_candidate_fusion")
 INPUT_09_SUFFIX = "_stage09_candidate_fusion"
-OUTPUT_ROOT = Path(r"D:/5006_BDA_project/data/output/11_qlora_data")
+OUTPUT_ROOT = env_or_project_path("OUTPUT_11_DATA_ROOT_DIR", "data/output/11_qlora_data")
 
 BUCKETS_OVERRIDE = os.getenv("BUCKETS_OVERRIDE", "10").strip()
 CANDIDATE_FILE = os.getenv("TRAIN_CANDIDATE_FILE", "candidates_pretrim150.parquet").strip() or "candidates_pretrim150.parquet"
@@ -52,7 +54,10 @@ ROW_CAP_ORDERED = os.getenv("QLORA_ROW_CAP_ORDERED", "false").strip().lower() ==
 
 ENFORCE_STAGE09_GATE = os.getenv("QLORA_ENFORCE_STAGE09_GATE", "true").strip().lower() == "true"
 STAGE09_GATE_METRICS_PATH = Path(
-    os.getenv("QLORA_STAGE09_GATE_METRICS_PATH", "D:/5006_BDA_project/data/metrics/stage09_recall_audit_summary_latest.csv").strip()
+    os.getenv(
+        "QLORA_STAGE09_GATE_METRICS_PATH",
+        project_path("data/metrics/stage09_recall_audit_summary_latest.csv").as_posix(),
+    ).strip()
 )
 STAGE09_GATE_MIN_TRUTH_IN_PRETRIM = float(os.getenv("QLORA_GATE_MIN_TRUTH_IN_PRETRIM", "0.82").strip() or 0.82)
 STAGE09_GATE_MAX_PRETRIM_CUT_LOSS = float(os.getenv("QLORA_GATE_MAX_PRETRIM_CUT_LOSS", "0.08").strip() or 0.08)
@@ -61,7 +66,10 @@ STAGE09_GATE_MAX_HARD_MISS = float(os.getenv("QLORA_GATE_MAX_HARD_MISS", "0.10")
 ENABLE_SHORT_TEXT_SUMMARY = os.getenv("QLORA_ENABLE_SHORT_TEXT_SUMMARY", "true").strip().lower() == "true"
 ENABLE_RAW_REVIEW_TEXT = os.getenv("QLORA_ENABLE_RAW_REVIEW_TEXT", "true").strip().lower() == "true"
 REVIEW_TABLE_PATH = Path(
-    os.getenv("QLORA_REVIEW_TABLE_PATH", "D:/5006_BDA_project/data/parquet/yelp_academic_dataset_review").strip()
+    os.getenv(
+        "QLORA_REVIEW_TABLE_PATH",
+        project_path("data/parquet/yelp_academic_dataset_review").as_posix(),
+    ).strip()
 )
 USER_REVIEW_TOPN = int(os.getenv("QLORA_USER_REVIEW_TOPN", "2").strip() or 2)
 ITEM_REVIEW_TOPN = int(os.getenv("QLORA_ITEM_REVIEW_TOPN", "2").strip() or 2)
@@ -76,11 +84,18 @@ HIST_POS_WEIGHT = float(os.getenv("QLORA_HIST_POS_WEIGHT", "0.25").strip() or 0.
 SPARK_DRIVER_MEMORY = os.getenv("SPARK_DRIVER_MEMORY", "6g").strip() or "6g"
 SPARK_EXECUTOR_MEMORY = os.getenv("SPARK_EXECUTOR_MEMORY", "6g").strip() or "6g"
 SPARK_MASTER = os.getenv("SPARK_MASTER", "local[2]").strip() or "local[2]"
-SPARK_LOCAL_DIR = os.getenv("SPARK_LOCAL_DIR", "D:/5006_BDA_project/data/spark-tmp").strip() or "D:/5006_BDA_project/data/spark-tmp"
+SPARK_LOCAL_DIR = (
+    os.getenv("SPARK_LOCAL_DIR", project_path("data/spark-tmp").as_posix()).strip()
+    or project_path("data/spark-tmp").as_posix()
+)
 SPARK_SQL_SHUFFLE_PARTITIONS = os.getenv("SPARK_SQL_SHUFFLE_PARTITIONS", "12").strip() or "12"
 SPARK_DEFAULT_PARALLELISM = os.getenv("SPARK_DEFAULT_PARALLELISM", "12").strip() or "12"
 SPARK_NETWORK_TIMEOUT = os.getenv("SPARK_NETWORK_TIMEOUT", "600s").strip() or "600s"
 SPARK_EXECUTOR_HEARTBEAT_INTERVAL = os.getenv("SPARK_EXECUTOR_HEARTBEAT_INTERVAL", "60s").strip() or "60s"
+SPARK_PYTHON_AUTH_SOCKET_TIMEOUT = os.getenv("SPARK_PYTHON_AUTH_SOCKET_TIMEOUT", "120s").strip() or "120s"
+SPARK_PYTHON_UNIX_DOMAIN_SOCKET_ENABLED = (
+    os.getenv("SPARK_PYTHON_UNIX_DOMAIN_SOCKET_ENABLED", "false").strip().lower() == "true"
+)
 SPARK_DRIVER_HOST = os.getenv("SPARK_DRIVER_HOST", "127.0.0.1").strip() or "127.0.0.1"
 SPARK_DRIVER_BIND_ADDRESS = os.getenv("SPARK_DRIVER_BIND_ADDRESS", "127.0.0.1").strip() or "127.0.0.1"
 SPARK_TMP_SESSION_ISOLATION = os.getenv("SPARK_TMP_SESSION_ISOLATION", "true").strip().lower() == "true"
@@ -91,6 +106,25 @@ SPARK_TMP_CLEAN_MAX_ENTRIES = int(os.getenv("SPARK_TMP_CLEAN_MAX_ENTRIES", "3000
 
 
 _SPARK_TMP_CTX: SparkTmpContext | None = None
+
+
+def _resolve_python_exec(raw: str, fallback: str) -> str:
+    raw_text = str(raw or "").strip()
+    if raw_text:
+        p = Path(raw_text)
+        if p.exists() and p.is_file():
+            return str(p)
+    fb = Path(str(fallback or "").strip() or sys.executable)
+    return str(fb)
+
+
+def _configure_pyspark_python() -> tuple[str, str]:
+    # Force Spark workers to use the same interpreter as driver by default.
+    worker_py = _resolve_python_exec(os.getenv("PYSPARK_PYTHON", "").strip(), sys.executable)
+    driver_py = _resolve_python_exec(os.getenv("PYSPARK_DRIVER_PYTHON", "").strip(), worker_py)
+    os.environ["PYSPARK_PYTHON"] = worker_py
+    os.environ["PYSPARK_DRIVER_PYTHON"] = driver_py
+    return worker_py, driver_py
 
 
 def parse_bucket_override(raw: str) -> set[int]:
@@ -124,19 +158,15 @@ def resolve_stage09_run() -> Path:
 
 
 def resolve_stage09_meta_path(raw_path: str) -> Path:
-    p = Path(str(raw_path or "").strip())
+    p = normalize_legacy_project_path(str(raw_path or "").strip())
     if p.exists():
         return p
-    legacy = str(raw_path or "").replace("\\", "/")
-    if "D:/5006 BDA project" in legacy:
-        alt = Path(legacy.replace("D:/5006 BDA project", "D:/5006_BDA_project"))
-        if alt.exists():
-            return alt
     return p
 
 
 def build_spark() -> SparkSession:
     global _SPARK_TMP_CTX
+    worker_py, driver_py = _configure_pyspark_python()
     _SPARK_TMP_CTX = build_spark_tmp_context(
         script_tag=RUN_TAG,
         spark_local_dir=SPARK_LOCAL_DIR,
@@ -151,6 +181,10 @@ def build_spark() -> SparkSession:
         f"[TMP] base={_SPARK_TMP_CTX.base_dir} local={_SPARK_TMP_CTX.spark_local_dir} "
         f"py_temp={_SPARK_TMP_CTX.py_temp_dir} cleanup={_SPARK_TMP_CTX.cleanup_summary}"
     )
+    print(
+        f"[SPARK] master={SPARK_MASTER} pyspark_python={worker_py} "
+        f"pyspark_driver_python={driver_py}"
+    )
     return (
         SparkSession.builder.appName(RUN_TAG)
         .master(SPARK_MASTER)
@@ -162,6 +196,10 @@ def build_spark() -> SparkSession:
         .config("spark.sql.shuffle.partitions", SPARK_SQL_SHUFFLE_PARTITIONS)
         .config("spark.default.parallelism", SPARK_DEFAULT_PARALLELISM)
         .config("spark.python.worker.reuse", "true")
+        .config("spark.python.unix.domain.socket.enabled", "true" if SPARK_PYTHON_UNIX_DOMAIN_SOCKET_ENABLED else "false")
+        .config("spark.python.authenticate.socketTimeout", SPARK_PYTHON_AUTH_SOCKET_TIMEOUT)
+        .config("spark.pyspark.python", worker_py)
+        .config("spark.pyspark.driver.python", driver_py)
         .config("spark.network.timeout", SPARK_NETWORK_TIMEOUT)
         .config("spark.executor.heartbeatInterval", SPARK_EXECUTOR_HEARTBEAT_INTERVAL)
         .config("spark.ui.showConsoleProgress", "false")

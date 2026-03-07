@@ -1,8 +1,10 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
+import gc
 import json
 import os
 import random
+from contextlib import nullcontext
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -12,27 +14,29 @@ import torch
 import torch.nn.functional as torch_f
 from datasets import DatasetDict, load_dataset
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+from pipeline.project_paths import env_or_project_path
 
 # Keep transformers on torch path in mixed TensorFlow/Keras env.
 os.environ.setdefault("USE_TF", "0")
 os.environ.setdefault("TRANSFORMERS_NO_TF", "1")
 
 from transformers import (
+    AutoConfig,
     AutoModelForCausalLM,
     AutoTokenizer,
     BitsAndBytesConfig,
     Trainer,
     TrainingArguments,
-    default_data_collator,
 )
+import transformers.modeling_utils as _tf_modeling_utils
 
 
 RUN_TAG = "stage11_2_qlora_train"
 QLORA_RESUME_RUN_DIR = os.getenv("QLORA_RESUME_RUN_DIR", "").strip()
 INPUT_11_RUN_DIR = os.getenv("INPUT_11_RUN_DIR", "").strip()
-INPUT_11_ROOT = Path(r"D:/5006_BDA_project/data/output/11_qlora_data")
+INPUT_11_ROOT = env_or_project_path("INPUT_11_ROOT_DIR", "data/output/11_qlora_data")
 INPUT_11_SUFFIX = "_stage11_1_qlora_build_dataset"
-OUTPUT_ROOT = Path(r"D:/5006_BDA_project/data/output/11_qlora_models")
+OUTPUT_ROOT = env_or_project_path("OUTPUT_11_MODELS_ROOT_DIR", "data/output/11_qlora_models")
 
 BUCKETS_OVERRIDE = os.getenv("BUCKETS_OVERRIDE", "10").strip()
 BASE_MODEL = os.getenv("QLORA_BASE_MODEL", "Qwen/Qwen3-4B").strip()
@@ -44,6 +48,29 @@ TRUST_REMOTE_CODE = os.getenv("QLORA_TRUST_REMOTE_CODE", "true").strip().lower()
 
 USE_4BIT = os.getenv("QLORA_USE_4BIT", "true").strip().lower() == "true"
 USE_BF16 = os.getenv("QLORA_USE_BF16", "true").strip().lower() == "true"
+DEVICE_MAP = os.getenv("QLORA_DEVICE_MAP", "auto").strip() or "auto"
+MAX_MEMORY_CUDA = os.getenv("QLORA_MAX_MEMORY_CUDA", "").strip()
+MAX_MEMORY_CPU = os.getenv("QLORA_MAX_MEMORY_CPU", "").strip()
+OFFLOAD_FOLDER = os.getenv("QLORA_OFFLOAD_FOLDER", "").strip()
+OFFLOAD_STATE_DICT = os.getenv("QLORA_OFFLOAD_STATE_DICT", "true").strip().lower() == "true"
+LOW_CPU_MEM_USAGE = os.getenv("QLORA_LOW_CPU_MEM_USAGE", "true").strip().lower() == "true"
+DISABLE_ALLOC_WARMUP = os.getenv("QLORA_DISABLE_ALLOC_WARMUP", "true").strip().lower() == "true"
+DISABLE_PARALLEL_LOADING = os.getenv("QLORA_DISABLE_PARALLEL_LOADING", "true").strip().lower() == "true"
+PARALLEL_LOADING_WORKERS = int(os.getenv("QLORA_PARALLEL_LOADING_WORKERS", "1").strip() or 1)
+CLEAR_CUDA_CACHE_BEFORE_LORA = (
+    os.getenv("QLORA_CLEAR_CUDA_CACHE_BEFORE_LORA", "true").strip().lower() == "true"
+)
+CAST_TRAINABLE_PARAMS_TO_COMPUTE = (
+    os.getenv("QLORA_CAST_TRAINABLE_PARAMS_TO_COMPUTE", "false").strip().lower() == "true"
+)
+MANUAL_FP16_AUTOCAST = (
+    os.getenv("QLORA_MANUAL_FP16_AUTOCAST", "false").strip().lower() == "true"
+)
+QWEN35_MAMBA_SSM_DTYPE = os.getenv("QLORA_QWEN35_MAMBA_SSM_DTYPE", "auto").strip().lower()
+QWEN35_SAFE_KBIT_PREP = os.getenv("QLORA_QWEN35_SAFE_KBIT_PREP", "true").strip().lower() == "true"
+QWEN35_FORCE_FLOAT_PARAMS_BF16 = (
+    os.getenv("QLORA_QWEN35_FORCE_FLOAT_PARAMS_BF16", "true").strip().lower() == "true"
+)
 LORA_R = int(os.getenv("QLORA_LORA_R", "16").strip() or 16)
 LORA_ALPHA = int(os.getenv("QLORA_LORA_ALPHA", "32").strip() or 32)
 LORA_DROPOUT = float(os.getenv("QLORA_LORA_DROPOUT", "0.05").strip() or 0.05)
@@ -65,6 +92,7 @@ WEIGHT_DECAY = float(os.getenv("QLORA_WEIGHT_DECAY", "0.01").strip() or 0.01)
 WARMUP_RATIO = float(os.getenv("QLORA_WARMUP_RATIO", "0.03").strip() or 0.03)
 BATCH_SIZE = int(os.getenv("QLORA_BATCH_SIZE", "1").strip() or 1)
 GRAD_ACC = int(os.getenv("QLORA_GRAD_ACC", "16").strip() or 16)
+EVAL_BATCH_SIZE = int(os.getenv("QLORA_EVAL_BATCH_SIZE", str(BATCH_SIZE)).strip() or BATCH_SIZE)
 EVAL_STEPS = int(os.getenv("QLORA_EVAL_STEPS", "100").strip() or 100)
 SAVE_STEPS = int(os.getenv("QLORA_SAVE_STEPS", "100").strip() or 100)
 LOGGING_STEPS = int(os.getenv("QLORA_LOGGING_STEPS", "20").strip() or 20)
@@ -334,30 +362,153 @@ def seed_everything(seed: int) -> None:
         torch.cuda.manual_seed_all(seed)
 
 
+def prepare_model_for_kbit_training_qwen35_safe(model: Any, enable_input_grads: bool) -> Any:
+    """
+    Qwen3.5 linear-attention kernels require non-float32 activations.
+    PEFT's generic helper upcasts non-4bit params to float32, which can
+    propagate float32 activations into FLA kernels and fail at runtime.
+    """
+    for _, param in model.named_parameters():
+        param.requires_grad = False
+    if enable_input_grads:
+        if hasattr(model, "enable_input_require_grads"):
+            model.enable_input_require_grads()
+        else:
+            def _make_inputs_require_grad(module: Any, _inputs: Any, output: Any) -> None:
+                output.requires_grad_(True)
+            model.get_input_embeddings().register_forward_hook(_make_inputs_require_grad)
+    return model
+
+
+def recast_float_params(model: Any, target_dtype: Any) -> int:
+    n_cast = 0
+    for param in model.parameters():
+        if param.__class__.__name__ == "Params4bit":
+            continue
+        if getattr(param, "dtype", None) == torch.float32:
+            param.data = param.data.to(target_dtype)
+            n_cast += 1
+    return int(n_cast)
+
+
+def recast_trainable_params(model: Any, target_dtype: Any) -> int:
+    n_cast = 0
+    for param in model.parameters():
+        if not bool(getattr(param, "requires_grad", False)):
+            continue
+        if getattr(param, "dtype", None) != target_dtype:
+            param.data = param.data.to(target_dtype)
+            n_cast += 1
+    return int(n_cast)
+
+
+def build_weighted_causal_lm_collator(tokenizer: Any) -> Any:
+    pad_token_id = int(tokenizer.pad_token_id if tokenizer.pad_token_id is not None else 0)
+
+    def _collate(features: list[dict[str, Any]]) -> dict[str, Any]:
+        max_len = max(int(len(f["input_ids"])) for f in features) if features else 0
+        input_ids: list[list[int]] = []
+        attention_mask: list[list[int]] = []
+        labels: list[list[int]] = []
+        sample_weight: list[float] = []
+
+        for f in features:
+            ids = [int(x) for x in f["input_ids"]]
+            att = [int(x) for x in f.get("attention_mask", [1] * len(ids))]
+            lab = [int(x) for x in f["labels"]]
+            pad_len = int(max_len - len(ids))
+            if pad_len > 0:
+                ids = ids + ([pad_token_id] * pad_len)
+                att = att + ([0] * pad_len)
+                lab = lab + ([-100] * pad_len)
+            input_ids.append(ids)
+            attention_mask.append(att)
+            labels.append(lab)
+            sample_weight.append(float(f.get("sample_weight", 1.0)))
+
+        return {
+            "input_ids": torch.tensor(input_ids, dtype=torch.long),
+            "attention_mask": torch.tensor(attention_mask, dtype=torch.long),
+            "labels": torch.tensor(labels, dtype=torch.long),
+            "sample_weight": torch.tensor(sample_weight, dtype=torch.float32),
+        }
+
+    return _collate
+
+
+def is_qwen35_model_type(model_type: str) -> bool:
+    mt = str(model_type or "").strip().lower()
+    return mt.startswith("qwen3_5")
+
+
 class WeightedCausalLmTrainer(Trainer):
     def compute_loss(self, model: Any, inputs: dict[str, Any], return_outputs: bool = False, **kwargs: Any) -> Any:
         weights = inputs.pop("sample_weight", None)
-        labels = inputs.get("labels")
-        outputs = model(**inputs)
+        labels = inputs.pop("labels", None)
+        use_bf16_autocast = bool(
+            torch.cuda.is_available() and USE_BF16 and torch.cuda.is_bf16_supported()
+        )
+        if use_bf16_autocast:
+            # torch>=2.4 prefers torch.amp.autocast("cuda", ...)
+            try:
+                amp_ctx = torch.amp.autocast("cuda", dtype=torch.bfloat16)
+            except Exception:
+                amp_ctx = torch.cuda.amp.autocast(dtype=torch.bfloat16)
+        elif torch.cuda.is_available() and MANUAL_FP16_AUTOCAST:
+            try:
+                amp_ctx = torch.amp.autocast("cuda", dtype=torch.float16)
+            except Exception:
+                amp_ctx = torch.cuda.amp.autocast(dtype=torch.float16)
+        else:
+            amp_ctx = nullcontext()
+        with amp_ctx:
+            outputs = model(**inputs)
         logits = outputs.get("logits")
         if labels is None or logits is None:
             loss = outputs.get("loss")
             return (loss, outputs) if return_outputs else loss
 
-        shift_logits = logits[..., :-1, :].contiguous()
-        shift_labels = labels[..., 1:].contiguous()
-        vocab = int(shift_logits.size(-1))
+        shift_logits = logits[..., :-1, :]
+        shift_labels = labels[..., 1:]
+        valid_mask = shift_labels.ne(-100)
+        if not bool(valid_mask.any()):
+            # Preserve a valid autograd path for fully truncated samples.
+            loss = logits[..., :1, :1].sum() * 0.0
+            return (loss, outputs) if return_outputs else loss
+
+        # Only compute CE on supervised token positions. In this project the
+        # target length is effectively 1, so full-sequence CE wastes memory
+        # without changing semantics.
+        # target_len is effectively 1 in this pipeline, so upcasting the
+        # supervised logits to fp32 is cheap and avoids fp16 CE instability.
+        valid_logits = shift_logits[valid_mask].float()
+        valid_targets = shift_labels[valid_mask]
         token_loss = torch_f.cross_entropy(
-            shift_logits.view(-1, vocab),
-            shift_labels.view(-1),
+            valid_logits,
+            valid_targets,
             reduction="none",
-            ignore_index=-100,
-        ).view(shift_labels.size())
-        valid_mask = (shift_labels != -100).float()
-        per_sample = (token_loss * valid_mask).sum(dim=1) / valid_mask.sum(dim=1).clamp_min(1.0)
+        )
+        sample_ids = valid_mask.nonzero(as_tuple=False)[:, 0]
+        sample_assign = torch_f.one_hot(
+            sample_ids,
+            num_classes=int(shift_labels.size(0)),
+        ).to(dtype=token_loss.dtype, device=token_loss.device)
+        per_sample = sample_assign.transpose(0, 1).matmul(token_loss)
+        token_counts = sample_assign.sum(dim=0).clamp_min(1.0)
+        per_sample = per_sample / token_counts
+        if per_sample.ndim != 1:
+            per_sample = per_sample.view(-1)
+
+        if per_sample.size(0) != int(shift_labels.size(0)):
+            pad = torch.zeros(
+                int(shift_labels.size(0)) - int(per_sample.size(0)),
+                device=per_sample.device,
+                dtype=per_sample.dtype,
+            )
+            per_sample = torch.cat([per_sample, pad], dim=0)
 
         if weights is not None:
-            w = weights.to(per_sample.device).float().view(-1)
+            w = weights.to(token_loss.device).float().view(-1)
             loss = (per_sample * w).sum() / w.sum().clamp_min(1e-8)
         else:
             loss = per_sample.mean()
@@ -505,15 +656,60 @@ def main() -> None:
             bnb_4bit_quant_type="nf4",
             bnb_4bit_compute_dtype=compute_dtype,
         )
+    print(
+        f"[CONFIG] has_cuda={has_cuda} use_4bit={USE_4BIT} "
+        f"bnb_config={bool(bnb_config is not None)} compute_dtype={compute_dtype}"
+    )
 
     model_kwargs: dict[str, Any] = {
         "trust_remote_code": TRUST_REMOTE_CODE,
+        "low_cpu_mem_usage": LOW_CPU_MEM_USAGE,
     }
     if has_cuda:
-        model_kwargs["device_map"] = "auto"
+        model_kwargs["device_map"] = DEVICE_MAP
+        max_memory: dict[Any, str] = {}
+        if MAX_MEMORY_CUDA:
+            max_memory[0] = str(MAX_MEMORY_CUDA)
+        if MAX_MEMORY_CPU:
+            max_memory["cpu"] = str(MAX_MEMORY_CPU)
+        if max_memory:
+            model_kwargs["max_memory"] = max_memory
+        if OFFLOAD_FOLDER:
+            offload_dir = Path(OFFLOAD_FOLDER).expanduser()
+            offload_dir.mkdir(parents=True, exist_ok=True)
+            model_kwargs["offload_folder"] = offload_dir.as_posix()
+        if OFFLOAD_STATE_DICT:
+            model_kwargs["offload_state_dict"] = True
     if bnb_config is not None:
         model_kwargs["quantization_config"] = bnb_config
         model_kwargs["torch_dtype"] = compute_dtype
+
+    if DISABLE_ALLOC_WARMUP and hasattr(_tf_modeling_utils, "caching_allocator_warmup"):
+        _tf_modeling_utils.caching_allocator_warmup = lambda *args, **kwargs: None  # type: ignore[assignment]
+        print("[CONFIG] disable_transformers_alloc_warmup=true")
+    if DISABLE_PARALLEL_LOADING:
+        os.environ["HF_ENABLE_PARALLEL_LOADING"] = "false"
+        os.environ["HF_PARALLEL_LOADING_WORKERS"] = str(max(1, int(PARALLEL_LOADING_WORKERS)))
+
+    # Qwen3.5 linear-attention kernels expect non-float32 mamba_ssm_dtype.
+    try:
+        model_cfg = AutoConfig.from_pretrained(BASE_MODEL, trust_remote_code=TRUST_REMOTE_CODE)
+        model_type = str(getattr(model_cfg, "model_type", "")).strip().lower()
+        if is_qwen35_model_type(model_type):
+            target_mamba_dtype = str(QWEN35_MAMBA_SSM_DTYPE or "auto").strip().lower()
+            if target_mamba_dtype in {"", "auto"} and compute_dtype == torch.bfloat16:
+                target_mamba_dtype = "bfloat16"
+            if target_mamba_dtype not in {"", "auto"}:
+                txt_cfg = getattr(model_cfg, "text_config", None)
+                if isinstance(txt_cfg, dict):
+                    txt_cfg["mamba_ssm_dtype"] = target_mamba_dtype
+                elif txt_cfg is not None:
+                    setattr(txt_cfg, "mamba_ssm_dtype", target_mamba_dtype)
+                print(f"[CONFIG] qwen3.5 mamba_ssm_dtype={target_mamba_dtype}")
+                model_kwargs["config"] = model_cfg
+    except Exception as cfg_exc:
+        short = str(cfg_exc).splitlines()[0][:180]
+        print(f"[WARN] qwen3.5 dtype config override skipped: {short}")
 
     try:
         model = AutoModelForCausalLM.from_pretrained(BASE_MODEL, **model_kwargs)
@@ -526,7 +722,33 @@ def main() -> None:
             ) from exc
         raise
     if bnb_config is not None:
-        model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=GRADIENT_CHECKPOINTING)
+        loaded_model_type = str(getattr(getattr(model, "config", None), "model_type", "")).strip().lower()
+        print(
+            f"[CONFIG] loaded_model_type={loaded_model_type} "
+            f"safe_kbit={QWEN35_SAFE_KBIT_PREP} force_float_params_bf16={QWEN35_FORCE_FLOAT_PARAMS_BF16}"
+        )
+        if is_qwen35_model_type(loaded_model_type) and QWEN35_SAFE_KBIT_PREP:
+            model = prepare_model_for_kbit_training_qwen35_safe(
+                model,
+                enable_input_grads=bool(GRADIENT_CHECKPOINTING),
+            )
+            print("[CONFIG] qwen3.5 safe_kbit_prep=true (skip PEFT fp32 upcast)")
+        else:
+            model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=GRADIENT_CHECKPOINTING)
+    loaded_model_type = str(getattr(getattr(model, "config", None), "model_type", "")).strip().lower()
+    if (
+        is_qwen35_model_type(loaded_model_type)
+        and has_cuda
+        and compute_dtype == torch.bfloat16
+        and QWEN35_FORCE_FLOAT_PARAMS_BF16
+    ):
+        n_recast = recast_float_params(model, torch.bfloat16)
+        print(f"[CONFIG] qwen3.5 recast_float_params_to_bf16={n_recast}")
+    if torch.cuda.is_available() and CLEAR_CUDA_CACHE_BEFORE_LORA:
+        # Drop transient load-time allocator reservations before adapter injection.
+        gc.collect()
+        torch.cuda.empty_cache()
+        print("[TRAIN] cleared_cuda_cache_before_lora=true")
     if GRADIENT_CHECKPOINTING:
         model.gradient_checkpointing_enable()
         model.config.use_cache = False
@@ -541,13 +763,19 @@ def main() -> None:
         target_modules=target_modules,
     )
     model = get_peft_model(model, lora_cfg)
+    if CAST_TRAINABLE_PARAMS_TO_COMPUTE and has_cuda and compute_dtype in (torch.float16, torch.bfloat16):
+        n_cast_trainable = recast_trainable_params(model, compute_dtype)
+        print(f"[CONFIG] recast_trainable_params_to_compute={n_cast_trainable}")
+        gc.collect()
+        torch.cuda.empty_cache()
+        print("[TRAIN] cleared_cuda_cache_after_lora_cast=true")
     model.print_trainable_parameters()
 
     has_eval = "eval" in ds_tok and len(ds_tok["eval"]) > 0
     args = TrainingArguments(
         output_dir=(out_dir / "trainer_output").as_posix(),
         per_device_train_batch_size=BATCH_SIZE,
-        per_device_eval_batch_size=max(1, BATCH_SIZE),
+        per_device_eval_batch_size=max(1, EVAL_BATCH_SIZE),
         gradient_accumulation_steps=GRAD_ACC,
         learning_rate=LR,
         weight_decay=WEIGHT_DECAY,
@@ -558,7 +786,7 @@ def main() -> None:
         save_steps=SAVE_STEPS,
         save_total_limit=2,
         bf16=bool(has_cuda and compute_dtype == torch.bfloat16),
-        fp16=bool(has_cuda and compute_dtype == torch.float16),
+        fp16=bool(has_cuda and compute_dtype == torch.float16 and not MANUAL_FP16_AUTOCAST),
         report_to=[],
         dataloader_num_workers=0,
         remove_unused_columns=False,
@@ -567,15 +795,32 @@ def main() -> None:
         load_best_model_at_end=False,
     )
 
-    trainer = WeightedCausalLmTrainer(
-        model=model,
-        args=args,
-        train_dataset=ds_tok["train"],
-        eval_dataset=(ds_tok["eval"] if has_eval else None),
-        tokenizer=tokenizer,
-        data_collator=default_data_collator,
-    )
-
+    trainer_kwargs: dict[str, Any] = {
+        "model": model,
+        "args": args,
+        "train_dataset": ds_tok["train"],
+        "eval_dataset": (ds_tok["eval"] if has_eval else None),
+        "data_collator": build_weighted_causal_lm_collator(tokenizer),
+    }
+    # transformers>=5 removed `tokenizer` from Trainer.__init__ in favor of
+    # `processing_class`; keep compatibility with both APIs.
+    try:
+        trainer = WeightedCausalLmTrainer(
+            **trainer_kwargs,
+            tokenizer=tokenizer,
+        )
+    except TypeError as exc:
+        if "unexpected keyword argument 'tokenizer'" not in str(exc):
+            raise
+        trainer = WeightedCausalLmTrainer(
+            **trainer_kwargs,
+            processing_class=tokenizer,
+        )
+    if torch.cuda.is_available():
+        # Drop transient allocations from dataset audit/model setup before step 0.
+        gc.collect()
+        torch.cuda.empty_cache()
+        print("[TRAIN] cleared_cuda_cache_before_train=true")
     resume_checkpoint = None
     if QLORA_RESUME_RUN_DIR:
         trainer_out_dir = out_dir / "trainer_output"
@@ -621,6 +866,7 @@ def main() -> None:
             "epochs": float(EPOCHS),
             "lr": float(LR),
             "batch_size": int(BATCH_SIZE),
+            "eval_batch_size": int(EVAL_BATCH_SIZE),
             "grad_acc": int(GRAD_ACC),
             "lora_r": int(LORA_R),
             "lora_alpha": int(LORA_ALPHA),
@@ -637,4 +883,6 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
 

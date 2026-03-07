@@ -1,26 +1,10 @@
-"""Stage 11-2 DPO: Pairwise Direct Preference Optimisation trainer.
+﻿"""Stage 11-2 DPO pairwise trainer.
 
-Drop-in alternative to ``11_2_qlora_train.py``.  Instead of binary
-YES/NO cross-entropy this script constructs *per-user preference pairs*
-(chosen = positive-item prompt, rejected = negative-item prompt) and
-trains with TRL ``DPOTrainer``.
+Drop-in alternative to ``11_2_qlora_train.py``:
+it builds per-user preference pairs and trains with TRL ``DPOTrainer``.
 
-The resulting LoRA adapter is **fully compatible** with the existing
-``11_3_qlora_sidecar_eval.py`` – it still uses ``score_yes_probability``
-to get P(YES) from the model, but the DPO training should yield sharper
-YES/NO separation than plain CE.
-
-Usage
------
-    set QLORA_DPO_BETA=0.1
-    set QLORA_EPOCHS=1
-    python scripts/11_2_dpo_train.py
-
-Key env-vars (anything not listed falls-back to 11_2 defaults):
-    QLORA_DPO_BETA          – DPO β parameter  (default 0.1)
-    QLORA_DPO_MAX_PAIRS     – cap per-user pairs (default 8)
-    QLORA_DPO_LOSS_TYPE     – "sigmoid" | "ipo"  (default sigmoid)
-    + all existing QLORA_* / BUCKETS_OVERRIDE env-vars
+The output LoRA adapter remains compatible with
+``11_3_qlora_sidecar_eval.py`` (which scores P(YES) for prompts).
 """
 from __future__ import annotations
 
@@ -38,6 +22,7 @@ import numpy as np
 import torch
 from datasets import Dataset, DatasetDict, load_dataset
 from peft import LoraConfig, PeftModel, get_peft_model, prepare_model_for_kbit_training
+from pipeline.project_paths import env_or_project_path
 
 os.environ.setdefault("USE_TF", "0")
 os.environ.setdefault("TRANSFORMERS_NO_TF", "1")
@@ -58,14 +43,14 @@ except ImportError:
     )
 
 
-# ──────────────────────────────── config ────────────────────────────────
+# ------------------------------- config -------------------------------
 RUN_TAG = "stage11_2_dpo_train"
 QLORA_RESUME_RUN_DIR = os.getenv("QLORA_RESUME_RUN_DIR", "").strip()
 QLORA_SFT_ADAPTER_DIR = os.getenv("QLORA_SFT_ADAPTER_DIR", "").strip()
 INPUT_11_RUN_DIR = os.getenv("INPUT_11_RUN_DIR", "").strip()
-INPUT_11_ROOT = Path(r"D:/5006_BDA_project/data/output/11_qlora_data")
+INPUT_11_ROOT = env_or_project_path("INPUT_11_ROOT_DIR", "data/output/11_qlora_data")
 INPUT_11_SUFFIX = "_stage11_1_qlora_build_dataset"
-OUTPUT_ROOT = Path(r"D:/5006_BDA_project/data/output/11_qlora_models")
+OUTPUT_ROOT = env_or_project_path("OUTPUT_11_MODELS_ROOT_DIR", "data/output/11_qlora_models")
 
 BUCKETS_OVERRIDE = os.getenv("BUCKETS_OVERRIDE", "10").strip()
 BASE_MODEL = os.getenv("QLORA_BASE_MODEL", "Qwen/Qwen3-4B").strip()
@@ -120,7 +105,7 @@ def strip_rank_features(prompt: str) -> str:
     return _RANK_FEATURE_RE.sub("", prompt)
 
 
-# ──────────────────────────────── helpers ────────────────────────────────
+# ------------------------------- helpers ------------------------------
 def parse_bucket_override(raw: str) -> list[int]:
     out: list[int] = []
     for part in str(raw or "").split(","):
@@ -181,7 +166,7 @@ def seed_everything(seed: int) -> None:
         torch.cuda.manual_seed_all(seed)
 
 
-# ──────────────────── DPO pair construction ────────────────────
+# ---------------------- DPO pair construction -----------------------
 def _extract_prompt_body(full_prompt: str) -> str:
     """Extract user+item portion from the full binary prompt.
 
@@ -206,7 +191,7 @@ def build_dpo_pairs(
     """Group rows by user_idx, cross-pair positives with negatives.
 
     For each user we pair every positive-item prompt (chosen=" YES")
-    with sampled negative-item prompts (rejected=" YES") – the key
+    with sampled negative-item prompts (rejected=" YES") 鈥?the key
     insight is: the *prompt itself contains the item info*, so the
     "chosen" prompt describes a good item and the "rejected" prompt
     describes a bad item.  Both get " YES" as the response text so
@@ -220,7 +205,7 @@ def build_dpo_pairs(
     """
     rng = random.Random(seed)
 
-    # Group by user – store full row for score access
+    # Group by user 鈥?store full row for score access
     user_pos: dict[int, list[dict[str, Any]]] = defaultdict(list)
     user_neg: dict[int, list[dict[str, Any]]] = defaultdict(list)
 
@@ -307,7 +292,7 @@ def build_dpo_pairs(
     return pairs
 
 
-# ──────────────────────────────── main ────────────────────────────────
+# 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ main 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 def main() -> None:
     seed_everything(SEED)
     source_11 = resolve_stage11_dataset_run()
@@ -342,7 +327,7 @@ def main() -> None:
             "Set QLORA_ENFORCE_REQUIRED_BASE_MODEL=false to override."
         )
     print(f"[CONFIG] base_model={BASE_MODEL}")
-    print(f"[CONFIG] DPO β={DPO_BETA}, loss_type={DPO_LOSS_TYPE}, max_pairs_per_user={DPO_MAX_PAIRS_PER_USER}")
+    print(f"[CONFIG] DPO 尾={DPO_BETA}, loss_type={DPO_LOSS_TYPE}, max_pairs_per_user={DPO_MAX_PAIRS_PER_USER}")
     print(f"[CONFIG] LR={LR}, epochs={EPOCHS}, batch_size={BATCH_SIZE}, grad_acc={GRAD_ACC}")
 
     if QLORA_RESUME_RUN_DIR:
@@ -356,7 +341,7 @@ def main() -> None:
         out_dir = OUTPUT_ROOT / f"{run_id}_{RUN_TAG}"
         out_dir.mkdir(parents=True, exist_ok=True)
 
-    # ──── Load raw JSON data ────
+    # 鈹€鈹€鈹€鈹€ Load raw JSON data 鈹€鈹€鈹€鈹€
     train_files, eval_files, file_summary = collect_json_files(source_11, buckets)
     raw_ds: DatasetDict = load_dataset("json", data_files={"train": train_files})  # type: ignore
     raw_train = raw_ds["train"]
@@ -369,7 +354,7 @@ def main() -> None:
     n_neg = int((labels == 0).sum())
     print(f"[DATA] pos={n_pos}, neg={n_neg}, ratio=1:{n_neg / max(1, n_pos):.1f}")
 
-    # ──── Build DPO preference pairs ────
+    # 鈹€鈹€鈹€鈹€ Build DPO preference pairs 鈹€鈹€鈹€鈹€
     train_rows = [raw_train[i] for i in range(len(raw_train))]
 
     # Optionally strip ranking features from pre-built prompts
@@ -407,7 +392,7 @@ def main() -> None:
 
     print(f"[DATA] DPO train_pairs: {len(dpo_train_ds)}")
 
-    # ──── Model ────
+    # 鈹€鈹€鈹€鈹€ Model 鈹€鈹€鈹€鈹€
     has_cuda = torch.cuda.is_available()
     compute_dtype = torch.bfloat16 if (has_cuda and USE_BF16 and torch.cuda.is_bf16_supported()) else torch.float16
     bnb_config = None
@@ -437,7 +422,7 @@ def main() -> None:
             ) from exc
         raise
 
-    # ── Optionally load & merge SFT adapter as initialisation ──
+    # 鈹€鈹€ Optionally load & merge SFT adapter as initialisation 鈹€鈹€
     if QLORA_SFT_ADAPTER_DIR:
         sft_path = Path(QLORA_SFT_ADAPTER_DIR)
         if not sft_path.exists():
@@ -473,7 +458,7 @@ def main() -> None:
         tokenizer.pad_token = tokenizer.eos_token if tokenizer.eos_token else tokenizer.unk_token
     tokenizer.padding_side = "right"
 
-    # ──── DPO Training ────
+    # 鈹€鈹€鈹€鈹€ DPO Training 鈹€鈹€鈹€鈹€
     has_eval = dpo_eval_ds is not None and len(dpo_eval_ds) > 0
     trainer_out_dir = out_dir / "trainer_output"
 
@@ -528,13 +513,13 @@ def main() -> None:
     train_result = trainer.train(resume_from_checkpoint=resume_checkpoint)
     eval_result = trainer.evaluate() if has_eval else {}
 
-    # ──── Save adapter ────
+    # 鈹€鈹€鈹€鈹€ Save adapter 鈹€鈹€鈹€鈹€
     adapter_dir = out_dir / "adapter"
     adapter_dir.mkdir(parents=True, exist_ok=True)
     model.save_pretrained(adapter_dir.as_posix())
     tokenizer.save_pretrained(adapter_dir.as_posix())
 
-    # ──── Run metadata ────
+    # 鈹€鈹€鈹€鈹€ Run metadata 鈹€鈹€鈹€鈹€
     payload = {
         "run_id": run_id,
         "run_tag": RUN_TAG,
@@ -585,3 +570,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
