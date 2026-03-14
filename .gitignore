@@ -1,0 +1,53 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Tool caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Virtual environments
+.venv/
+.venv-wsl/
+venv/
+env/
+
+# Editor / OS noise
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+AGENTS.md
+
+# Local temporary and recovery directories
+tmp/
+_recovered_winfr/
+=1.6.0,
+C*Usershht13/
+*.log
+
+# Python build artifacts
+build/
+dist/
+*.egg-info/
+
+# Local data artifacts
+data/cache/
+data/recovery_reports/
+data/tmp/
+data/Yelp JSON/
+data/parquet/
+data/spark-tmp/
+data/output/*
+!data/output/_v1_freeze_20260313/
+data/output/_v1_freeze_20260313/*
+!data/output/_v1_freeze_20260313/v1_freeze_manifest.json
+!data/output/_first_champion_freeze_20260313/
+data/output/_first_champion_freeze_20260313/*
+!data/output/_first_champion_freeze_20260313/first_champion_manifest.json
+!data/output/_prod_runs/
+!data/output/_prod_runs/*.json

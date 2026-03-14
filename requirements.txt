@@ -1,0 +1,12 @@
+# Public CPU-friendly baseline for smoke tests, validators, and non-GPU stages.
+numpy>=1.26
+pandas>=2.2
+pyarrow>=14
+scipy>=1.10
+scikit-learn>=1.4
+xgboost>=2.0
+pyspark>=3.5
+pytest>=8,<9
+
+# GPU-heavy stage11 QLoRA / DPO dependencies remain in:
+# requirements-stage11-qlora.txt

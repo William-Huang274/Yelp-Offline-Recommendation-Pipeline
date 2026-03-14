@@ -1,0 +1,11 @@
+torch>=2.1
+transformers>=4.40
+accelerate>=0.29
+peft>=0.11
+datasets>=2.18
+sentencepiece>=0.1.99
+safetensors>=0.4
+scipy>=1.10
+
+# Optional but recommended for 4-bit QLoRA (GPU only).
+bitsandbytes>=0.43
