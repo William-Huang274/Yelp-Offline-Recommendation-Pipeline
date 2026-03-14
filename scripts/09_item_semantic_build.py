@@ -14,6 +14,7 @@ from typing import Any
 import numpy as np
 from pyspark import StorageLevel
 from pyspark.sql import DataFrame, SparkSession, functions as F
+from pipeline.project_paths import env_or_project_path, project_path
 
 # Keep sentence-transformers on torch path in mixed TensorFlow/Keras env.
 os.environ.setdefault("USE_TF", "0")
@@ -24,8 +25,27 @@ RUN_PROFILE = os.getenv("RUN_PROFILE_OVERRIDE", "full").strip().lower() or "full
 RUN_TAG = "stage09_item_semantic_build"
 RANDOM_SEED = int(os.getenv("ITEM_SEM_RANDOM_SEED", "42").strip() or 42)
 
-PARQUET_BASE = Path(r"D:/5006 BDA project/data/parquet")
-OUTPUT_ROOT = Path(r"D:/5006 BDA project/data/output/09_item_semantics")
+PARQUET_BASE = env_or_project_path("PARQUET_BASE_DIR", "data/parquet")
+OUTPUT_ROOT = env_or_project_path("OUTPUT_09_ITEM_SEM_ROOT_DIR", "data/output/09_item_semantics")
+SPARK_MASTER = os.getenv("ITEM_SEM_SPARK_MASTER", os.getenv("SPARK_MASTER", "local[2]")).strip() or "local[2]"
+SPARK_DRIVER_MEMORY = (
+    os.getenv("ITEM_SEM_SPARK_DRIVER_MEMORY", os.getenv("SPARK_DRIVER_MEMORY", "6g")).strip() or "6g"
+)
+SPARK_EXECUTOR_MEMORY = (
+    os.getenv("ITEM_SEM_SPARK_EXECUTOR_MEMORY", os.getenv("SPARK_EXECUTOR_MEMORY", "6g")).strip() or "6g"
+)
+SPARK_SQL_SHUFFLE_PARTITIONS = (
+    os.getenv("ITEM_SEM_SPARK_SQL_SHUFFLE_PARTITIONS", os.getenv("SPARK_SQL_SHUFFLE_PARTITIONS", "8")).strip() or "8"
+)
+SPARK_DEFAULT_PARALLELISM = (
+    os.getenv("ITEM_SEM_SPARK_DEFAULT_PARALLELISM", os.getenv("SPARK_DEFAULT_PARALLELISM", "8")).strip() or "8"
+)
+SPARK_NETWORK_TIMEOUT = (
+    os.getenv("ITEM_SEM_SPARK_NETWORK_TIMEOUT", os.getenv("SPARK_NETWORK_TIMEOUT", "600s")).strip() or "600s"
+)
+SPARK_HEARTBEAT_INTERVAL = (
+    os.getenv("ITEM_SEM_SPARK_HEARTBEAT_INTERVAL", os.getenv("SPARK_HEARTBEAT_INTERVAL", "60s")).strip() or "60s"
+)
 
 TARGET_STATE = "LA"
 REQUIRE_RESTAURANTS = True
@@ -47,8 +67,20 @@ EMBED_MAX_SENTENCES = int(os.getenv("ITEM_SEM_EMBED_MAX_SENTENCES", "140000").st
 EMBED_SIM_MIN = float(os.getenv("ITEM_SEM_EMBED_SIM_MIN", "0.58").strip() or 0.58)
 EMBED_BATCH_SIZE = int(os.getenv("ITEM_SEM_EMBED_BATCH_SIZE", "64").strip() or 64)
 USE_BGE_M3 = os.getenv("ITEM_SEM_USE_BGE_M3", "true").strip().lower() == "true"
-BGE_LOCAL_MODEL_PATH = Path(os.getenv("BGE_LOCAL_MODEL_PATH", r"D:/hf_cache/hub/models--BAAI--bge-m3").strip())
+BGE_LOCAL_MODEL_PATH = Path(
+    os.getenv("BGE_LOCAL_MODEL_PATH", project_path("hf_models/BAAI__bge-m3").as_posix()).strip()
+)
 MINILM_MODEL_NAME = os.getenv("ITEM_SEM_FALLBACK_MODEL", "sentence-transformers/all-MiniLM-L6-v2").strip()
+EMBED_DEVICE_OVERRIDE = os.getenv("ITEM_SEM_EMBED_DEVICE", "").strip().lower()
+EMBED_BATCH_SIZE_GPU = int(os.getenv("ITEM_SEM_EMBED_BATCH_SIZE_GPU", str(EMBED_BATCH_SIZE)).strip() or EMBED_BATCH_SIZE)
+EMBED_BATCH_SIZE_CPU = int(os.getenv("ITEM_SEM_EMBED_BATCH_SIZE_CPU", "16").strip() or 16)
+EMBED_MAX_LENGTH = int(os.getenv("ITEM_SEM_EMBED_MAX_LENGTH", "512").strip() or 512)
+ENABLE_DENSE_AUDIT = os.getenv("ITEM_SEM_ENABLE_DENSE_AUDIT", "false").strip().lower() == "true"
+DENSE_AUDIT_SCOPE_NAMES = tuple(
+    x.strip().lower()
+    for x in os.getenv("ITEM_SEM_DENSE_AUDIT_SCOPE_NAMES", "core,semantic,pos,neg").split(",")
+    if x.strip()
+)
 
 ENABLE_LLM_MATCH = os.getenv("ITEM_SEM_ENABLE_LLM", "false").strip().lower() == "true"
 LLM_MAX_SENTENCES = int(os.getenv("ITEM_SEM_LLM_MAX_SENTENCES", "1500").strip() or 1500)
@@ -139,16 +171,20 @@ _TAG_BY_NAME = {t.tag: t for t in TAG_DEFS}
 
 
 def build_spark() -> SparkSession:
-    local_dir = Path(r"D:/5006 BDA project/data/spark-tmp")
+    local_dir = env_or_project_path("SPARK_LOCAL_DIR", "data/spark-tmp")
     local_dir.mkdir(parents=True, exist_ok=True)
     return (
         SparkSession.builder.appName("stage09-item-semantic-build")
-        .master("local[2]")
-        .config("spark.driver.memory", "6g")
-        .config("spark.executor.memory", "6g")
+        .master(SPARK_MASTER)
+        .config("spark.driver.memory", SPARK_DRIVER_MEMORY)
+        .config("spark.executor.memory", SPARK_EXECUTOR_MEMORY)
         .config("spark.local.dir", str(local_dir))
-        .config("spark.sql.shuffle.partitions", "8")
-        .config("spark.default.parallelism", "8")
+        .config("spark.sql.shuffle.partitions", SPARK_SQL_SHUFFLE_PARTITIONS)
+        .config("spark.default.parallelism", SPARK_DEFAULT_PARALLELISM)
+        .config("spark.python.worker.reuse", "true")
+        .config("spark.network.timeout", SPARK_NETWORK_TIMEOUT)
+        .config("spark.executor.heartbeatInterval", SPARK_HEARTBEAT_INTERVAL)
+        .config("spark.sql.adaptive.enabled", "true")
         .config("spark.ui.showConsoleProgress", "false")
         .getOrCreate()
     )
@@ -161,6 +197,83 @@ def write_json(path: Path, payload: dict[str, Any]) -> None:
 
 def normalize_space(text: str) -> str:
     return " ".join((text or "").strip().split())
+
+
+def pretty_token(text: Any) -> str:
+    return normalize_space(str(text or "").replace("_", " "))
+
+
+def pipe_tags_to_text(raw: Any, limit: int = 5) -> str:
+    tags = [pretty_token(x) for x in str(raw or "").split("|") if pretty_token(x)]
+    return ", ".join(tags[: int(max(1, limit))])
+
+
+def build_merchant_dense_text(
+    meta: dict[str, Any],
+    feature_row: dict[str, Any] | None,
+    scope: str,
+) -> str:
+    name = normalize_space(str(meta.get("name", "")))
+    city = normalize_space(str(meta.get("city", "")))
+    state = normalize_space(str(meta.get("state", "")))
+    categories = normalize_space(str(meta.get("categories", "")))
+    stars = meta.get("stars")
+    review_count = meta.get("review_count")
+    core_parts: list[str] = []
+    if name:
+        core_parts.append(f"name: {name}")
+    if categories:
+        core_parts.append(f"categories: {categories}")
+    if city or state:
+        core_parts.append(f"location: {city} {state}".strip())
+    if stars not in {None, ""}:
+        core_parts.append(f"stars: {stars}")
+    if review_count not in {None, ""}:
+        core_parts.append(f"review_count: {review_count}")
+    core_text = " ; ".join(core_parts)
+
+    feature_row = feature_row or {}
+    pos_tags = pipe_tags_to_text(feature_row.get("top_pos_tags", ""))
+    neg_tags = pipe_tags_to_text(feature_row.get("top_neg_tags", ""))
+    semantic_score = feature_row.get("semantic_score", "")
+    semantic_conf = feature_row.get("semantic_confidence", "")
+    semantic_support = feature_row.get("semantic_support", "")
+
+    if scope == "core":
+        return normalize_space(core_text)
+    if scope == "pos":
+        parts = [core_text]
+        if pos_tags:
+            parts.append(f"people like: {pos_tags}")
+        return normalize_space(" ; ".join([p for p in parts if p]))
+    if scope == "neg":
+        parts = [core_text]
+        if neg_tags:
+            parts.append(f"people dislike: {neg_tags}")
+        return normalize_space(" ; ".join([p for p in parts if p]))
+
+    parts = [core_text]
+    if semantic_score not in {None, ""}:
+        parts.append(f"semantic_score: {semantic_score}")
+    if semantic_conf not in {None, ""}:
+        parts.append(f"semantic_confidence: {semantic_conf}")
+    if semantic_support not in {None, ""}:
+        parts.append(f"semantic_support: {semantic_support}")
+    if pos_tags:
+        parts.append(f"top_positive: {pos_tags}")
+    if neg_tags:
+        parts.append(f"top_negative: {neg_tags}")
+    return normalize_space(" ; ".join([p for p in parts if p]))
+
+
+def write_dense_vector_npz(path: Path, business_ids: list[str], vectors: np.ndarray, model_name: str) -> None:
+    np.savez_compressed(
+        path.as_posix(),
+        business_ids=np.array(business_ids, dtype="<U64"),
+        vectors=vectors.astype(np.float32),
+        model_name=np.array([str(model_name)]),
+        normalized=np.array([1], dtype=np.int32),
+    )
 
 
 def split_sentences(text: str) -> list[str]:
@@ -270,28 +383,112 @@ def pick_latest_snapshot(model_root: Path) -> Path | None:
 
 def resolve_embedding_model() -> str:
     if bool(USE_BGE_M3):
+        if BGE_LOCAL_MODEL_PATH.exists() and (BGE_LOCAL_MODEL_PATH / "config.json").exists():
+            return BGE_LOCAL_MODEL_PATH.as_posix()
         snap = pick_latest_snapshot(BGE_LOCAL_MODEL_PATH)
         if snap is not None:
             return snap.as_posix()
     return MINILM_MODEL_NAME
 
 
-def load_encoder() -> Any | None:
+class HFEncoder:
+    def __init__(self, model_name: str, device: str) -> None:
+        import torch  # type: ignore
+        from transformers import AutoModel, AutoTokenizer
+
+        self._torch = torch
+        self.model_name = str(model_name)
+        self.device = str(device or "cpu")
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+        self.model = AutoModel.from_pretrained(self.model_name)
+        self.model.to(self.device)
+        self.model.eval()
+
+    def encode(
+        self,
+        texts: list[str],
+        batch_size: int,
+        normalize_embeddings: bool = True,
+        convert_to_numpy: bool = True,
+        show_progress_bar: bool = True,
+    ) -> np.ndarray:
+        del show_progress_bar
+        parts: list[np.ndarray] = []
+        with self._torch.no_grad():
+            for start in range(0, len(texts), int(max(1, batch_size))):
+                batch = texts[start : start + int(max(1, batch_size))]
+                toks = self.tokenizer(
+                    batch,
+                    padding=True,
+                    truncation=True,
+                    max_length=int(EMBED_MAX_LENGTH),
+                    return_tensors="pt",
+                )
+                toks = {k: v.to(self.device) for k, v in toks.items()}
+                out = self.model(**toks)
+                last_hidden = out.last_hidden_state
+                attn = toks["attention_mask"].unsqueeze(-1).expand(last_hidden.size()).float()
+                summed = (last_hidden * attn).sum(dim=1)
+                denom = attn.sum(dim=1).clamp(min=1e-9)
+                emb = (summed / denom).detach().cpu().numpy().astype(np.float32)
+                if normalize_embeddings:
+                    norms = np.linalg.norm(emb, axis=1, keepdims=True)
+                    norms[norms == 0.0] = 1.0
+                    emb = (emb / norms).astype(np.float32)
+                parts.append(emb)
+        if not parts:
+            return np.zeros((0, 0), dtype=np.float32) if convert_to_numpy else np.zeros((0, 0), dtype=np.float32)
+        arr = np.concatenate(parts, axis=0).astype(np.float32, copy=False)
+        return arr if convert_to_numpy else arr
+
+
+def resolve_embed_device() -> str:
+    device = str(EMBED_DEVICE_OVERRIDE or "").strip().lower()
+    if device in {"cpu", "cuda"}:
+        return device
+    try:
+        import torch  # type: ignore
+
+        return "cuda" if bool(torch.cuda.is_available()) else "cpu"
+    except Exception:
+        return "cpu"
+
+
+def pick_embed_batch_size(device: str) -> int:
+    if device == "cuda":
+        return int(max(8, EMBED_BATCH_SIZE_GPU))
+    return int(max(8, EMBED_BATCH_SIZE_CPU))
+
+
+def load_encoder() -> tuple[Any | None, str | None, str, str]:
     if not bool(ENABLE_EMBED_MATCH):
-        return None
+        return None, None, resolve_embed_device(), "disabled"
+    device = resolve_embed_device()
     try:
         from sentence_transformers import SentenceTransformer
-    except Exception as e:
-        print(f"[WARN] sentence-transformers unavailable: {e}")
-        return None
+    except Exception:
+        SentenceTransformer = None  # type: ignore
     model_name = resolve_embedding_model()
+    if SentenceTransformer is not None:
+        try:
+            enc = SentenceTransformer(model_name, device=device)
+            print(
+                f"[INFO] embedding_model={model_name} backend=sentence_transformers "
+                f"device={device} batch_size={pick_embed_batch_size(device)}"
+            )
+            return enc, model_name, device, "sentence_transformers"
+        except Exception as e:
+            print(f"[WARN] sentence-transformers load failed: {e}")
     try:
-        enc = SentenceTransformer(model_name, device="cpu")
-        print(f"[INFO] embedding_model={model_name}")
-        return enc
+        enc = HFEncoder(model_name=model_name, device=device)
+        print(
+            f"[INFO] embedding_model={model_name} backend=transformers_mean_pool "
+            f"device={device} batch_size={pick_embed_batch_size(device)}"
+        )
+        return enc, model_name, device, "transformers_mean_pool"
     except Exception as e:
         print(f"[WARN] embedding model load failed: {e}")
-        return None
+        return None, model_name, device, "failed"
 
 
 def encode_texts(encoder: Any, texts: list[str], batch_size: int) -> np.ndarray:
@@ -353,7 +550,7 @@ def llm_extract_tag(sentence: str) -> dict[str, Any] | None:
 def load_business_scope(spark: SparkSession) -> DataFrame:
     business = (
         spark.read.parquet((PARQUET_BASE / "yelp_academic_dataset_business").as_posix())
-        .select("business_id", "state", "categories")
+        .select("business_id", "name", "city", "state", "categories", "stars", "review_count")
         .withColumn("business_id", F.col("business_id").cast("string"))
     )
     cat = F.lower(F.coalesce(F.col("categories"), F.lit("")))
@@ -365,7 +562,7 @@ def load_business_scope(spark: SparkSession) -> DataFrame:
         cond = (cond | cat.contains("food")) if cond is not None else cat.contains("food")
     if cond is not None:
         biz = biz.filter(cond)
-    biz = biz.select("business_id").distinct()
+    biz = biz.dropDuplicates(["business_id"])
     if RUN_PROFILE == "sample":
         biz = biz.orderBy(F.rand(RANDOM_SEED)).limit(int(SAMPLE_MAX_BUSINESSES))
     return biz.persist(StorageLevel.DISK_ONLY)
@@ -379,7 +576,7 @@ def load_reviews(spark: SparkSession, biz: DataFrame) -> DataFrame:
         .withColumn("business_id", F.col("business_id").cast("string"))
         .withColumn("ts", F.to_timestamp("date"))
         .filter(F.col("ts").isNotNull())
-        .join(biz, on="business_id", how="inner")
+        .join(biz.select("business_id"), on="business_id", how="inner")
         .select("review_id", "business_id", "ts", "text")
         .persist(StorageLevel.DISK_ONLY)
     )
@@ -492,8 +689,14 @@ def main() -> None:
     n_biz = int(biz.count())
     print(f"[INFO] run_profile={RUN_PROFILE} businesses={n_biz} reviews={n_reviews}")
 
-    encoder = load_encoder()
+    encoder, encoder_model_name, encoder_device, encoder_backend = load_encoder()
     enable_embed = encoder is not None
+    embed_batch_size = pick_embed_batch_size(encoder_device) if enable_embed else int(max(8, EMBED_BATCH_SIZE_CPU))
+    if enable_embed:
+        print(
+            f"[INFO] embedding_runtime model={encoder_model_name} backend={encoder_backend} "
+            f"device={encoder_device} batch_size={embed_batch_size} max_length={int(EMBED_MAX_LENGTH)}"
+        )
 
     agg: dict[tuple[str, str], dict[str, Any]] = {}
     embed_queue: list[dict[str, Any]] = []
@@ -595,9 +798,9 @@ def main() -> None:
         emitted_llm = 0
         if enable_embed and embed_queue:
             proto_texts = [normalize_space(" ; ".join(t.prototypes)) for t in TAG_DEFS]
-            proto_emb = encode_texts(encoder, proto_texts, batch_size=int(max(8, EMBED_BATCH_SIZE)))
+            proto_emb = encode_texts(encoder, proto_texts, batch_size=int(embed_batch_size))
             sent_texts = [r["sentence"] for r in embed_queue]
-            sent_emb = encode_texts(encoder, sent_texts, batch_size=int(max(8, EMBED_BATCH_SIZE)))
+            sent_emb = encode_texts(encoder, sent_texts, batch_size=int(embed_batch_size))
             sims = np.matmul(sent_emb, proto_emb.T).astype(np.float32)
             best_idx = np.argmax(sims, axis=1)
             best_sim = sims[np.arange(sims.shape[0]), best_idx]
@@ -767,6 +970,87 @@ def main() -> None:
         for row in feature_rows:
             wr.writerow(row)
 
+    dense_audit_meta: dict[str, Any] = {
+        "enabled": bool(ENABLE_DENSE_AUDIT),
+        "status": "disabled" if not bool(ENABLE_DENSE_AUDIT) else "skipped",
+        "requested_scopes": list(DENSE_AUDIT_SCOPE_NAMES),
+        "written_scopes": {},
+    }
+    if bool(ENABLE_DENSE_AUDIT):
+        try:
+            if not enable_embed:
+                raise RuntimeError("dense audit requires embedding encoder")
+            requested_scopes = [s for s in DENSE_AUDIT_SCOPE_NAMES if s in {"core", "semantic", "pos", "neg"}]
+            feature_by_biz = {str(row["business_id"]): row for row in feature_rows}
+            text_rows: list[dict[str, Any]] = []
+            texts_by_scope: dict[str, list[str]] = {scope: [] for scope in requested_scopes}
+            business_ids_by_scope: dict[str, list[str]] = {scope: [] for scope in requested_scopes}
+
+            for row in biz.select("business_id", "name", "city", "state", "categories", "stars", "review_count").toLocalIterator():
+                meta = {
+                    "business_id": str(row["business_id"]),
+                    "name": row["name"],
+                    "city": row["city"],
+                    "state": row["state"],
+                    "categories": row["categories"],
+                    "stars": row["stars"],
+                    "review_count": row["review_count"],
+                }
+                biz_id = str(meta["business_id"])
+                feature_row = feature_by_biz.get(biz_id)
+                out_row: dict[str, Any] = {"business_id": biz_id}
+                for scope in requested_scopes:
+                    txt = build_merchant_dense_text(meta, feature_row, scope)
+                    out_row[f"{scope}_text"] = txt
+                    if txt:
+                        texts_by_scope[scope].append(txt)
+                        business_ids_by_scope[scope].append(biz_id)
+                text_rows.append(out_row)
+
+            if text_rows:
+                with (out_dir / "merchant_dense_audit_texts.csv").open("w", newline="", encoding="utf-8") as f:
+                    fieldnames = ["business_id"] + [f"{scope}_text" for scope in requested_scopes]
+                    wr = csv.DictWriter(f, fieldnames=fieldnames)
+                    wr.writeheader()
+                    for row in text_rows:
+                        wr.writerow(row)
+
+            written_scopes: dict[str, Any] = {}
+            for scope in requested_scopes:
+                scope_texts = texts_by_scope.get(scope, [])
+                scope_ids = business_ids_by_scope.get(scope, [])
+                if scope_texts:
+                    scope_vecs = encode_texts(encoder, scope_texts, batch_size=int(embed_batch_size))
+                    write_dense_vector_npz(
+                        out_dir / f"merchant_dense_vectors_{scope}.npz",
+                        business_ids=scope_ids,
+                        vectors=scope_vecs,
+                        model_name=str(encoder_model_name or ""),
+                    )
+                    n_written = int(scope_vecs.shape[0])
+                else:
+                    n_written = 0
+                written_scopes[scope] = {
+                    "records_input": int(len(text_rows)),
+                    "records_nonempty": int(len(scope_texts)),
+                    "vectors_written": int(n_written),
+                }
+
+            dense_audit_meta = {
+                "enabled": True,
+                "status": "ok",
+                "requested_scopes": requested_scopes,
+                "text_rows": int(len(text_rows)),
+                "written_scopes": written_scopes,
+            }
+        except Exception as e:
+            dense_audit_meta = {
+                "enabled": True,
+                "status": "failed",
+                "requested_scopes": list(DENSE_AUDIT_SCOPE_NAMES),
+                "error": str(e),
+            }
+
     run_meta = {
         "run_id": run_id,
         "run_profile": RUN_PROFILE,
@@ -778,10 +1062,22 @@ def main() -> None:
         "n_item_features": int(len(feature_rows)),
         "enable_embed_match": bool(enable_embed),
         "enable_llm_match": bool(ENABLE_LLM_MATCH),
-        "embed_model": resolve_embedding_model() if enable_embed else "",
+        "embed_model": str(encoder_model_name or ""),
+        "embed_backend": str(encoder_backend or ""),
+        "embed_device": str(encoder_device or ""),
+        "embed_batch_size": int(embed_batch_size) if enable_embed else 0,
+        "embed_max_length": int(EMBED_MAX_LENGTH),
         "llm_model": LLM_MODEL if ENABLE_LLM_MATCH else "",
         "half_life_days": float(HALF_LIFE_DAYS),
         "embed_sim_min": float(EMBED_SIM_MIN),
+        "spark_master": str(SPARK_MASTER),
+        "spark_driver_memory": str(SPARK_DRIVER_MEMORY),
+        "spark_executor_memory": str(SPARK_EXECUTOR_MEMORY),
+        "spark_sql_shuffle_partitions": str(SPARK_SQL_SHUFFLE_PARTITIONS),
+        "spark_default_parallelism": str(SPARK_DEFAULT_PARALLELISM),
+        "enable_dense_audit": bool(ENABLE_DENSE_AUDIT),
+        "dense_audit_scope_names": list(DENSE_AUDIT_SCOPE_NAMES),
+        "dense_audit": dense_audit_meta,
     }
     write_json(out_dir / "run_meta.json", run_meta)
     print(f"[INFO] wrote {out_dir}")

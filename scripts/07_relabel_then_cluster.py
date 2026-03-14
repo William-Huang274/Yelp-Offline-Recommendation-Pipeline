@@ -16,6 +16,7 @@ import requests
 from pyspark import StorageLevel
 from pyspark.sql import DataFrame, SparkSession, functions as F
 from pyspark.sql.window import Window
+from pipeline.project_paths import env_or_project_path
 
 # Keep sentence-transformers on PyTorch path in mixed TensorFlow/Keras setups.
 os.environ.setdefault("USE_TF", "0")
@@ -51,7 +52,7 @@ NORMALIZE_EMBEDDINGS = True
 REUSE_EMBEDDINGS = True
 
 # Labeling config
-LABEL_CONFIG_DIR = Path(r"D:/5006 BDA project/config/labeling/food_service/v1")
+LABEL_CONFIG_DIR = env_or_project_path("LABEL_CONFIG_DIR", "config/labeling/food_service/v1")
 RELABEL_USE_LLM = True
 RELABEL_MAX_LLM_CALLS_SAMPLE = 230
 RELABEL_MAX_LLM_CALLS_FULL = 900
@@ -247,9 +248,10 @@ OLLAMA_JSON_RETRY_NUM_PREDICT = 192
 LLM_PROMPT_REVIEW_CHARS = 520
 LLM_REASON_SHORT_MAX_CHARS = 120
 
-BASE_DIR = Path(r"D:/5006 BDA project/data/parquet")
-OUTPUT_ROOT = Path(r"D:/5006 BDA project/data/output/07_embedding_cluster")
+BASE_DIR = env_or_project_path("PARQUET_BASE_DIR", "data/parquet")
+OUTPUT_ROOT = env_or_project_path("OUTPUT_07_ROOT_DIR", "data/output/07_embedding_cluster")
 RUN_TAG = "relabel_minilm"
+SPARK_LOCAL_DIR = env_or_project_path("SPARK_LOCAL_DIR", "data/spark-tmp")
 
 FULL_CONFIG = {
     "sample_fraction": 0.0,
@@ -484,7 +486,7 @@ def build_spark() -> SparkSession:
     driver_mem = os.environ.get("SPARK_DRIVER_MEMORY", "6g")
     executor_mem = os.environ.get("SPARK_EXECUTOR_MEMORY", driver_mem)
     local_master = os.environ.get("SPARK_LOCAL_MASTER", "local[2]")
-    local_dir = Path(r"D:/5006 BDA project/data/spark-tmp")
+    local_dir = SPARK_LOCAL_DIR
     local_dir.mkdir(parents=True, exist_ok=True)
 
     builder = (

@@ -12,14 +12,15 @@ import pandas as pd
 from pyspark.sql import DataFrame, SparkSession, functions as F
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import log_loss, roc_auc_score
+from pipeline.project_paths import env_or_project_path
 
 
 RUN_TAG = "stage09_profile_calibration"
 
 INPUT_09_RUN_DIR = os.getenv("INPUT_09_RUN_DIR", "").strip()
-INPUT_09_ROOT = Path(r"D:/5006 BDA project/data/output/09_candidate_fusion")
+INPUT_09_ROOT = env_or_project_path("INPUT_09_ROOT_DIR", "data/output/09_candidate_fusion")
 INPUT_09_SUFFIX = "_stage09_candidate_fusion"
-OUTPUT_ROOT = Path(r"D:/5006 BDA project/data/output/09_profile_calibration")
+OUTPUT_ROOT = env_or_project_path("OUTPUT_09_PROFILE_CALIB_ROOT_DIR", "data/output/09_profile_calibration")
 
 NEG_POS_RATIO = float(os.getenv("CALIB_NEG_POS_RATIO", "20").strip() or 20.0)
 HOLDOUT_USER_FRAC = float(os.getenv("CALIB_HOLDOUT_USER_FRAC", "0.2").strip() or 0.2)
@@ -38,7 +39,7 @@ FEATURE_NAMES = [
 
 
 def build_spark() -> SparkSession:
-    local_dir = Path(r"D:/5006 BDA project/data/spark-tmp")
+    local_dir = env_or_project_path("SPARK_LOCAL_DIR", "data/spark-tmp")
     local_dir.mkdir(parents=True, exist_ok=True)
     return (
         SparkSession.builder.appName("stage09-profile-calibration-train")
@@ -271,4 +272,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

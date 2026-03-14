@@ -14,7 +14,7 @@ import torch
 import torch.nn.functional as torch_f
 from datasets import DatasetDict, load_dataset
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
-from pipeline.project_paths import env_or_project_path
+from pipeline.project_paths import env_or_project_path, resolve_latest_run_pointer, write_latest_run_pointer
 
 # Keep transformers on torch path in mixed TensorFlow/Keras env.
 os.environ.setdefault("USE_TF", "0")
@@ -67,6 +67,7 @@ MANUAL_FP16_AUTOCAST = (
     os.getenv("QLORA_MANUAL_FP16_AUTOCAST", "false").strip().lower() == "true"
 )
 QWEN35_MAMBA_SSM_DTYPE = os.getenv("QLORA_QWEN35_MAMBA_SSM_DTYPE", "auto").strip().lower()
+ATTN_IMPLEMENTATION = os.getenv("QLORA_ATTN_IMPLEMENTATION", "").strip().lower()
 QWEN35_SAFE_KBIT_PREP = os.getenv("QLORA_QWEN35_SAFE_KBIT_PREP", "true").strip().lower() == "true"
 QWEN35_FORCE_FLOAT_PARAMS_BF16 = (
     os.getenv("QLORA_QWEN35_FORCE_FLOAT_PARAMS_BF16", "true").strip().lower() == "true"
@@ -83,6 +84,11 @@ MAX_SEQ_LEN = int(os.getenv("QLORA_MAX_SEQ_LEN", "768").strip() or 768)
 MAX_TRAIN_ROWS = int(os.getenv("QLORA_MAX_TRAIN_ROWS", "0").strip() or 0)
 MAX_EVAL_ROWS = int(os.getenv("QLORA_MAX_EVAL_ROWS", "0").strip() or 0)
 MAX_NEG_POS_RATIO = float(os.getenv("QLORA_MAX_NEG_POS_RATIO", "4.0").strip() or 4.0)
+TRAIN_SOURCE = os.getenv("QLORA_TRAIN_SOURCE", "default").strip().lower() or "default"
+NEG_REBALANCE_MODE = os.getenv("QLORA_NEG_REBALANCE_MODE", "random").strip().lower() or "random"
+MAX_TRAIN_USERS = int(os.getenv("QLORA_MAX_TRAIN_USERS", "0").strip() or 0)
+MAX_EVAL_USERS = int(os.getenv("QLORA_MAX_EVAL_USERS", "0").strip() or 0)
+USER_CAP_RANDOMIZED = os.getenv("QLORA_USER_CAP_RANDOMIZED", "true").strip().lower() == "true"
 SEED = int(os.getenv("QLORA_RANDOM_SEED", "42").strip() or 42)
 ENFORCE_STAGE09_GATE = os.getenv("QLORA_ENFORCE_STAGE09_GATE", "true").strip().lower() == "true"
 
@@ -95,12 +101,28 @@ GRAD_ACC = int(os.getenv("QLORA_GRAD_ACC", "16").strip() or 16)
 EVAL_BATCH_SIZE = int(os.getenv("QLORA_EVAL_BATCH_SIZE", str(BATCH_SIZE)).strip() or BATCH_SIZE)
 EVAL_STEPS = int(os.getenv("QLORA_EVAL_STEPS", "100").strip() or 100)
 SAVE_STEPS = int(os.getenv("QLORA_SAVE_STEPS", "100").strip() or 100)
+SAVE_TOTAL_LIMIT = int(os.getenv("QLORA_SAVE_TOTAL_LIMIT", "2").strip() or 2)
 LOGGING_STEPS = int(os.getenv("QLORA_LOGGING_STEPS", "20").strip() or 20)
+DATASET_MAP_NUM_PROC = int(os.getenv("QLORA_DATASET_MAP_NUM_PROC", "1").strip() or 1)
+FORMAT_MAP_NUM_PROC = int(os.getenv("QLORA_FORMAT_MAP_NUM_PROC", str(DATASET_MAP_NUM_PROC)).strip() or DATASET_MAP_NUM_PROC)
+TOKENIZE_MAP_NUM_PROC = int(os.getenv("QLORA_TOKENIZE_MAP_NUM_PROC", str(DATASET_MAP_NUM_PROC)).strip() or DATASET_MAP_NUM_PROC)
+DATALOADER_NUM_WORKERS = int(os.getenv("QLORA_DATALOADER_NUM_WORKERS", "0").strip() or 0)
+PAD_TO_MULTIPLE_OF = int(os.getenv("QLORA_PAD_TO_MULTIPLE_OF", "0").strip() or 0)
 GRADIENT_CHECKPOINTING = os.getenv("QLORA_GRADIENT_CHECKPOINTING", "true").strip().lower() == "true"
+LOSS_MODE = os.getenv("QLORA_LOSS_MODE", "full_ce").strip().lower() or "full_ce"
 
 TOKEN_AUDIT_ENABLED = os.getenv("QLORA_TOKEN_AUDIT_ENABLED", "true").strip().lower() == "true"
 TOKEN_AUDIT_MAX_ROWS = int(os.getenv("QLORA_TOKEN_AUDIT_MAX_ROWS", "4000").strip() or 4000)
 TOKEN_AUDIT_BATCH_SIZE = int(os.getenv("QLORA_TOKEN_AUDIT_BATCH_SIZE", "256").strip() or 256)
+CHECKPOINT_AUDIT_ENABLED = os.getenv("QLORA_CHECKPOINT_AUDIT_ENABLED", "true").strip().lower() == "true"
+CHECKPOINT_AUDIT_PROFILE = os.getenv("QLORA_CHECKPOINT_AUDIT_PROFILE", "smoke").strip().lower() or "smoke"
+CHECKPOINT_AUDIT_PROMPT_MODE_RAW = os.getenv("QLORA_CHECKPOINT_AUDIT_PROMPT_MODE", "").strip().lower()
+CHECKPOINT_AUDIT_INVERT_PROB = os.getenv("QLORA_CHECKPOINT_AUDIT_INVERT_PROB", "true").strip().lower() == "true"
+CHECKPOINT_AUDIT_USE_EVAL_SPLIT = os.getenv("QLORA_CHECKPOINT_AUDIT_USE_EVAL_SPLIT", "true").strip().lower() == "true"
+CHECKPOINT_AUDIT_MAX_USERS = int(os.getenv("QLORA_CHECKPOINT_AUDIT_MAX_USERS", "64").strip() or 64)
+CHECKPOINT_AUDIT_MAX_ROWS = int(os.getenv("QLORA_CHECKPOINT_AUDIT_MAX_ROWS", "8192").strip() or 8192)
+
+BINARY_CLASS_TOKEN_IDS: tuple[int, int] | None = None
 
 
 def parse_bucket_override(raw: str) -> list[int]:
@@ -130,17 +152,44 @@ def resolve_stage11_dataset_run() -> Path:
         if not p.exists():
             raise FileNotFoundError(f"INPUT_11_RUN_DIR not found: {p}")
         return p
+    pinned = resolve_latest_run_pointer("stage11_1_qlora_build_dataset")
+    if pinned is not None:
+        return pinned
     return pick_latest_run(INPUT_11_ROOT, INPUT_11_SUFFIX)
 
 
-def collect_json_files(source_11: Path, buckets: list[int]) -> tuple[list[str], list[str], dict[str, Any]]:
+def collect_json_files(
+    source_11: Path,
+    buckets: list[int],
+    train_source: str,
+) -> tuple[list[str], list[str], dict[str, Any]]:
+    source_key = str(train_source or "default").strip().lower()
+    if source_key == "default":
+        train_dir_name = "train_json"
+        eval_dir_name = "eval_json"
+    elif source_key == "rich_sft":
+        train_dir_name = "rich_sft_train_json"
+        eval_dir_name = "rich_sft_eval_json"
+    elif source_key == "pairwise_pool":
+        train_dir_name = "pairwise_pool_train_json"
+        eval_dir_name = "pairwise_pool_eval_json"
+    else:
+        raise ValueError(
+            "unsupported QLORA_TRAIN_SOURCE="
+            f"{train_source}. expected one of: default, rich_sft, pairwise_pool"
+        )
     train_files: list[str] = []
     eval_files: list[str] = []
-    summary: dict[str, Any] = {"buckets": []}
+    summary: dict[str, Any] = {
+        "train_source": source_key,
+        "train_dir_name": train_dir_name,
+        "eval_dir_name": eval_dir_name,
+        "buckets": [],
+    }
     for b in buckets:
         bdir = source_11 / f"bucket_{b}"
-        train_dir = bdir / "train_json"
-        eval_dir = bdir / "eval_json"
+        train_dir = bdir / train_dir_name
+        eval_dir = bdir / eval_dir_name
         if not bdir.exists():
             continue
         b_train = sorted([p.as_posix() for p in train_dir.glob("*.json")]) if train_dir.exists() else []
@@ -153,10 +202,15 @@ def collect_json_files(source_11: Path, buckets: list[int]) -> tuple[list[str], 
                 "train_files": len(b_train),
                 "eval_files": len(b_eval),
                 "bucket_dir": str(bdir),
+                "train_dir": str(train_dir),
+                "eval_dir": str(eval_dir),
             }
         )
     if not train_files:
-        raise RuntimeError(f"no train json files found under {source_11} for buckets={buckets}")
+        raise RuntimeError(
+            "no train json files found under "
+            f"{source_11} for buckets={buckets} train_source={source_key}"
+        )
     return train_files, eval_files, summary
 
 
@@ -172,7 +226,82 @@ def maybe_cap_rows(ds: Any, max_rows: int, seed: int) -> Any:
     return ds.select(idx)
 
 
-def rebalance_negatives(ds: Any, max_neg_pos_ratio: float, seed: int) -> Any:
+def maybe_cap_users(ds: Any, max_users: int, seed: int, randomized: bool) -> Any:
+    if int(max_users) <= 0:
+        return ds
+    cols = list(getattr(ds, "column_names", []))
+    if "user_idx" not in cols:
+        return ds
+    raw_users = [str(x) for x in ds["user_idx"]]
+    if len(raw_users) <= 0:
+        return ds
+    seen: dict[str, None] = {}
+    unique_users = [u for u in raw_users if not (u in seen or seen.setdefault(u, None))]
+    if len(unique_users) <= int(max_users):
+        return ds
+    chosen = list(unique_users)
+    if randomized:
+        rng = random.Random(int(seed))
+        rng.shuffle(chosen)
+    chosen = chosen[: int(max_users)]
+    chosen_set = set(chosen)
+    keep = [i for i, user_key in enumerate(raw_users) if user_key in chosen_set]
+    return ds.select(keep)
+
+
+def build_checkpoint_audit_manifest(
+    out_dir: Path,
+    source_11: Path,
+    ds_meta: dict[str, Any],
+    buckets: list[int],
+) -> dict[str, Any]:
+    trainer_out_dir = out_dir / "trainer_output"
+    cp_dirs = (
+        sorted(
+            [d for d in trainer_out_dir.iterdir() if d.is_dir() and d.name.startswith("checkpoint-")],
+            key=lambda d: int(d.name.split("-")[1]),
+        )
+        if trainer_out_dir.exists()
+        else []
+    )
+    audit_prompt_mode = (
+        CHECKPOINT_AUDIT_PROMPT_MODE_RAW
+        or str(ds_meta.get("prompt_mode", "")).strip().lower()
+        or ("full_lite" if TRAIN_SOURCE == "rich_sft" else "full")
+    )
+    checkpoints = [
+        {
+            "name": d.name,
+            "step": int(d.name.split("-")[1]),
+            "path": str(d),
+        }
+        for d in cp_dirs
+    ]
+    return {
+        "enabled": bool(CHECKPOINT_AUDIT_ENABLED),
+        "selection_goal": "rank-side smoke audit for stage11_3; do not pick checkpoints by eval_loss alone",
+        "source_stage11_dataset_run": str(source_11),
+        "source_stage09_run": str(ds_meta.get("source_stage09_run", "")).strip(),
+        "buckets": [int(b) for b in buckets],
+        "train_source": str(TRAIN_SOURCE),
+        "prompt_mode": str(audit_prompt_mode),
+        "invert_prob": bool(CHECKPOINT_AUDIT_INVERT_PROB),
+        "eval_profile": str(CHECKPOINT_AUDIT_PROFILE),
+        "use_eval_split": bool(CHECKPOINT_AUDIT_USE_EVAL_SPLIT),
+        "max_users_per_bucket": int(CHECKPOINT_AUDIT_MAX_USERS),
+        "max_rows_per_bucket": int(CHECKPOINT_AUDIT_MAX_ROWS),
+        "save_steps": int(SAVE_STEPS),
+        "save_total_limit": int(SAVE_TOTAL_LIMIT),
+        "available_checkpoints": checkpoints,
+        "final_adapter_path": str(out_dir / "adapter"),
+        "notes": [
+            "Use the same prompt family for checkpoint smoke audit and final full-cohort eval.",
+            "Increase QLORA_SAVE_TOTAL_LIMIT if you want to keep more checkpoints for rank-side selection.",
+        ],
+    }
+
+
+def rebalance_negatives_random(ds: Any, max_neg_pos_ratio: float, seed: int) -> Any:
     if float(max_neg_pos_ratio) <= 0:
         return ds
     cols = list(getattr(ds, "column_names", []))
@@ -192,6 +321,89 @@ def rebalance_negatives(ds: Any, max_neg_pos_ratio: float, seed: int) -> Any:
     return ds.select(keep)
 
 
+def rebalance_negatives_tier_preserve(ds: Any, max_neg_pos_ratio: float, seed: int) -> Any:
+    if float(max_neg_pos_ratio) <= 0:
+        return ds
+    cols = list(getattr(ds, "column_names", []))
+    if "label" not in cols or "neg_tier" not in cols:
+        return ds
+    labels = np.asarray(ds["label"], dtype=np.int32)
+    pos_idx = np.where(labels == 1)[0]
+    neg_idx = np.where(labels == 0)[0]
+    if len(pos_idx) == 0 or len(neg_idx) == 0:
+        return ds
+    target_neg = int(min(len(neg_idx), max(1, int(len(pos_idx) * float(max_neg_pos_ratio)))))
+    if target_neg >= len(neg_idx):
+        return ds
+
+    raw_tiers = np.asarray([str(x or "") for x in ds["neg_tier"]], dtype=object)
+    neg_tiers = raw_tiers[neg_idx]
+    tier_keys = sorted({str(x or "") for x in neg_tiers.tolist()})
+    if not tier_keys:
+        return rebalance_negatives_random(ds, max_neg_pos_ratio, seed)
+
+    neg_groups: dict[str, np.ndarray] = {
+        tier: neg_idx[np.where(neg_tiers == tier)[0]]
+        for tier in tier_keys
+    }
+    total_neg = float(len(neg_idx))
+    quotas: dict[str, int] = {}
+    remainders: list[tuple[float, str]] = []
+    allocated = 0
+    for tier, tier_indices in neg_groups.items():
+        raw_quota = float(target_neg) * (float(len(tier_indices)) / total_neg)
+        quota = int(np.floor(raw_quota))
+        quota = min(quota, int(len(tier_indices)))
+        quotas[tier] = quota
+        allocated += quota
+        remainders.append((raw_quota - float(quota), tier))
+
+    remaining = int(target_neg - allocated)
+    if remaining > 0:
+        for _, tier in sorted(remainders, key=lambda x: (-x[0], x[1])):
+            spare = int(len(neg_groups[tier])) - int(quotas[tier])
+            if spare <= 0:
+                continue
+            take = min(spare, remaining)
+            quotas[tier] += int(take)
+            remaining -= int(take)
+            if remaining <= 0:
+                break
+
+    rng = np.random.default_rng(int(seed))
+    picked_groups: list[np.ndarray] = []
+    for tier, tier_indices in neg_groups.items():
+        quota = int(quotas.get(tier, 0))
+        if quota <= 0:
+            continue
+        if quota >= int(len(tier_indices)):
+            picked_groups.append(np.asarray(tier_indices, dtype=np.int64))
+            continue
+        tier_pick = rng.choice(tier_indices, size=quota, replace=False)
+        picked_groups.append(np.asarray(tier_pick, dtype=np.int64))
+
+    if not picked_groups:
+        return ds.select(pos_idx.astype(np.int64).tolist())
+
+    neg_pick = np.sort(np.concatenate(picked_groups)).astype(np.int64)
+    keep = np.sort(np.concatenate([pos_idx, neg_pick])).astype(np.int64).tolist()
+    return ds.select(keep)
+
+
+def rebalance_negatives(ds: Any, mode: str, max_neg_pos_ratio: float, seed: int) -> Any:
+    key = str(mode or "random").strip().lower()
+    if key in {"", "random"}:
+        return rebalance_negatives_random(ds, max_neg_pos_ratio, seed)
+    if key in {"off", "none", "disabled"}:
+        return ds
+    if key in {"tier_preserve", "tier-aware", "tier"}:
+        return rebalance_negatives_tier_preserve(ds, max_neg_pos_ratio, seed)
+    raise ValueError(
+        "unsupported QLORA_NEG_REBALANCE_MODE="
+        f"{mode}. expected one of: random, off, tier_preserve"
+    )
+
+
 def binary_label_stats(ds: Any) -> dict[str, int]:
     cols = list(getattr(ds, "column_names", []))
     if "label" not in cols:
@@ -199,7 +411,10 @@ def binary_label_stats(ds: Any) -> dict[str, int]:
     labels = np.array(ds["label"], dtype=np.int32)
     pos = int((labels == 1).sum())
     neg = int((labels == 0).sum())
-    return {"rows": int(len(ds)), "pos": pos, "neg": neg}
+    out = {"rows": int(len(ds)), "pos": pos, "neg": neg}
+    if "user_idx" in cols:
+        out["users"] = int(len({str(x) for x in ds["user_idx"]}))
+    return out
 
 
 
@@ -354,6 +569,26 @@ def _build_text(prompt: str, target: str) -> str:
     return f"{p} {t}"
 
 
+def resolve_binary_class_token_ids(tokenizer: Any) -> tuple[int, int] | None:
+    def _single_token_id(text: str) -> int | None:
+        try:
+            ids = tokenizer(text, add_special_tokens=False)["input_ids"]
+        except Exception:
+            return None
+        if len(ids) != 1:
+            return None
+        return int(ids[0])
+
+    yes_id = _single_token_id(" YES")
+    no_id = _single_token_id(" NO")
+    if yes_id is None or no_id is None:
+        yes_id = _single_token_id("YES")
+        no_id = _single_token_id("NO")
+    if yes_id is None or no_id is None or yes_id == no_id:
+        return None
+    return (int(yes_id), int(no_id))
+
+
 def seed_everything(seed: int) -> None:
     random.seed(seed)
     np.random.seed(seed)
@@ -407,6 +642,9 @@ def build_weighted_causal_lm_collator(tokenizer: Any) -> Any:
 
     def _collate(features: list[dict[str, Any]]) -> dict[str, Any]:
         max_len = max(int(len(f["input_ids"])) for f in features) if features else 0
+        if PAD_TO_MULTIPLE_OF > 1 and max_len > 0:
+            rounded_len = ((int(max_len) + int(PAD_TO_MULTIPLE_OF) - 1) // int(PAD_TO_MULTIPLE_OF)) * int(PAD_TO_MULTIPLE_OF)
+            max_len = min(int(MAX_SEQ_LEN), int(rounded_len))
         input_ids: list[list[int]] = []
         attention_mask: list[list[int]] = []
         labels: list[list[int]] = []
@@ -483,11 +721,30 @@ class WeightedCausalLmTrainer(Trainer):
         # supervised logits to fp32 is cheap and avoids fp16 CE instability.
         valid_logits = shift_logits[valid_mask].float()
         valid_targets = shift_labels[valid_mask]
-        token_loss = torch_f.cross_entropy(
-            valid_logits,
-            valid_targets,
-            reduction="none",
-        )
+        use_binary_yesno = bool(LOSS_MODE == "binary_yesno" and BINARY_CLASS_TOKEN_IDS is not None)
+        if use_binary_yesno:
+            yes_id, no_id = BINARY_CLASS_TOKEN_IDS or (-1, -1)
+            target_ok = valid_targets.eq(int(yes_id)) | valid_targets.eq(int(no_id))
+            if bool(target_ok.all()):
+                binary_logits = valid_logits[:, [int(no_id), int(yes_id)]]
+                binary_targets = valid_targets.eq(int(yes_id)).long()
+                token_loss = torch_f.cross_entropy(
+                    binary_logits,
+                    binary_targets,
+                    reduction="none",
+                )
+            else:
+                token_loss = torch_f.cross_entropy(
+                    valid_logits,
+                    valid_targets,
+                    reduction="none",
+                )
+        else:
+            token_loss = torch_f.cross_entropy(
+                valid_logits,
+                valid_targets,
+                reduction="none",
+            )
         sample_ids = valid_mask.nonzero(as_tuple=False)[:, 0]
         sample_assign = torch_f.one_hot(
             sample_ids,
@@ -516,9 +773,11 @@ class WeightedCausalLmTrainer(Trainer):
 
 
 def main() -> None:
+    global BINARY_CLASS_TOKEN_IDS
     seed_everything(SEED)
     source_11 = resolve_stage11_dataset_run()
     buckets = parse_bucket_override(BUCKETS_OVERRIDE) or [10]
+    ds_meta: dict[str, Any] = {}
     if ENFORCE_STAGE09_GATE:
         ds_meta_path = source_11 / "run_meta.json"
         if not ds_meta_path.exists():
@@ -548,6 +807,36 @@ def main() -> None:
         print("[WARN] QLORA_MAX_TRAIN_ROWS=0 uses uncapped train rows and may run much longer.")
     if int(MAX_EVAL_ROWS) == 0:
         print("[WARN] QLORA_MAX_EVAL_ROWS=0 uses uncapped eval rows and may slow periodic eval.")
+    if TRAIN_SOURCE not in {"default", "rich_sft", "pairwise_pool"}:
+        raise RuntimeError(
+            "unsupported QLORA_TRAIN_SOURCE="
+            f"{TRAIN_SOURCE}. expected one of: default, rich_sft, pairwise_pool"
+        )
+    if NEG_REBALANCE_MODE not in {"random", "off", "none", "disabled", "tier_preserve", "tier-aware", "tier"}:
+        raise RuntimeError(
+            "unsupported QLORA_NEG_REBALANCE_MODE="
+            f"{NEG_REBALANCE_MODE}. expected one of: random, off, tier_preserve"
+        )
+    if LOSS_MODE not in {"full_ce", "binary_yesno"}:
+        raise RuntimeError(
+            "unsupported QLORA_LOSS_MODE="
+            f"{LOSS_MODE}. expected one of: full_ce, binary_yesno"
+        )
+    if TRAIN_SOURCE == "pairwise_pool" and int(MAX_TRAIN_ROWS) > 0:
+        raise RuntimeError(
+            "pairwise_pool + QLORA_MAX_TRAIN_ROWS breaks user-level candidate structure. "
+            "Use QLORA_MAX_TRAIN_USERS instead."
+        )
+    if TRAIN_SOURCE == "pairwise_pool" and int(MAX_EVAL_ROWS) > 0:
+        raise RuntimeError(
+            "pairwise_pool + QLORA_MAX_EVAL_ROWS breaks eval-side user structure. "
+            "Use QLORA_MAX_EVAL_USERS instead."
+        )
+    if TRAIN_SOURCE == "pairwise_pool" and NEG_REBALANCE_MODE == "random":
+        raise RuntimeError(
+            "pairwise_pool + random negative rebalance destroys the upstream tier structure. "
+            "Use QLORA_NEG_REBALANCE_MODE=off or tier_preserve."
+        )
     if ENFORCE_REQUIRED_BASE_MODEL and BASE_MODEL != REQUIRED_BASE_MODEL:
         raise RuntimeError(
             "base model mismatch: "
@@ -568,18 +857,21 @@ def main() -> None:
         out_dir = OUTPUT_ROOT / f"{run_id}_{RUN_TAG}"
         out_dir.mkdir(parents=True, exist_ok=True)
 
-    train_files, eval_files, summary = collect_json_files(source_11, buckets)
+    train_files, eval_files, summary = collect_json_files(source_11, buckets, TRAIN_SOURCE)
     data_files: dict[str, list[str]] = {"train": train_files}
     if eval_files:
         data_files["eval"] = eval_files
 
     ds: DatasetDict = load_dataset("json", data_files=data_files)  # type: ignore[assignment]
     before_stats = binary_label_stats(ds["train"])
-    ds["train"] = rebalance_negatives(ds["train"], MAX_NEG_POS_RATIO, SEED)
+    ds["train"] = maybe_cap_users(ds["train"], MAX_TRAIN_USERS, SEED, USER_CAP_RANDOMIZED)
+    after_user_cap_stats = binary_label_stats(ds["train"])
+    ds["train"] = rebalance_negatives(ds["train"], NEG_REBALANCE_MODE, MAX_NEG_POS_RATIO, SEED)
     after_rebalance_stats = binary_label_stats(ds["train"])
     ds["train"] = maybe_cap_rows(ds["train"], MAX_TRAIN_ROWS, SEED)
     after_cap_stats = binary_label_stats(ds["train"])
     if "eval" in ds:
+        ds["eval"] = maybe_cap_users(ds["eval"], MAX_EVAL_USERS, SEED + 17, USER_CAP_RANDOMIZED)
         ds["eval"] = maybe_cap_rows(ds["eval"], MAX_EVAL_ROWS, SEED + 1)
 
     def _fmt(row: dict[str, Any]) -> dict[str, Any]:
@@ -593,18 +885,37 @@ def main() -> None:
             w = 1.0
         return {"text": _build_text(prompt, target), "sample_weight": float(w)}
 
-    ds = ds.map(_fmt, remove_columns=[c for c in ds["train"].column_names if c not in ("text", "sample_weight")])
+    format_map_kwargs: dict[str, Any] = {}
+    if FORMAT_MAP_NUM_PROC > 1:
+        format_map_kwargs["num_proc"] = FORMAT_MAP_NUM_PROC
+    ds = ds.map(
+        _fmt,
+        remove_columns=[c for c in ds["train"].column_names if c not in ("text", "sample_weight")],
+        **format_map_kwargs,
+    )
     print(
         "[DATA] train_stats "
+        f"source={TRAIN_SOURCE} "
         f"before={before_stats} "
+        f"after_user_cap={after_user_cap_stats} "
         f"after_rebalance={after_rebalance_stats} "
-        f"after_cap={after_cap_stats}"
+        f"after_cap={after_cap_stats} "
+        f"neg_rebalance_mode={NEG_REBALANCE_MODE}"
     )
 
     tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, trust_remote_code=TRUST_REMOTE_CODE)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token if tokenizer.eos_token else tokenizer.unk_token
     tokenizer.padding_side = "right"
+    if LOSS_MODE == "binary_yesno":
+        BINARY_CLASS_TOKEN_IDS = resolve_binary_class_token_ids(tokenizer)
+        if BINARY_CLASS_TOKEN_IDS is None:
+            print("[WARN] binary_yesno loss requested but YES/NO did not resolve to single-token ids; fallback to full_ce")
+        else:
+            yes_id, no_id = BINARY_CLASS_TOKEN_IDS
+            print(f"[CONFIG] binary_yesno_token_ids yes={yes_id} no={no_id}")
+    else:
+        BINARY_CLASS_TOKEN_IDS = None
 
     def _tok(row: dict[str, Any]) -> dict[str, Any]:
         text = row["text"]
@@ -619,7 +930,17 @@ def main() -> None:
         full["sample_weight"] = float(row.get("sample_weight", 1.0))
         return full
 
-    ds_tok = ds.map(_tok, remove_columns=ds["train"].column_names)
+    token_map_kwargs: dict[str, Any] = {}
+    if TOKENIZE_MAP_NUM_PROC > 1:
+        token_map_kwargs["num_proc"] = TOKENIZE_MAP_NUM_PROC
+    ds_tok = ds.map(_tok, remove_columns=ds["train"].column_names, **token_map_kwargs)
+    print(
+        "[CONFIG] pipeline_workers "
+        f"format_map={max(1, FORMAT_MAP_NUM_PROC)} "
+        f"tokenize_map={max(1, TOKENIZE_MAP_NUM_PROC)} "
+        f"dataloader={max(0, DATALOADER_NUM_WORKERS)} "
+        f"pad_to_multiple_of={PAD_TO_MULTIPLE_OF}"
+    )
 
     token_audit: dict[str, Any] = {"enabled": False}
     token_audit_path = out_dir / "token_length_audit.json"
@@ -658,13 +979,16 @@ def main() -> None:
         )
     print(
         f"[CONFIG] has_cuda={has_cuda} use_4bit={USE_4BIT} "
-        f"bnb_config={bool(bnb_config is not None)} compute_dtype={compute_dtype}"
+        f"bnb_config={bool(bnb_config is not None)} compute_dtype={compute_dtype} "
+        f"attn_implementation={(ATTN_IMPLEMENTATION or '<default>')}"
     )
 
     model_kwargs: dict[str, Any] = {
         "trust_remote_code": TRUST_REMOTE_CODE,
         "low_cpu_mem_usage": LOW_CPU_MEM_USAGE,
     }
+    if ATTN_IMPLEMENTATION and ATTN_IMPLEMENTATION not in {"auto", "default"}:
+        model_kwargs["attn_implementation"] = ATTN_IMPLEMENTATION
     if has_cuda:
         model_kwargs["device_map"] = DEVICE_MAP
         max_memory: dict[Any, str] = {}
@@ -772,6 +1096,11 @@ def main() -> None:
     model.print_trainable_parameters()
 
     has_eval = "eval" in ds_tok and len(ds_tok["eval"]) > 0
+    if CHECKPOINT_AUDIT_ENABLED and int(SAVE_TOTAL_LIMIT) < 3:
+        print(
+            "[WARN] checkpoint audit enabled with SAVE_TOTAL_LIMIT<3; "
+            "increase QLORA_SAVE_TOTAL_LIMIT if you want more rank-side checkpoint coverage."
+        )
     args = TrainingArguments(
         output_dir=(out_dir / "trainer_output").as_posix(),
         per_device_train_batch_size=BATCH_SIZE,
@@ -784,11 +1113,11 @@ def main() -> None:
         logging_steps=LOGGING_STEPS,
         eval_steps=EVAL_STEPS if has_eval else None,
         save_steps=SAVE_STEPS,
-        save_total_limit=2,
+        save_total_limit=SAVE_TOTAL_LIMIT,
         bf16=bool(has_cuda and compute_dtype == torch.bfloat16),
         fp16=bool(has_cuda and compute_dtype == torch.float16 and not MANUAL_FP16_AUTOCAST),
         report_to=[],
-        dataloader_num_workers=0,
+        dataloader_num_workers=max(0, DATALOADER_NUM_WORKERS),
         remove_unused_columns=False,
         gradient_checkpointing=GRADIENT_CHECKPOINTING,
         eval_strategy="steps" if has_eval else "no",
@@ -840,11 +1169,18 @@ def main() -> None:
     adapter_dir.mkdir(parents=True, exist_ok=True)
     model.save_pretrained(adapter_dir.as_posix())
     tokenizer.save_pretrained(adapter_dir.as_posix())
+    checkpoint_audit_manifest = build_checkpoint_audit_manifest(out_dir, source_11, ds_meta, buckets)
+    checkpoint_audit_manifest_path = out_dir / "checkpoint_audit_manifest.json"
+    checkpoint_audit_manifest_path.write_text(
+        json.dumps(checkpoint_audit_manifest, ensure_ascii=True, indent=2),
+        encoding="utf-8",
+    )
 
     payload = {
         "run_id": run_id,
         "run_tag": RUN_TAG,
         "source_stage11_dataset_run": str(source_11),
+        "source_stage09_run": str(ds_meta.get("source_stage09_run", "")).strip(),
         "resumed_from_dir": QLORA_RESUME_RUN_DIR if QLORA_RESUME_RUN_DIR else None,
         "resumed_checkpoint": resume_checkpoint if QLORA_RESUME_RUN_DIR else None,
         "buckets": buckets,
@@ -861,24 +1197,49 @@ def main() -> None:
         "token_audit_enabled": bool(TOKEN_AUDIT_ENABLED),
         "token_audit_file": (str(token_audit_path) if TOKEN_AUDIT_ENABLED else ""),
         "token_audit_summary": token_audit,
+        "checkpoint_audit_manifest_file": str(checkpoint_audit_manifest_path),
+        "checkpoint_audit_manifest": checkpoint_audit_manifest,
         "config": {
+            "train_source": str(TRAIN_SOURCE),
+            "neg_rebalance_mode": str(NEG_REBALANCE_MODE),
+            "loss_mode": str(LOSS_MODE),
             "max_seq_len": int(MAX_SEQ_LEN),
+            "max_train_users": int(MAX_TRAIN_USERS),
+            "max_eval_users": int(MAX_EVAL_USERS),
+            "user_cap_randomized": bool(USER_CAP_RANDOMIZED),
             "epochs": float(EPOCHS),
             "lr": float(LR),
             "batch_size": int(BATCH_SIZE),
             "eval_batch_size": int(EVAL_BATCH_SIZE),
             "grad_acc": int(GRAD_ACC),
+            "eval_steps": int(EVAL_STEPS),
+            "save_steps": int(SAVE_STEPS),
+            "save_total_limit": int(SAVE_TOTAL_LIMIT),
             "lora_r": int(LORA_R),
             "lora_alpha": int(LORA_ALPHA),
             "lora_dropout": float(LORA_DROPOUT),
             "target_modules": target_modules,
+            "attn_implementation": str(ATTN_IMPLEMENTATION or ""),
         },
         "data_files": summary,
         "adapter_dir": str(adapter_dir),
     }
     (out_dir / "run_meta.json").write_text(json.dumps(payload, ensure_ascii=True, indent=2), encoding="utf-8")
+    pointer_path = write_latest_run_pointer(
+        "stage11_2_qlora_train",
+        out_dir,
+        extra={
+            "run_tag": RUN_TAG,
+            "source_stage11_dataset_run": str(source_11),
+            "source_stage09_run": str(ds_meta.get("source_stage09_run", "")).strip(),
+            "base_model": BASE_MODEL,
+            "adapter_dir": str(adapter_dir),
+        },
+    )
     print(f"[DONE] qlora adapter saved to: {adapter_dir}")
     print(f"[DONE] run_meta: {out_dir / 'run_meta.json'}")
+    print(f"[DONE] checkpoint_audit_manifest: {checkpoint_audit_manifest_path}")
+    print(f"[DONE] updated latest pointer: {pointer_path}")
 
 
 if __name__ == "__main__":

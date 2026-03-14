@@ -12,7 +12,6 @@ import json
 import os
 import random
 import re
-from collections import defaultdict
 from datetime import datetime
 from itertools import product as itertools_product
 from pathlib import Path
@@ -23,11 +22,17 @@ import torch
 from datasets import Dataset, DatasetDict, load_dataset
 from peft import LoraConfig, PeftModel, get_peft_model, prepare_model_for_kbit_training
 from pipeline.project_paths import env_or_project_path
+from pipeline.stage11_pairwise import (
+    build_dpo_pairs,
+    build_rich_sft_dpo_pairs,
+    pair_records_for_training,
+)
 
 os.environ.setdefault("USE_TF", "0")
 os.environ.setdefault("TRANSFORMERS_NO_TF", "1")
 
 from transformers import (
+    AutoConfig,
     AutoModelForCausalLM,
     AutoTokenizer,
     BitsAndBytesConfig,
@@ -44,7 +49,7 @@ except ImportError:
 
 
 # ------------------------------- config -------------------------------
-RUN_TAG = "stage11_2_dpo_train"
+RUN_TAG = os.getenv("RUN_TAG", "stage11_2_dpo_train").strip() or "stage11_2_dpo_train"
 QLORA_RESUME_RUN_DIR = os.getenv("QLORA_RESUME_RUN_DIR", "").strip()
 QLORA_SFT_ADAPTER_DIR = os.getenv("QLORA_SFT_ADAPTER_DIR", "").strip()
 INPUT_11_RUN_DIR = os.getenv("INPUT_11_RUN_DIR", "").strip()
@@ -71,8 +76,12 @@ LORA_TARGET_MODULES = os.getenv(
 ).strip()
 
 MAX_SEQ_LEN = int(os.getenv("QLORA_MAX_SEQ_LEN", "768").strip() or 768)
+PAD_TO_MULTIPLE_OF = int(os.getenv("QLORA_PAD_TO_MULTIPLE_OF", "0").strip() or 0)
 SEED = int(os.getenv("QLORA_RANDOM_SEED", "42").strip() or 42)
 ENFORCE_STAGE09_GATE = os.getenv("QLORA_ENFORCE_STAGE09_GATE", "false").strip().lower() == "true"
+QWEN35_SAFE_KBIT_PREP = os.getenv("QLORA_QWEN35_SAFE_KBIT_PREP", "true").strip().lower() == "true"
+QWEN35_FORCE_FLOAT_PARAMS_BF16 = os.getenv("QLORA_QWEN35_FORCE_FLOAT_PARAMS_BF16", "true").strip().lower() == "true"
+QWEN35_MAMBA_SSM_DTYPE = os.getenv("QLORA_QWEN35_MAMBA_SSM_DTYPE", "auto").strip()
 
 EPOCHS = float(os.getenv("QLORA_EPOCHS", "1.0").strip() or 1.0)
 LR = float(os.getenv("QLORA_LR", "5e-5").strip() or 5e-5)
@@ -82,27 +91,167 @@ BATCH_SIZE = int(os.getenv("QLORA_BATCH_SIZE", "1").strip() or 1)
 GRAD_ACC = int(os.getenv("QLORA_GRAD_ACC", "8").strip() or 8)
 EVAL_STEPS = int(os.getenv("QLORA_EVAL_STEPS", "1000").strip() or 1000)
 SAVE_STEPS = int(os.getenv("QLORA_SAVE_STEPS", "1000").strip() or 1000)
+SAVE_TOTAL_LIMIT = int(os.getenv("QLORA_SAVE_TOTAL_LIMIT", "2").strip() or 2)
 LOGGING_STEPS = int(os.getenv("QLORA_LOGGING_STEPS", "10").strip() or 10)
 GRADIENT_CHECKPOINTING = os.getenv("QLORA_GRADIENT_CHECKPOINTING", "true").strip().lower() == "true"
 
 # DPO-specific
 DPO_BETA = float(os.getenv("QLORA_DPO_BETA", "0.1").strip() or 0.1)
 DPO_MAX_PAIRS_PER_USER = int(os.getenv("QLORA_DPO_MAX_PAIRS", "8").strip() or 8)
+DPO_TRUE_MAX_PAIRS_PER_USER = int(os.getenv("QLORA_DPO_TRUE_MAX_PAIRS", "2").strip() or 2)
+DPO_VALID_MAX_PAIRS_PER_USER = int(os.getenv("QLORA_DPO_VALID_MAX_PAIRS", "1").strip() or 1)
+DPO_HIST_MAX_PAIRS_PER_USER = int(os.getenv("QLORA_DPO_HIST_MAX_PAIRS", "1").strip() or 1)
+DPO_ALLOW_MID_NEG = os.getenv("QLORA_DPO_ALLOW_MID_NEG", "true").strip().lower() == "true"
 DPO_LOSS_TYPE = os.getenv("QLORA_DPO_LOSS_TYPE", "sigmoid").strip() or "sigmoid"
 DPO_MAX_PROMPT_LENGTH = int(os.getenv("QLORA_DPO_MAX_PROMPT_LENGTH", "512").strip() or 512)
 DPO_MAX_TARGET_LENGTH = int(os.getenv("QLORA_DPO_MAX_TARGET_LENGTH", "16").strip() or 16)
 DPO_PREFER_EASY_NEG = os.getenv("QLORA_DPO_PREFER_EASY_NEG", "true").strip().lower() == "true"
 DPO_FILTER_INVERTED = os.getenv("QLORA_DPO_FILTER_INVERTED", "false").strip().lower() == "true"
 DPO_STRIP_RANK_FEATURES = os.getenv("QLORA_DPO_STRIP_RANK_FEATURES", "false").strip().lower() == "true"
+DPO_PRETOKENIZE = os.getenv("QLORA_DPO_PRETOKENIZE", "true").strip().lower() == "true"
+PAIRWISE_SOURCE_MODE = os.getenv("QLORA_PAIRWISE_SOURCE_MODE", "auto").strip().lower() or "auto"
 
 _RANK_FEATURE_RE = re.compile(
     r"; (?:candidate_sources|user_segment|als_rank|cluster_rank|profile_rank|popular_rank): [^;]*"
 )
 
 
+def is_qwen35_model_type(model_type: str) -> bool:
+    mt = str(model_type or "").strip().lower()
+    return mt.startswith("qwen3_5")
+
+
+def prepare_model_for_kbit_training_qwen35_safe(model: Any, enable_input_grads: bool) -> Any:
+    # Qwen3.5 linear-attention kernels are sensitive to float32 activations
+    # that PEFT's generic helper may introduce via blanket upcasts.
+    for _, param in model.named_parameters():
+        param.requires_grad = False
+    if enable_input_grads:
+        if hasattr(model, "enable_input_require_grads"):
+            model.enable_input_require_grads()
+        else:
+            def _make_inputs_require_grad(module: Any, _inputs: Any, output: Any) -> None:
+                output.requires_grad_(True)
+            model.get_input_embeddings().register_forward_hook(_make_inputs_require_grad)
+    return model
+
+
+def recast_float_params(model: Any, target_dtype: Any) -> int:
+    n_cast = 0
+    for param in model.parameters():
+        if param.__class__.__name__ == "Params4bit":
+            continue
+        if getattr(param, "dtype", None) == torch.float32:
+            param.data = param.data.to(target_dtype)
+            n_cast += 1
+    return int(n_cast)
+
+
 def strip_rank_features(prompt: str) -> str:
     """Remove ranking-position features from a pre-built prompt string."""
     return _RANK_FEATURE_RE.sub("", prompt)
+
+
+def _longest_common_prefix_len(a: list[int], b: list[int]) -> int:
+    limit = min(len(a), len(b))
+    idx = 0
+    while idx < limit and a[idx] == b[idx]:
+        idx += 1
+    return idx
+
+
+def build_pretokenized_preference_records(
+    pairs: list[dict[str, str]],
+    tokenizer: AutoTokenizer,
+    *,
+    dataset_name: str,
+) -> tuple[list[dict[str, list[int]]], dict[str, Any]]:
+    eos_token_id = getattr(tokenizer, "eos_token_id", None)
+    records: list[dict[str, list[int]]] = []
+    raw_prompt_lens: list[int] = []
+    prompt_lens: list[int] = []
+    chosen_lens: list[int] = []
+    rejected_lens: list[int] = []
+    extra_shared_prefix_tokens: list[int] = []
+    identical_pairs = 0
+
+    for pair in pairs:
+        prompt_text = str(pair.get("prompt", ""))
+        chosen_text = str(pair.get("chosen", ""))
+        rejected_text = str(pair.get("rejected", ""))
+
+        raw_prompt_ids = tokenizer(text=prompt_text)["input_ids"]
+        prompt_chosen_ids = tokenizer(text=prompt_text + chosen_text)["input_ids"]
+        prompt_rejected_ids = tokenizer(text=prompt_text + rejected_text)["input_ids"]
+        shared_prefix_len = _longest_common_prefix_len(prompt_chosen_ids, prompt_rejected_ids)
+
+        prompt_ids = prompt_chosen_ids[:shared_prefix_len]
+        chosen_ids = prompt_chosen_ids[shared_prefix_len:]
+        rejected_ids = prompt_rejected_ids[shared_prefix_len:]
+
+        if eos_token_id is not None:
+            if not chosen_ids or chosen_ids[-1] != eos_token_id:
+                chosen_ids = chosen_ids + [int(eos_token_id)]
+            if not rejected_ids or rejected_ids[-1] != eos_token_id:
+                rejected_ids = rejected_ids + [int(eos_token_id)]
+
+        if prompt_chosen_ids == prompt_rejected_ids:
+            identical_pairs += 1
+
+        records.append(
+            {
+                "prompt_ids": [int(x) for x in prompt_ids],
+                "chosen_ids": [int(x) for x in chosen_ids],
+                "rejected_ids": [int(x) for x in rejected_ids],
+            }
+        )
+        raw_prompt_lens.append(len(raw_prompt_ids))
+        prompt_lens.append(len(prompt_ids))
+        chosen_lens.append(len(chosen_ids))
+        rejected_lens.append(len(rejected_ids))
+        extra_shared_prefix_tokens.append(max(0, len(prompt_ids) - len(raw_prompt_ids)))
+
+    def _summary(values: list[int]) -> dict[str, int]:
+        if not values:
+            return {"count": 0, "min": 0, "p50": 0, "p95": 0, "max": 0}
+        xs = sorted(int(v) for v in values)
+        n = len(xs)
+
+        def _pick(q: float) -> int:
+            idx = max(0, min(n - 1, int(round((n - 1) * q))))
+            return int(xs[idx])
+
+        return {
+            "count": int(n),
+            "min": int(xs[0]),
+            "p50": _pick(0.50),
+            "p95": _pick(0.95),
+            "max": int(xs[-1]),
+        }
+
+    audit = {
+        "dataset_name": dataset_name,
+        "records": int(len(records)),
+        "identical_full_pair_count": int(identical_pairs),
+        "raw_prompt_token_len": _summary(raw_prompt_lens),
+        "prompt_token_len": _summary(prompt_lens),
+        "chosen_token_len": _summary(chosen_lens),
+        "rejected_token_len": _summary(rejected_lens),
+        "extra_shared_prefix_tokens": _summary(extra_shared_prefix_tokens),
+    }
+    return records, audit
+
+
+class StablePrefixDPOTrainer(DPOTrainer):
+    def _prepare_dataset(self, dataset, processing_class, args, dataset_name):
+        first_example = next(iter(dataset))
+        if isinstance(first_example, dict) and {
+            "prompt_ids",
+            "chosen_ids",
+            "rejected_ids",
+        }.issubset(first_example.keys()):
+            return dataset
+        return super()._prepare_dataset(dataset, processing_class, args, dataset_name)
 
 
 # ------------------------------- helpers ------------------------------
@@ -136,14 +285,24 @@ def resolve_stage11_dataset_run() -> Path:
     return pick_latest_run(INPUT_11_ROOT, INPUT_11_SUFFIX)
 
 
-def collect_json_files(source_11: Path, buckets: list[int]) -> tuple[list[str], list[str], dict[str, Any]]:
+def collect_json_files(
+    source_11: Path,
+    buckets: list[int],
+    *,
+    train_dir_name: str = "train_json",
+    eval_dir_name: str = "eval_json",
+) -> tuple[list[str], list[str], dict[str, Any]]:
     train_files: list[str] = []
     eval_files: list[str] = []
-    summary: dict[str, Any] = {"buckets": []}
+    summary: dict[str, Any] = {
+        "train_dir_name": train_dir_name,
+        "eval_dir_name": eval_dir_name,
+        "buckets": [],
+    }
     for b in buckets:
         bdir = source_11 / f"bucket_{b}"
-        train_dir = bdir / "train_json"
-        eval_dir = bdir / "eval_json"
+        train_dir = bdir / train_dir_name
+        eval_dir = bdir / eval_dir_name
         if not bdir.exists():
             continue
         b_train = sorted([p.as_posix() for p in train_dir.glob("*.json")]) if train_dir.exists() else []
@@ -158,138 +317,28 @@ def collect_json_files(source_11: Path, buckets: list[int]) -> tuple[list[str], 
     return train_files, eval_files, summary
 
 
+def resolve_pairwise_source_mode(source_11: Path, buckets: list[int]) -> str:
+    valid_modes = {"auto", "pointwise", "rich_sft"}
+    if PAIRWISE_SOURCE_MODE not in valid_modes:
+        raise ValueError(
+            f"unsupported QLORA_PAIRWISE_SOURCE_MODE={PAIRWISE_SOURCE_MODE}; "
+            f"expected one of {sorted(valid_modes)}"
+        )
+    if PAIRWISE_SOURCE_MODE in {"pointwise", "rich_sft"}:
+        return PAIRWISE_SOURCE_MODE
+    for bucket in buckets:
+        rich_dir = source_11 / f"bucket_{bucket}" / "rich_sft_train_json"
+        if rich_dir.exists() and any(rich_dir.glob("*.json")):
+            return "rich_sft"
+    return "pointwise"
+
+
 def seed_everything(seed: int) -> None:
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
-
-
-# ---------------------- DPO pair construction -----------------------
-def _extract_prompt_body(full_prompt: str) -> str:
-    """Extract user+item portion from the full binary prompt.
-
-    The original prompt looks like:
-        "You are a recommendation assistant. ... Answer only YES or NO.\n
-         User: <user_text>\nCandidate: <item_text>\nAnswer:"
-
-    We keep the *entire* prompt (including system instruction) because DPO
-    needs the model to see the same prefix it was pre-trained / will be
-    evaluated on.  The chosen / rejected responses are just " YES" / " NO".
-    """
-    return full_prompt.strip()
-
-
-def build_dpo_pairs(
-    rows: list[dict[str, Any]],
-    max_pairs_per_user: int,
-    seed: int,
-    prefer_easy_neg: bool = True,
-    filter_inverted: bool = False,
-) -> list[dict[str, str]]:
-    """Group rows by user_idx, cross-pair positives with negatives.
-
-    For each user we pair every positive-item prompt (chosen=" YES")
-    with sampled negative-item prompts (rejected=" YES") 鈥?the key
-    insight is: the *prompt itself contains the item info*, so the
-    "chosen" prompt describes a good item and the "rejected" prompt
-    describes a bad item.  Both get " YES" as the response text so
-    DPO learns to *prefer generating YES for good items*.
-
-    When ``prefer_easy_neg=True``, prioritise easy/near negatives
-    (where the score gap is more intuitive) over hard negatives.
-
-    When ``filter_inverted=True``, exclude pairs where the negative
-    item has a higher pre_score than the positive item.
-    """
-    rng = random.Random(seed)
-
-    # Group by user 鈥?store full row for score access
-    user_pos: dict[int, list[dict[str, Any]]] = defaultdict(list)
-    user_neg: dict[int, list[dict[str, Any]]] = defaultdict(list)
-
-    for row in rows:
-        uid = int(row.get("user_idx", -1))
-        label = int(row.get("label", 0))
-        prompt = str(row.get("prompt", "")).strip()
-        if uid < 0 or not prompt:
-            continue
-        if label == 1:
-            user_pos[uid].append(row)
-        else:
-            user_neg[uid].append(row)
-
-    pairs: list[dict[str, str]] = []
-    users_with_pairs = 0
-    users_skipped = 0
-    n_filtered_inverted = 0
-
-    for uid in sorted(user_pos.keys()):
-        pos_rows = user_pos[uid]
-        neg_rows = user_neg.get(uid, [])
-        if not neg_rows:
-            users_skipped += 1
-            continue
-
-        users_with_pairs += 1
-
-        # Optionally prioritise easy/near negatives
-        if prefer_easy_neg:
-            easy_near = [r for r in neg_rows if r.get("neg_tier") in ("easy", "near", "fill")]
-            hard = [r for r in neg_rows if r.get("neg_tier") == "hard"]
-            ordered_neg = easy_near + hard  # easy first, hard as fallback
-        else:
-            ordered_neg = list(neg_rows)
-            rng.shuffle(ordered_neg)
-
-        # Generate cross-pairs with priority ordering
-        all_combos: list[tuple[dict[str, Any], dict[str, Any]]] = []
-        for p_row in pos_rows:
-            for n_row in ordered_neg:
-                all_combos.append((p_row, n_row))
-
-        # If preferring easy neg, keep order; otherwise shuffle
-        if not prefer_easy_neg:
-            rng.shuffle(all_combos)
-
-        selected = all_combos[:max_pairs_per_user]
-
-        for pos_row, neg_row in selected:
-            # Optionally filter pairs where neg scores higher
-            if filter_inverted:
-                pos_score = float(pos_row.get("pre_score", 0))
-                neg_score = float(neg_row.get("pre_score", 0))
-                if neg_score > pos_score:
-                    n_filtered_inverted += 1
-                    continue
-
-            pos_prompt = str(pos_row.get("prompt", "")).strip()
-            neg_prompt = str(neg_row.get("prompt", "")).strip()
-
-            # Extract the common prompt part (everything before "Candidate:")
-            # Both pos and neg should have the same user context
-            if "Candidate:" in pos_prompt:
-                common_prompt = pos_prompt.split("Candidate:")[0] + "Candidate:"
-            else:
-                common_prompt = ""
-
-            pairs.append({
-                "prompt": common_prompt,
-                "chosen": pos_prompt + " YES",
-                "rejected": neg_prompt + " YES",
-            })
-
-    rng.shuffle(pairs)
-    print(
-        f"[DPO-PAIRS] users_with_pairs={users_with_pairs} "
-        f"users_skipped={users_skipped} "
-        f"total_pairs={len(pairs)} "
-        f"max_pairs_per_user={max_pairs_per_user} "
-        f"prefer_easy_neg={prefer_easy_neg} "
-        f"filtered_inverted={n_filtered_inverted}"
-    )
-    return pairs
 
 
 # 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ main 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
@@ -329,6 +378,10 @@ def main() -> None:
     print(f"[CONFIG] base_model={BASE_MODEL}")
     print(f"[CONFIG] DPO 尾={DPO_BETA}, loss_type={DPO_LOSS_TYPE}, max_pairs_per_user={DPO_MAX_PAIRS_PER_USER}")
     print(f"[CONFIG] LR={LR}, epochs={EPOCHS}, batch_size={BATCH_SIZE}, grad_acc={GRAD_ACC}")
+    print(f"[CONFIG] max_seq_len={MAX_SEQ_LEN}, pad_to_multiple_of={PAD_TO_MULTIPLE_OF}")
+    print(f"[CONFIG] dpo_pretokenize={DPO_PRETOKENIZE}")
+    source_mode = resolve_pairwise_source_mode(source_11, buckets)
+    print(f"[CONFIG] pairwise_source_mode={source_mode}")
 
     if QLORA_RESUME_RUN_DIR:
         out_dir = Path(QLORA_RESUME_RUN_DIR)
@@ -342,7 +395,15 @@ def main() -> None:
         out_dir.mkdir(parents=True, exist_ok=True)
 
     # 鈹€鈹€鈹€鈹€ Load raw JSON data 鈹€鈹€鈹€鈹€
-    train_files, eval_files, file_summary = collect_json_files(source_11, buckets)
+    if source_mode == "rich_sft":
+        train_files, eval_files, file_summary = collect_json_files(
+            source_11,
+            buckets,
+            train_dir_name="rich_sft_train_json",
+            eval_dir_name="rich_sft_eval_json",
+        )
+    else:
+        train_files, eval_files, file_summary = collect_json_files(source_11, buckets)
     raw_ds: DatasetDict = load_dataset("json", data_files={"train": train_files})  # type: ignore
     raw_train = raw_ds["train"]
 
@@ -363,11 +424,25 @@ def main() -> None:
             row["prompt"] = strip_rank_features(str(row.get("prompt", "")))
         print("[DATA] stripped ranking features from prompts (DPO_STRIP_RANK_FEATURES=true)")
 
-    train_pairs = build_dpo_pairs(
-        train_rows, DPO_MAX_PAIRS_PER_USER, SEED,
-        prefer_easy_neg=DPO_PREFER_EASY_NEG,
-        filter_inverted=DPO_FILTER_INVERTED,
-    )
+    if source_mode == "rich_sft":
+        train_pairs_full, train_pair_audit = build_rich_sft_dpo_pairs(
+            train_rows,
+            DPO_MAX_PAIRS_PER_USER,
+            SEED,
+            true_max_pairs_per_user=DPO_TRUE_MAX_PAIRS_PER_USER,
+            valid_max_pairs_per_user=DPO_VALID_MAX_PAIRS_PER_USER,
+            hist_max_pairs_per_user=DPO_HIST_MAX_PAIRS_PER_USER,
+            allow_mid_neg=DPO_ALLOW_MID_NEG,
+        )
+    else:
+        train_pairs_full, train_pair_audit = build_dpo_pairs(
+            train_rows,
+            DPO_MAX_PAIRS_PER_USER,
+            SEED,
+            prefer_easy_neg=DPO_PREFER_EASY_NEG,
+            filter_inverted=DPO_FILTER_INVERTED,
+        )
+    train_pairs = pair_records_for_training(train_pairs_full)
 
     if not train_pairs:
         raise RuntimeError(
@@ -380,17 +455,28 @@ def main() -> None:
     if eval_files:
         raw_eval_ds: DatasetDict = load_dataset("json", data_files={"eval": eval_files})  # type: ignore
         eval_rows_list = [raw_eval_ds["eval"][i] for i in range(len(raw_eval_ds["eval"]))]
-        eval_pairs = build_dpo_pairs(
-            eval_rows_list, max(2, DPO_MAX_PAIRS_PER_USER // 2), SEED + 1,
-            prefer_easy_neg=DPO_PREFER_EASY_NEG,
-            filter_inverted=DPO_FILTER_INVERTED,
-        )
+        if source_mode == "rich_sft":
+            eval_pairs_full, eval_pair_audit = build_rich_sft_dpo_pairs(
+                eval_rows_list,
+                max(2, DPO_MAX_PAIRS_PER_USER // 2),
+                SEED + 1,
+                true_max_pairs_per_user=max(1, min(DPO_TRUE_MAX_PAIRS_PER_USER, 1)),
+                valid_max_pairs_per_user=max(0, min(DPO_VALID_MAX_PAIRS_PER_USER, 1)),
+                hist_max_pairs_per_user=max(0, min(DPO_HIST_MAX_PAIRS_PER_USER, 1)),
+                allow_mid_neg=DPO_ALLOW_MID_NEG,
+            )
+        else:
+            eval_pairs_full, eval_pair_audit = build_dpo_pairs(
+                eval_rows_list,
+                max(2, DPO_MAX_PAIRS_PER_USER // 2),
+                SEED + 1,
+                prefer_easy_neg=DPO_PREFER_EASY_NEG,
+                filter_inverted=DPO_FILTER_INVERTED,
+            )
+        eval_pairs = pair_records_for_training(eval_pairs_full)
         print(f"[DATA] eval_pairs: {len(eval_pairs)}")
-
-    dpo_train_ds = Dataset.from_list(train_pairs)
-    dpo_eval_ds = Dataset.from_list(eval_pairs) if eval_pairs else None
-
-    print(f"[DATA] DPO train_pairs: {len(dpo_train_ds)}")
+    else:
+        eval_pair_audit = {}
 
     # 鈹€鈹€鈹€鈹€ Model 鈹€鈹€鈹€鈹€
     has_cuda = torch.cuda.is_available()
@@ -410,6 +496,25 @@ def main() -> None:
     if bnb_config is not None:
         model_kwargs["quantization_config"] = bnb_config
         model_kwargs["torch_dtype"] = compute_dtype
+
+    try:
+        model_cfg = AutoConfig.from_pretrained(BASE_MODEL, trust_remote_code=TRUST_REMOTE_CODE)
+        model_type = str(getattr(model_cfg, "model_type", "")).strip().lower()
+        if is_qwen35_model_type(model_type):
+            target_mamba_dtype = str(QWEN35_MAMBA_SSM_DTYPE or "auto").strip().lower()
+            if target_mamba_dtype in {"", "auto"} and compute_dtype == torch.bfloat16:
+                target_mamba_dtype = "bfloat16"
+            if target_mamba_dtype not in {"", "auto"}:
+                txt_cfg = getattr(model_cfg, "text_config", None)
+                if isinstance(txt_cfg, dict):
+                    txt_cfg["mamba_ssm_dtype"] = target_mamba_dtype
+                elif txt_cfg is not None:
+                    setattr(txt_cfg, "mamba_ssm_dtype", target_mamba_dtype)
+                print(f"[CONFIG] qwen3.5 mamba_ssm_dtype={target_mamba_dtype}")
+                model_kwargs["config"] = model_cfg
+    except Exception as cfg_exc:
+        short = str(cfg_exc).splitlines()[0][:180]
+        print(f"[WARN] qwen3.5 dtype config override skipped: {short}")
 
     try:
         model = AutoModelForCausalLM.from_pretrained(BASE_MODEL, **model_kwargs)
@@ -434,9 +539,31 @@ def main() -> None:
         print("[MODEL] SFT adapter merged successfully.")
 
     if bnb_config is not None:
-        model = prepare_model_for_kbit_training(
-            model, use_gradient_checkpointing=GRADIENT_CHECKPOINTING
+        loaded_model_type = str(getattr(getattr(model, "config", None), "model_type", "")).strip().lower()
+        print(
+            f"[CONFIG] loaded_model_type={loaded_model_type} "
+            f"safe_kbit={QWEN35_SAFE_KBIT_PREP} force_float_params_bf16={QWEN35_FORCE_FLOAT_PARAMS_BF16}"
         )
+        if is_qwen35_model_type(loaded_model_type) and QWEN35_SAFE_KBIT_PREP:
+            model = prepare_model_for_kbit_training_qwen35_safe(
+                model,
+                enable_input_grads=bool(GRADIENT_CHECKPOINTING),
+            )
+            print("[CONFIG] qwen3.5 safe_kbit_prep=true (skip PEFT fp32 upcast)")
+        else:
+            model = prepare_model_for_kbit_training(
+                model,
+                use_gradient_checkpointing=GRADIENT_CHECKPOINTING,
+            )
+    loaded_model_type = str(getattr(getattr(model, "config", None), "model_type", "")).strip().lower()
+    if (
+        is_qwen35_model_type(loaded_model_type)
+        and has_cuda
+        and compute_dtype == torch.bfloat16
+        and QWEN35_FORCE_FLOAT_PARAMS_BF16
+    ):
+        n_recast = recast_float_params(model, torch.bfloat16)
+        print(f"[CONFIG] qwen3.5 recast_float_params_to_bf16={n_recast}")
     if GRADIENT_CHECKPOINTING:
         model.gradient_checkpointing_enable()
         model.config.use_cache = False
@@ -458,6 +585,31 @@ def main() -> None:
         tokenizer.pad_token = tokenizer.eos_token if tokenizer.eos_token else tokenizer.unk_token
     tokenizer.padding_side = "right"
 
+    if DPO_PRETOKENIZE:
+        train_records, train_token_audit = build_pretokenized_preference_records(
+            train_pairs,
+            tokenizer,
+            dataset_name="train",
+        )
+        eval_records, eval_token_audit = (
+            build_pretokenized_preference_records(eval_pairs, tokenizer, dataset_name="eval")
+            if eval_pairs
+            else ([], {})
+        )
+        dpo_train_ds = Dataset.from_list(train_records)
+        dpo_eval_ds = Dataset.from_list(eval_records) if eval_records else None
+        print(
+            "[DATA] pretokenized DPO datasets: "
+            f"train={len(dpo_train_ds)}, eval={len(dpo_eval_ds) if dpo_eval_ds else 0}"
+        )
+    else:
+        train_token_audit = {}
+        eval_token_audit = {}
+        dpo_train_ds = Dataset.from_list(train_pairs)
+        dpo_eval_ds = Dataset.from_list(eval_pairs) if eval_pairs else None
+
+    print(f"[DATA] DPO train_pairs: {len(dpo_train_ds)}")
+
     # 鈹€鈹€鈹€鈹€ DPO Training 鈹€鈹€鈹€鈹€
     has_eval = dpo_eval_ds is not None and len(dpo_eval_ds) > 0
     trainer_out_dir = out_dir / "trainer_output"
@@ -467,6 +619,7 @@ def main() -> None:
         beta=DPO_BETA,
         loss_type=DPO_LOSS_TYPE,
         max_length=MAX_SEQ_LEN,
+        pad_to_multiple_of=(PAD_TO_MULTIPLE_OF if PAD_TO_MULTIPLE_OF > 0 else None),
         per_device_train_batch_size=BATCH_SIZE,
         per_device_eval_batch_size=max(1, BATCH_SIZE),
         gradient_accumulation_steps=GRAD_ACC,
@@ -477,7 +630,7 @@ def main() -> None:
         logging_steps=LOGGING_STEPS,
         eval_steps=EVAL_STEPS if has_eval else None,
         save_steps=SAVE_STEPS,
-        save_total_limit=2,
+        save_total_limit=max(1, int(SAVE_TOTAL_LIMIT)),
         bf16=bool(has_cuda and compute_dtype == torch.bfloat16),
         fp16=bool(has_cuda and compute_dtype == torch.float16),
         report_to=[],
@@ -488,7 +641,7 @@ def main() -> None:
         load_best_model_at_end=False,
     )
 
-    trainer = DPOTrainer(
+    trainer = StablePrefixDPOTrainer(
         model=model,
         ref_model=None,   # with PEFT, TRL auto-uses frozen base as ref
         args=dpo_config,
@@ -541,14 +694,30 @@ def main() -> None:
         "dpo_config": {
             "beta": DPO_BETA,
             "loss_type": DPO_LOSS_TYPE,
+            "pretokenize": bool(DPO_PRETOKENIZE),
+            "pairwise_source_mode": source_mode,
             "max_pairs_per_user": DPO_MAX_PAIRS_PER_USER,
+            "true_max_pairs_per_user": DPO_TRUE_MAX_PAIRS_PER_USER,
+            "valid_max_pairs_per_user": DPO_VALID_MAX_PAIRS_PER_USER,
+            "hist_max_pairs_per_user": DPO_HIST_MAX_PAIRS_PER_USER,
+            "allow_mid_neg": bool(DPO_ALLOW_MID_NEG),
             "max_prompt_length": DPO_MAX_PROMPT_LENGTH,
             "max_target_length": DPO_MAX_TARGET_LENGTH,
         },
+        "pair_audit": {
+            "train": train_pair_audit,
+            "eval": eval_pair_audit,
+        },
+        "tokenization_audit": {
+            "train": train_token_audit,
+            "eval": eval_token_audit,
+        },
         "config": {
             "max_seq_len": int(MAX_SEQ_LEN),
+            "pad_to_multiple_of": int(PAD_TO_MULTIPLE_OF),
             "epochs": float(EPOCHS),
             "lr": float(LR),
+            "save_total_limit": int(SAVE_TOTAL_LIMIT),
             "batch_size": int(BATCH_SIZE),
             "grad_acc": int(GRAD_ACC),
             "lora_r": int(LORA_R),

@@ -9,13 +9,14 @@ from typing import Any
 import pandas as pd
 from pyspark.sql import DataFrame, SparkSession, functions as F
 
+from pipeline.project_paths import env_or_project_path, project_path
 from pipeline.spark_tmp_manager import SparkTmpContext, build_spark_tmp_context
 
 
 RUN_TAG = "stage11_0_qlora_data_gate_audit"
 
 INPUT_09_RUN_DIR = os.getenv("INPUT_09_RUN_DIR", "").strip()
-INPUT_09_ROOT = Path(r"D:/5006 BDA project/data/output/09_candidate_fusion")
+INPUT_09_ROOT = env_or_project_path("INPUT_09_ROOT_DIR", "data/output/09_candidate_fusion")
 INPUT_09_SUFFIX = "_stage09_candidate_fusion"
 
 BUCKETS_OVERRIDE = os.getenv("BUCKETS_OVERRIDE", "10").strip()
@@ -26,13 +27,16 @@ INCLUDE_VALID_POS = os.getenv("QLORA_AUDIT_INCLUDE_VALID_POS", "true").strip().l
 GATE_A_MIN_TRUE_IN_TOPN = float(os.getenv("QLORA_GATE_A_MIN_TRUE_IN_TOPN", "0.82").strip() or 0.82)
 GATE_B_MAX_NO_POS_RATIO = float(os.getenv("QLORA_GATE_B_MAX_NO_POS_RATIO", "0.30").strip() or 0.30)
 
-OUTPUT_ROOT = Path(r"D:/5006 BDA project/data/output/11_qlora_data_gate_audit")
-METRICS_LATEST = Path(r"D:/5006 BDA project/data/metrics/stage11_qlora_data_gate_audit_latest.csv")
+OUTPUT_ROOT = env_or_project_path("OUTPUT_11_DATA_GATE_AUDIT_ROOT_DIR", "data/output/11_qlora_data_gate_audit")
+METRICS_LATEST = env_or_project_path("METRICS_STAGE11_DATA_GATE_AUDIT_PATH", "data/metrics/stage11_qlora_data_gate_audit_latest.csv")
 
 SPARK_DRIVER_MEMORY = os.getenv("SPARK_DRIVER_MEMORY", "6g").strip() or "6g"
 SPARK_EXECUTOR_MEMORY = os.getenv("SPARK_EXECUTOR_MEMORY", "6g").strip() or "6g"
 SPARK_MASTER = os.getenv("SPARK_MASTER", "local[2]").strip() or "local[2]"
-SPARK_LOCAL_DIR = os.getenv("SPARK_LOCAL_DIR", "D:/5006 BDA project/data/spark-tmp").strip() or "D:/5006 BDA project/data/spark-tmp"
+SPARK_LOCAL_DIR = (
+    os.getenv("SPARK_LOCAL_DIR", project_path("data/spark-tmp").as_posix()).strip()
+    or project_path("data/spark-tmp").as_posix()
+)
 SPARK_SQL_SHUFFLE_PARTITIONS = os.getenv("SPARK_SQL_SHUFFLE_PARTITIONS", "12").strip() or "12"
 SPARK_DEFAULT_PARALLELISM = os.getenv("SPARK_DEFAULT_PARALLELISM", "12").strip() or "12"
 SPARK_NETWORK_TIMEOUT = os.getenv("SPARK_NETWORK_TIMEOUT", "600s").strip() or "600s"

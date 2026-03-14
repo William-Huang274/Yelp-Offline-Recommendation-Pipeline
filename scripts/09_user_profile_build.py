@@ -15,6 +15,7 @@ import numpy as np
 from pyspark import StorageLevel
 from pyspark.sql import DataFrame, SparkSession, functions as F
 from pyspark.sql.window import Window
+from pipeline.project_paths import env_or_project_path, project_path
 
 # Keep sentence-transformers on PyTorch path in mixed TensorFlow/Keras setups.
 os.environ.setdefault("USE_TF", "0")
@@ -27,9 +28,29 @@ RUN_TAG = "stage09_user_profile_build"
 RANDOM_SEED = 42
 
 # Paths
-PARQUET_BASE = Path(r"D:/5006 BDA project/data/parquet")
-OUTPUT_ROOT = Path(r"D:/5006 BDA project/data/output/09_user_profiles")
-CACHE_ROOT = Path(r"D:/5006 BDA project/data/cache/user_profile_embeddings")
+PARQUET_BASE = env_or_project_path("PARQUET_BASE_DIR", "data/parquet")
+OUTPUT_ROOT = env_or_project_path("OUTPUT_09_USER_PROFILE_ROOT_DIR", "data/output/09_user_profiles")
+CACHE_ROOT = env_or_project_path("CACHE_09_USER_PROFILE_ROOT_DIR", "data/cache/user_profile_embeddings")
+SPARK_MASTER = os.getenv("PROFILE_SPARK_MASTER", os.getenv("SPARK_MASTER", "local[4]")).strip() or "local[4]"
+SPARK_DRIVER_MEMORY = (
+    os.getenv("PROFILE_SPARK_DRIVER_MEMORY", os.getenv("SPARK_DRIVER_MEMORY", "6g")).strip() or "6g"
+)
+SPARK_EXECUTOR_MEMORY = (
+    os.getenv("PROFILE_SPARK_EXECUTOR_MEMORY", os.getenv("SPARK_EXECUTOR_MEMORY", "6g")).strip() or "6g"
+)
+SPARK_SQL_SHUFFLE_PARTITIONS = (
+    os.getenv("PROFILE_SPARK_SQL_SHUFFLE_PARTITIONS", os.getenv("SPARK_SQL_SHUFFLE_PARTITIONS", "32")).strip()
+    or "32"
+)
+SPARK_DEFAULT_PARALLELISM = (
+    os.getenv("PROFILE_SPARK_DEFAULT_PARALLELISM", os.getenv("SPARK_DEFAULT_PARALLELISM", "32")).strip() or "32"
+)
+SPARK_NETWORK_TIMEOUT = (
+    os.getenv("PROFILE_SPARK_NETWORK_TIMEOUT", os.getenv("SPARK_NETWORK_TIMEOUT", "600s")).strip() or "600s"
+)
+SPARK_HEARTBEAT_INTERVAL = (
+    os.getenv("PROFILE_SPARK_HEARTBEAT_INTERVAL", os.getenv("SPARK_HEARTBEAT_INTERVAL", "60s")).strip() or "60s"
+)
 
 # Scope
 TARGET_STATE = "LA"
@@ -82,14 +103,22 @@ ENABLE_EMBEDDING = True
 EMBED_SCOPE = "profile_text"  # "profile_text" only in v1 (stable on local hardware)
 USE_BGE_M3 = True
 BGE_MODEL_NAME = "BAAI/bge-m3"
-BGE_LOCAL_MODEL_PATH = r"D:/hf_cache/hub/models--BAAI--bge-m3"
+BGE_LOCAL_MODEL_PATH = os.getenv("BGE_LOCAL_MODEL_PATH", project_path("hf_models/BAAI__bge-m3").as_posix()).strip()
 MINILM_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 ALLOW_MODEL_FALLBACK = True
 EMBED_NORMALIZE = True
-EMBED_BATCH_SIZE_GPU_BGE = 8
-EMBED_BATCH_SIZE_GPU_MINILM = 64
-EMBED_BATCH_SIZE_CPU_BGE = 4
-EMBED_BATCH_SIZE_CPU_MINILM = 32
+EMBED_DEVICE_OVERRIDE = os.getenv("PROFILE_EMBED_DEVICE", "").strip().lower()
+EMBED_BATCH_SIZE_GPU_BGE = int(os.getenv("PROFILE_EMBED_BATCH_SIZE_GPU_BGE", "8").strip() or 8)
+EMBED_BATCH_SIZE_GPU_MINILM = int(os.getenv("PROFILE_EMBED_BATCH_SIZE_GPU_MINILM", "64").strip() or 64)
+EMBED_BATCH_SIZE_CPU_BGE = int(os.getenv("PROFILE_EMBED_BATCH_SIZE_CPU_BGE", "4").strip() or 4)
+EMBED_BATCH_SIZE_CPU_MINILM = int(os.getenv("PROFILE_EMBED_BATCH_SIZE_CPU_MINILM", "32").strip() or 32)
+EMBED_MAX_LENGTH = int(os.getenv("PROFILE_EMBED_MAX_LENGTH", "512").strip() or 512)
+ENABLE_MULTI_VECTOR_AUDIT = os.getenv("PROFILE_ENABLE_MULTI_VECTOR_AUDIT", "false").strip().lower() == "true"
+MULTI_VECTOR_SCOPE_NAMES = tuple(
+    x.strip().lower()
+    for x in os.getenv("PROFILE_MULTI_VECTOR_SCOPE_NAMES", "short,long,pos,neg").split(",")
+    if x.strip()
+)
 
 WORD_RE = re.compile(r"[a-zA-Z][a-zA-Z'&-]*")
 SENTENCE_SPLIT_RE = re.compile(r"[.!?]+\s+|\n+")
@@ -257,16 +286,19 @@ NEGATIVE_TERMS = {
 
 
 def build_spark() -> SparkSession:
-    local_dir = Path(r"D:/5006 BDA project/data/spark-tmp")
+    local_dir = env_or_project_path("SPARK_LOCAL_DIR", "data/spark-tmp")
     local_dir.mkdir(parents=True, exist_ok=True)
     return (
         SparkSession.builder.appName("stage09-user-profile-build")
-        .master("local[4]")
-        .config("spark.driver.memory", "6g")
-        .config("spark.executor.memory", "6g")
+        .master(SPARK_MASTER)
+        .config("spark.driver.memory", SPARK_DRIVER_MEMORY)
+        .config("spark.executor.memory", SPARK_EXECUTOR_MEMORY)
         .config("spark.local.dir", str(local_dir))
-        .config("spark.sql.shuffle.partitions", "32")
-        .config("spark.default.parallelism", "32")
+        .config("spark.sql.shuffle.partitions", SPARK_SQL_SHUFFLE_PARTITIONS)
+        .config("spark.default.parallelism", SPARK_DEFAULT_PARALLELISM)
+        .config("spark.python.worker.reuse", "true")
+        .config("spark.network.timeout", SPARK_NETWORK_TIMEOUT)
+        .config("spark.executor.heartbeatInterval", SPARK_HEARTBEAT_INTERVAL)
         .config("spark.sql.adaptive.enabled", "true")
         .config("spark.ui.showConsoleProgress", "false")
         .getOrCreate()
@@ -392,6 +424,45 @@ def _sentence_hash(text: str) -> str:
     return hashlib.sha1(text.encode("utf-8")).hexdigest()
 
 
+def _pretty_tag_text(tag: str) -> str:
+    return _normalize_space(str(tag or "").replace("_", " "))
+
+
+def _json_dict_text_list(raw: Any) -> dict[str, list[str]]:
+    txt = _normalize_space(str(raw or ""))
+    if not txt:
+        return {}
+    try:
+        payload = json.loads(txt)
+    except Exception:
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+    out: dict[str, list[str]] = {}
+    for key, vals in payload.items():
+        if isinstance(vals, list):
+            clean = [_pretty_tag_text(v) for v in vals if _pretty_tag_text(v)]
+            if clean:
+                out[_pretty_tag_text(key)] = clean
+    return out
+
+
+def _build_typed_pref_text(row: dict[str, Any], tags_field: str, by_type_field: str, prefix: str) -> str:
+    parts: list[str] = []
+    by_type = _json_dict_text_list(row.get(by_type_field, ""))
+    for facet, tags in sorted(by_type.items()):
+        top_tags = tags[:3]
+        if top_tags:
+            parts.append(f"{facet}: {', '.join(top_tags)}")
+    if not parts:
+        raw_tags = [_pretty_tag_text(x) for x in str(row.get(tags_field, "")).split("|") if _pretty_tag_text(x)]
+        if raw_tags:
+            parts.append(", ".join(raw_tags[:5]))
+    if not parts:
+        return ""
+    return _join_with_char_limit([f"{prefix} {'; '.join(parts)}"], int(PROFILE_TEXT_MAX_CHARS // 2))
+
+
 def _score_sentence(sentence: str, recency_score: float, window_priority: int) -> tuple[float, list[str], set[str]]:
     lower = sentence.lower()
     words = _word_tokens(lower)
@@ -493,32 +564,96 @@ def _resolve_bge_path(path_text: str) -> str | None:
     return None
 
 
-def _load_embedding_model() -> tuple[Any, str, str]:
-    try:
+class _HFEncoder:
+    def __init__(self, model_name: str, device: str) -> None:
         import torch  # type: ignore
+        from transformers import AutoModel, AutoTokenizer
 
-        device = "cuda" if bool(torch.cuda.is_available()) else "cpu"
-    except Exception:
-        device = "cpu"
+        self._torch = torch
+        self.model_name = str(model_name)
+        self.device = str(device or "cpu")
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+        self.model = AutoModel.from_pretrained(self.model_name)
+        self.model.to(self.device)
+        self.model.eval()
+
+    def encode(
+        self,
+        texts: list[str],
+        batch_size: int,
+        convert_to_numpy: bool = True,
+        normalize_embeddings: bool = True,
+        show_progress_bar: bool = True,
+    ) -> np.ndarray:
+        del show_progress_bar
+        all_parts: list[np.ndarray] = []
+        with self._torch.no_grad():
+            for start in range(0, len(texts), int(max(1, batch_size))):
+                batch = texts[start : start + int(max(1, batch_size))]
+                toks = self.tokenizer(
+                    batch,
+                    padding=True,
+                    truncation=True,
+                    max_length=int(EMBED_MAX_LENGTH),
+                    return_tensors="pt",
+                )
+                toks = {k: v.to(self.device) for k, v in toks.items()}
+                out = self.model(**toks)
+                last_hidden = out.last_hidden_state
+                attn = toks["attention_mask"].unsqueeze(-1).expand(last_hidden.size()).float()
+                summed = (last_hidden * attn).sum(dim=1)
+                denom = attn.sum(dim=1).clamp(min=1e-9)
+                emb = (summed / denom).detach().cpu().numpy().astype(np.float32)
+                if normalize_embeddings:
+                    norms = np.linalg.norm(emb, axis=1, keepdims=True)
+                    norms[norms == 0.0] = 1.0
+                    emb = (emb / norms).astype(np.float32)
+                all_parts.append(emb)
+        if not all_parts:
+            return np.zeros((0, 0), dtype=np.float32) if convert_to_numpy else np.zeros((0, 0), dtype=np.float32)
+        arr = np.concatenate(all_parts, axis=0).astype(np.float32, copy=False)
+        return arr if convert_to_numpy else arr
+
+
+def _load_embedding_model() -> tuple[Any, str, str, str]:
+    device = str(EMBED_DEVICE_OVERRIDE or "").strip().lower()
+    if device not in {"cpu", "cuda"}:
+        try:
+            import torch  # type: ignore
+
+            device = "cuda" if bool(torch.cuda.is_available()) else "cpu"
+        except Exception:
+            device = "cpu"
 
     try:
         from sentence_transformers import SentenceTransformer
-    except Exception as e:
-        raise RuntimeError(f"sentence-transformers import failed: {e}") from e
+    except Exception:
+        SentenceTransformer = None  # type: ignore
 
     primary = MINILM_MODEL_NAME
     if USE_BGE_M3:
         local = _resolve_bge_path(BGE_LOCAL_MODEL_PATH)
         primary = local if local else BGE_MODEL_NAME
 
-    try:
-        model = SentenceTransformer(primary, device=device)
-        return model, primary, device
-    except Exception:
-        if not ALLOW_MODEL_FALLBACK or primary == MINILM_MODEL_NAME:
-            raise
-        model = SentenceTransformer(MINILM_MODEL_NAME, device=device)
-        return model, MINILM_MODEL_NAME, device
+    candidate_models = [primary]
+    if ALLOW_MODEL_FALLBACK and primary != MINILM_MODEL_NAME:
+        candidate_models.append(MINILM_MODEL_NAME)
+
+    last_error: Exception | None = None
+    for model_name in candidate_models:
+        if SentenceTransformer is not None:
+            try:
+                model = SentenceTransformer(model_name, device=device)
+                return model, model_name, device, "sentence_transformers"
+            except Exception as e:
+                last_error = e
+        try:
+            model = _HFEncoder(model_name=model_name, device=device)
+            return model, model_name, device, "transformers_mean_pool"
+        except Exception as e:
+            last_error = e
+
+    raise RuntimeError(f"embedding model load failed: {last_error}")
 
 
 def _pick_batch_size(model_name: str, device: str) -> int:
@@ -547,6 +682,79 @@ def _load_npz_cache(path: Path) -> tuple[np.ndarray, np.ndarray]:
 def _save_npz_cache(path: Path, hashes: np.ndarray, vectors: np.ndarray) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(path, text_hashes=hashes, embeddings=vectors.astype(np.float32))
+
+
+def _encode_text_records_with_cache(
+    records: list[tuple[str, str]],
+    model: Any,
+    batch_size: int,
+    cache_hashes: np.ndarray,
+    cache_vectors: np.ndarray,
+) -> tuple[list[str], np.ndarray, np.ndarray, np.ndarray, dict[str, Any]]:
+    cache_map = {str(h): i for i, h in enumerate(cache_hashes.tolist())}
+    record_user_ids: list[str] = []
+    record_hashes: list[str] = []
+    unique_missing: list[str] = []
+    unique_missing_texts: list[str] = []
+    seen_missing: set[str] = set()
+
+    for uid, raw_text in records:
+        txt = _normalize_space(raw_text)
+        if not txt:
+            continue
+        h = _sentence_hash(txt)
+        record_user_ids.append(str(uid))
+        record_hashes.append(h)
+        if h in cache_map or h in seen_missing:
+            continue
+        seen_missing.add(h)
+        unique_missing.append(h)
+        unique_missing_texts.append(txt)
+
+    if unique_missing_texts:
+        miss_emb = model.encode(
+            unique_missing_texts,
+            batch_size=int(batch_size),
+            convert_to_numpy=True,
+            normalize_embeddings=bool(EMBED_NORMALIZE),
+            show_progress_bar=True,
+        ).astype(np.float32)
+        if cache_vectors.shape[0] == 0:
+            cache_hashes = np.array(unique_missing, dtype="<U40")
+            cache_vectors = miss_emb
+        else:
+            cache_hashes = np.concatenate([cache_hashes, np.array(unique_missing, dtype="<U40")], axis=0)
+            cache_vectors = np.concatenate([cache_vectors, miss_emb], axis=0)
+        cache_map = {str(h): i for i, h in enumerate(cache_hashes.tolist())}
+
+    vec_user_ids: list[str] = []
+    vec_rows: list[np.ndarray] = []
+    for uid, h in zip(record_user_ids, record_hashes):
+        idx = cache_map.get(h)
+        if idx is None:
+            continue
+        vec_user_ids.append(uid)
+        vec_rows.append(cache_vectors[int(idx)])
+
+    dim = int(cache_vectors.shape[1]) if cache_vectors.ndim == 2 and cache_vectors.shape[0] > 0 else 0
+    mat = np.stack(vec_rows).astype(np.float32) if vec_rows else np.zeros((0, dim), dtype=np.float32)
+    meta = {
+        "records_input": int(len(records)),
+        "records_nonempty": int(len(record_hashes)),
+        "vectors_written": int(len(vec_rows)),
+        "missing_encoded": int(len(unique_missing_texts)),
+    }
+    return vec_user_ids, mat, cache_hashes, cache_vectors, meta
+
+
+def _write_vector_npz(path: Path, user_ids: list[str], vectors: np.ndarray, model_name: str) -> None:
+    np.savez_compressed(
+        path.as_posix(),
+        user_ids=np.array(user_ids, dtype="<U64"),
+        vectors=vectors.astype(np.float32),
+        model_name=np.array([model_name]),
+        normalized=np.array([int(EMBED_NORMALIZE)], dtype=np.int32),
+    )
 
 
 def _join_with_char_limit(sentences: list[str], max_chars: int) -> str:
@@ -1029,86 +1237,133 @@ def main() -> None:
 
     # Embedding on profile_text with persistent hash cache.
     embed_meta: dict[str, Any] = {"enabled": bool(ENABLE_EMBEDDING), "status": "skipped"}
+    extra_vector_meta: dict[str, Any] = {
+        "enabled": bool(ENABLE_MULTI_VECTOR_AUDIT),
+        "status": "disabled" if not bool(ENABLE_MULTI_VECTOR_AUDIT) else "skipped",
+        "requested_scopes": list(MULTI_VECTOR_SCOPE_NAMES),
+        "written_scopes": {},
+    }
     if ENABLE_EMBEDDING:
         try:
             if EMBED_SCOPE != "profile_text":
                 raise RuntimeError(f"unsupported EMBED_SCOPE={EMBED_SCOPE}; only profile_text is supported in v1")
-            model, model_name, device = _load_embedding_model()
+            model, model_name, device, backend = _load_embedding_model()
             batch_size = _pick_batch_size(model_name, device)
+            print(
+                f"[INFO] embedding_runtime model={model_name} backend={backend} "
+                f"device={device} batch_size={int(batch_size)} max_length={int(EMBED_MAX_LENGTH)}"
+            )
             cache_file = _cache_file_for_model(model_name)
             cache_hashes, cache_vectors = _load_npz_cache(cache_file)
-            cache_map = {str(h): i for i, h in enumerate(cache_hashes.tolist())}
 
-            user_ids: list[str] = []
-            text_hashes: list[str] = []
-            text_values: list[str] = []
+            base_records: list[tuple[str, str]] = []
+            multi_text_rows: list[dict[str, Any]] = []
+            requested_scopes = [s for s in MULTI_VECTOR_SCOPE_NAMES if s in {"short", "long", "pos", "neg"}]
+            records_by_scope: dict[str, list[tuple[str, str]]] = {scope: [] for scope in requested_scopes}
             for row in profile_rows:
-                txt = _normalize_space(str(row.get("profile_text", "")))
-                if not txt:
-                    continue
                 if int(row.get("n_sentences_selected", 0)) <= 0:
                     continue
-                h = _sentence_hash(txt)
-                user_ids.append(str(row["user_id"]))
-                text_hashes.append(h)
-                text_values.append(txt)
-
-            unique_missing: list[str] = []
-            unique_missing_texts: list[str] = []
-            seen: set[str] = set()
-            for h, txt in zip(text_hashes, text_values):
-                if h in cache_map or h in seen:
+                uid = str(row["user_id"])
+                txt = _normalize_space(str(row.get("profile_text", "")))
+                if txt:
+                    base_records.append((uid, txt))
+                if not bool(ENABLE_MULTI_VECTOR_AUDIT):
                     continue
-                seen.add(h)
-                unique_missing.append(h)
-                unique_missing_texts.append(txt)
 
-            if unique_missing_texts:
-                miss_emb = model.encode(
-                    unique_missing_texts,
-                    batch_size=int(batch_size),
-                    convert_to_numpy=True,
-                    normalize_embeddings=bool(EMBED_NORMALIZE),
-                    show_progress_bar=True,
-                ).astype(np.float32)
-                if cache_vectors.shape[0] == 0:
-                    cache_hashes = np.array(unique_missing, dtype="<U40")
-                    cache_vectors = miss_emb
-                else:
-                    cache_hashes = np.concatenate([cache_hashes, np.array(unique_missing, dtype="<U40")], axis=0)
-                    cache_vectors = np.concatenate([cache_vectors, miss_emb], axis=0)
-                _save_npz_cache(cache_file, cache_hashes, cache_vectors)
-                cache_map = {str(h): i for i, h in enumerate(cache_hashes.tolist())}
-
-            # Build per-user vectors
-            vec_user_ids: list[str] = []
-            vec_rows: list[np.ndarray] = []
-            for uid, h in zip(user_ids, text_hashes):
-                idx = cache_map.get(h)
-                if idx is None:
-                    continue
-                vec_user_ids.append(uid)
-                vec_rows.append(cache_vectors[int(idx)])
-
-            if vec_rows:
-                mat = np.stack(vec_rows).astype(np.float32)
-                np.savez_compressed(
-                    (out_dir / "user_profile_vectors.npz").as_posix(),
-                    user_ids=np.array(vec_user_ids, dtype="<U64"),
-                    vectors=mat,
-                    model_name=np.array([model_name]),
-                    normalized=np.array([int(EMBED_NORMALIZE)], dtype=np.int32),
+                short_txt_raw = _normalize_space(str(row.get("profile_text_short", "")))
+                long_txt_raw = _normalize_space(str(row.get("profile_text_long", "")))
+                pos_txt = _build_typed_pref_text(
+                    row,
+                    tags_field="profile_top_pos_tags",
+                    by_type_field="profile_top_pos_tags_by_type",
+                    prefix="likes",
                 )
+                neg_txt = _build_typed_pref_text(
+                    row,
+                    tags_field="profile_top_neg_tags",
+                    by_type_field="profile_top_neg_tags_by_type",
+                    prefix="avoids",
+                )
+                short_txt = _join_with_char_limit([f"[SHORT] {short_txt_raw}"], int(PROFILE_TEXT_MAX_CHARS // 2)) if short_txt_raw else ""
+                long_txt = _join_with_char_limit([f"[LONG] {long_txt_raw}"], int(PROFILE_TEXT_MAX_CHARS // 2)) if long_txt_raw else ""
+                if "short" in records_by_scope and short_txt:
+                    records_by_scope["short"].append((uid, short_txt))
+                if "long" in records_by_scope and long_txt:
+                    records_by_scope["long"].append((uid, long_txt))
+                if "pos" in records_by_scope and pos_txt:
+                    records_by_scope["pos"].append((uid, pos_txt))
+                if "neg" in records_by_scope and neg_txt:
+                    records_by_scope["neg"].append((uid, neg_txt))
+                multi_text_rows.append(
+                    {
+                        "user_id": uid,
+                        "profile_short_text": short_txt,
+                        "profile_long_text": long_txt,
+                        "profile_pos_text": pos_txt,
+                        "profile_neg_text": neg_txt,
+                    }
+                )
+
+            vec_user_ids, mat, cache_hashes, cache_vectors, base_encode_meta = _encode_text_records_with_cache(
+                base_records,
+                model=model,
+                batch_size=int(batch_size),
+                cache_hashes=cache_hashes,
+                cache_vectors=cache_vectors,
+            )
+            if mat.shape[0] > 0:
+                _write_vector_npz(out_dir / "user_profile_vectors.npz", vec_user_ids, mat, model_name)
+
+            if bool(ENABLE_MULTI_VECTOR_AUDIT) and multi_text_rows:
+                with (out_dir / "user_profile_multi_vector_texts.csv").open("w", newline="", encoding="utf-8") as f:
+                    writer = csv.DictWriter(
+                        f,
+                        fieldnames=[
+                            "user_id",
+                            "profile_short_text",
+                            "profile_long_text",
+                            "profile_pos_text",
+                            "profile_neg_text",
+                        ],
+                    )
+                    writer.writeheader()
+                    for row in multi_text_rows:
+                        writer.writerow(row)
+
+                extra_written: dict[str, Any] = {}
+                for scope in requested_scopes:
+                    scope_records = records_by_scope.get(scope, [])
+                    scope_user_ids, scope_mat, cache_hashes, cache_vectors, scope_meta = _encode_text_records_with_cache(
+                        scope_records,
+                        model=model,
+                        batch_size=int(batch_size),
+                        cache_hashes=cache_hashes,
+                        cache_vectors=cache_vectors,
+                    )
+                    if scope_mat.shape[0] > 0:
+                        _write_vector_npz(out_dir / f"user_profile_vectors_{scope}.npz", scope_user_ids, scope_mat, model_name)
+                    extra_written[scope] = scope_meta
+                extra_vector_meta = {
+                    "enabled": True,
+                    "status": "ok",
+                    "requested_scopes": requested_scopes,
+                    "written_scopes": extra_written,
+                    "text_view_rows": int(len(multi_text_rows)),
+                }
+
+            _save_npz_cache(cache_file, cache_hashes, cache_vectors)
             embed_meta = {
                 "enabled": True,
                 "status": "ok",
                 "model_name": model_name,
+                "backend": backend,
                 "device": device,
                 "batch_size": int(batch_size),
+                "max_length": int(EMBED_MAX_LENGTH),
                 "cache_file": str(cache_file),
                 "cache_size": int(cache_hashes.shape[0]),
-                "vectors_written": int(len(vec_rows)),
-                "missing_encoded": int(len(unique_missing_texts)),
+                "vectors_written": int(mat.shape[0]),
+                "missing_encoded": int(base_encode_meta["missing_encoded"]),
             }
         except Exception as e:
             embed_meta = {
@@ -1116,6 +1371,13 @@ def main() -> None:
                 "status": "failed",
                 "error": str(e),
             }
+            if bool(ENABLE_MULTI_VECTOR_AUDIT):
+                extra_vector_meta = {
+                    "enabled": True,
+                    "status": "failed",
+                    "requested_scopes": list(MULTI_VECTOR_SCOPE_NAMES),
+                    "error": str(e),
+                }
 
     write_json(
         out_dir / "run_meta.json",
@@ -1156,9 +1418,12 @@ def main() -> None:
                 "scope": EMBED_SCOPE,
                 "use_bge_m3": bool(USE_BGE_M3),
                 "normalize": bool(EMBED_NORMALIZE),
+                "enable_multi_vector_audit": bool(ENABLE_MULTI_VECTOR_AUDIT),
+                "multi_vector_scope_names": list(MULTI_VECTOR_SCOPE_NAMES),
             },
             "summary": summary,
             "embedding": embed_meta,
+            "embedding_audit_extra_vectors": extra_vector_meta,
         },
     )
 
