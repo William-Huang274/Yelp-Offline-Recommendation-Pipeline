@@ -1,8 +1,8 @@
 # Yelp LA Offline Recommendation Pipeline
 
-An offline recommendation project built on the Yelp dataset, focused on Los
-Angeles food and restaurant discovery. The repository covers the full path from
-data preparation and business relabeling to candidate generation, structured
+An offline recommendation project built on the Yelp dataset, focused on the state
+of Louisiana food and restaurant discovery. The repository covers the full path 
+from data preparation and business relabeling to candidate generation, structured
 rerank, and LLM-based sidecar rerank experiments.
 
 This repository is suitable as a portfolio and research-delivery project. It is
