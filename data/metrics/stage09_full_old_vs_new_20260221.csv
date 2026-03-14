@@ -1,0 +1,6 @@
+run,bucket,fusion_recall_at_10,fusion_ndcg_at_10,profile_recall_at_10,profile_ndcg_at_10,profile_rows_total,item_semantic_enabled,profile_status
+20260220_175510_full_stage09_candidate_fusion,2,0.102938,0.047653,0.0,0.0,0,False,no_profile_rows
+20260220_175510_full_stage09_candidate_fusion,5,0.085612,0.040838,0.0,0.0,0,False,no_profile_rows
+20260221_180151_full_stage09_candidate_fusion,2,0.103313,0.047917,0.039234,0.019184,1288311,True,ok
+20260221_180151_full_stage09_candidate_fusion,5,0.086329,0.040927,0.092985,0.038643,2120139,True,ok
+20260221_180151_full_stage09_candidate_fusion,10,0.066611,0.031252,0.070481,0.030902,808539,True,ok

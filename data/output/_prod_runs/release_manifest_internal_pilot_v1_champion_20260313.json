@@ -1,0 +1,26 @@
+{
+  "release_label": "internal_pilot_v1_champion_20260313",
+  "published_at": "2026-03-13 20:30:34 +0800",
+  "source_manifest_path": "D:\\5006_BDA_project\\data\\output\\_first_champion_freeze_20260313\\first_champion_manifest.json",
+  "status": {
+    "internal_pilot_ready": true,
+    "production_ready": false
+  },
+  "policy_source": {
+    "champion_path": "stage11_qlora_sidecar",
+    "aligned_fallback_path": "stage10_learned_xgb",
+    "emergency_baseline_path": "stage09_plus_prescore"
+  },
+  "release_contract": {
+    "source_run_09": "20260311_005450_full_stage09_candidate_fusion",
+    "bucket": 10,
+    "eval_users": 738,
+    "candidate_topn": 250,
+    "top_k": 10
+  },
+  "prod_pointers": {
+    "stage09_release": "D:\\5006_BDA_project\\data\\output\\09_candidate_fusion\\20260311_005450_full_stage09_candidate_fusion",
+    "stage10_release": "D:\\5006_BDA_project\\data\\output\\10_2_rank_infer_eval\\20260313_193213_stage10_2_rank_infer_eval",
+    "stage11_release": "D:\\5006_BDA_project\\data\\output\\11_qlora_sidecar_eval\\20260313_151256_stage11_3_qlora_sidecar_eval"
+  }
+}

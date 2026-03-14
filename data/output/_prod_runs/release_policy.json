@@ -1,0 +1,22 @@
+{
+  "pointer_name": "release_policy",
+  "run_dir": "D:\\5006_BDA_project",
+  "release_label": "internal_pilot_v1_champion_20260313",
+  "approved_at": "2026-03-13 19:39:31 +08:00",
+  "champion_pointer": "stage11_release",
+  "aligned_fallback_pointer": "stage10_release",
+  "emergency_baseline_pointer": "stage09_release",
+  "release_contract": {
+    "source_run_09": "20260311_005450_full_stage09_candidate_fusion",
+    "bucket": 10,
+    "eval_users": 738,
+    "candidate_topn": 250,
+    "top_k": 10
+  },
+  "notes": [
+    "Keep _latest_runs for experiments only.",
+    "Do not let smoke or partial runs overwrite _prod_runs.",
+    "Publish from a frozen champion manifest, not from an ad hoc run.",
+    "release_policy_source=D:\\5006_BDA_project\\data\\output\\_first_champion_freeze_20260313\\first_champion_manifest.json"
+  ]
+}

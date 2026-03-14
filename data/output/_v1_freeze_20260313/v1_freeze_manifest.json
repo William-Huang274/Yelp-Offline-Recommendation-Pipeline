@@ -1,0 +1,178 @@
+{
+  "freeze_id": "v1_freeze_20260313",
+  "freeze_created_at": "2026-03-13 18:52:52 +08:00",
+  "repo_root": "D:\\5006_BDA_project",
+  "freeze_kind": "local_artifact_freeze_from_latest_cloud_lineage",
+  "status": {
+    "freeze_complete": true,
+    "release_default_path": "stage09_plus_prescore",
+    "cloud_best_eval_path": "stage11_dpo_sidecar",
+    "is_final_internal_go_live_champion": false,
+    "note": "This freeze preserves the latest successful cloud lineage locally for v1 closeout. It does not resolve GL-07 release-alignment risk."
+  },
+  "lineage": {
+    "stage09_source": {
+      "remote_run_dir": "/root/autodl-tmp/stage09_fs/20260311_005450_full_stage09_candidate_fusion",
+      "local_run_dir": "D:\\5006_BDA_project\\data\\output\\09_candidate_fusion\\20260311_005450_full_stage09_candidate_fusion",
+      "selection_reason": "Referenced by the latest verified successful stage11_1 and stage11_3 cloud pointers."
+    },
+    "stage11_1_dataset": {
+      "remote_run_dir": "/root/autodl-tmp/stage11_fs/input11data/20260311_011112_stage11_1_qlora_build_dataset",
+      "local_run_dir": "D:\\5006_BDA_project\\data\\output\\11_qlora_data\\20260311_011112_stage11_1_qlora_build_dataset",
+      "source_run_09": "/root/autodl-tmp/stage09_fs/20260311_005450_full_stage09_candidate_fusion",
+      "enforce_stage09_gate": false
+    },
+    "stage11_2_sft": {
+      "remote_run_dir": "/root/autodl-tmp/stage11_fs/models/20260312_175852_stage11_2_qlora_train",
+      "local_run_dir": "D:\\5006_BDA_project\\data\\output\\11_qlora_models\\20260312_175852_stage11_2_qlora_train",
+      "base_model": "/root/hf_models/Qwen3.5-9B",
+      "source_stage11_dataset_run": "/root/autodl-tmp/stage11_fs/input11data/20260311_011112_stage11_1_qlora_build_dataset",
+      "sync_scope": "adapter_and_audit_essentials_only"
+    },
+    "stage11_2_dpo_eval_run": {
+      "remote_run_dir": "/root/autodl-tmp/stage11_fs/models/20260312_221630_stage11_2_dpo_train_9b_v3full_ckpt485_eval_run",
+      "local_run_dir": "D:\\5006_BDA_project\\data\\output\\11_qlora_models\\20260312_221630_stage11_2_dpo_train_9b_v3full_ckpt485_eval_run",
+      "base_model": "/root/hf_models/Qwen3.5-9B",
+      "source_stage11_dataset_run": "/root/autodl-tmp/stage11_fs/input11data/20260311_011112_stage11_1_qlora_build_dataset",
+      "source_sft_adapter_dir": "/root/autodl-tmp/stage11_fs/models/20260312_175852_stage11_2_qlora_train/adapter"
+    },
+    "stage11_3_sidecar_eval": {
+      "remote_run_dir": "/root/autodl-tmp/stage11_fs/sidecar_eval/20260313_151256_stage11_3_qlora_sidecar_eval",
+      "local_run_dir": "D:\\5006_BDA_project\\data\\output\\11_qlora_sidecar_eval\\20260313_151256_stage11_3_qlora_sidecar_eval",
+      "source_run_09": "/root/autodl-tmp/stage09_fs/20260311_005450_full_stage09_candidate_fusion",
+      "source_run_11_1_data": "/root/autodl-tmp/stage11_fs/input11data/20260311_011112_stage11_1_qlora_build_dataset",
+      "source_run_11_2": "/root/autodl-tmp/stage11_fs/models/20260312_221630_stage11_2_dpo_train_9b_v3full_ckpt485_eval_run",
+      "blend_alpha_recorded": 0.5,
+      "alpha_sweep_best": 0.54,
+      "top_k": 10,
+      "rerank_topn": 250,
+      "use_stage11_eval_split": true
+    }
+  },
+  "metrics": {
+    "stage09_latest_local_audit_reference": {
+      "metrics_file": "D:\\5006_BDA_project\\data\\metrics\\stage09_recall_audit_summary_latest.csv",
+      "run_id": "20260305_003539",
+      "source_run_09": "20260305_002746_full_stage09_candidate_fusion",
+      "bucket": 10,
+      "n_users": 3618,
+      "truth_in_all": 0.947208,
+      "truth_in_pretrim": 0.882255,
+      "pretrim_cut_loss": 0.064953,
+      "hard_miss": 0.052792
+    },
+    "stage11_v1_eval_recorded": {
+      "metrics_file": "D:\\5006_BDA_project\\data\\output\\11_qlora_sidecar_eval\\20260313_151256_stage11_3_qlora_sidecar_eval\\qlora_sidecar_metrics.csv",
+      "run_id_11": "20260313_151256",
+      "source_run_09": "/root/autodl-tmp/stage09_fs/20260311_005450_full_stage09_candidate_fusion",
+      "source_run_11_2": "/root/autodl-tmp/stage11_fs/models/20260312_221630_stage11_2_dpo_train_9b_v3full_ckpt485_eval_run",
+      "n_users": 738,
+      "n_items": 1451,
+      "n_candidates": 184500,
+      "prescore_at_10": {
+        "recall": 0.056910569105691054,
+        "ndcg": 0.02646705876884783
+      },
+      "qlora_sidecar_at_10": {
+        "recall": 0.06775067750677506,
+        "ndcg": 0.02993468209586097
+      },
+      "delta_vs_prescore": {
+        "recall_abs": 0.010840108401084008,
+        "recall_rel": 0.19047619047619047,
+        "ndcg_abs": 0.00346762332701314,
+        "ndcg_rel": 0.13101657182262315
+      }
+    },
+    "stage11_alpha_sweep_best": {
+      "file": "D:\\5006_BDA_project\\data\\output\\11_qlora_sidecar_eval\\20260313_151256_stage11_3_qlora_sidecar_eval\\alpha_sweep_best.json",
+      "alpha": 0.54,
+      "recall_at_10": 0.06775067750677506,
+      "ndcg_at_10": 0.03012705082592172
+    }
+  },
+  "local_inventory": [
+    {
+      "path": "D:\\5006_BDA_project\\data\\output\\09_candidate_fusion\\20260311_005450_full_stage09_candidate_fusion",
+      "file_count": 107,
+      "bytes": 236501072,
+      "sync_scope": "full_with_symlink_targets_materialized"
+    },
+    {
+      "path": "D:\\5006_BDA_project\\data\\output\\11_qlora_data\\20260311_011112_stage11_1_qlora_build_dataset",
+      "file_count": 85,
+      "bytes": 166853117,
+      "sync_scope": "full"
+    },
+    {
+      "path": "D:\\5006_BDA_project\\data\\output\\11_qlora_models\\20260312_175852_stage11_2_qlora_train",
+      "file_count": 9,
+      "bytes": 136443017,
+      "sync_scope": "adapter_and_audit_essentials_only"
+    },
+    {
+      "path": "D:\\5006_BDA_project\\data\\output\\11_qlora_models\\20260312_221630_stage11_2_dpo_train_9b_v3full_ckpt485_eval_run",
+      "file_count": 12,
+      "bytes": 194911169,
+      "sync_scope": "adapter_eval_run_essentials"
+    },
+    {
+      "path": "D:\\5006_BDA_project\\data\\output\\11_qlora_sidecar_eval\\20260313_151256_stage11_3_qlora_sidecar_eval",
+      "file_count": 6,
+      "bytes": 16538641,
+      "sync_scope": "full"
+    }
+  ],
+  "integrity_hashes": [
+    {
+      "path": "D:\\5006_BDA_project\\data\\output\\11_qlora_sidecar_eval\\20260313_151256_stage11_3_qlora_sidecar_eval\\qlora_sidecar_metrics.csv",
+      "sha256": "cbfdb76815b25ec7c5b518170ddb1e8e2365b6a3d4cedc646a25c2ab55fdf803",
+      "bytes": 645
+    },
+    {
+      "path": "D:\\5006_BDA_project\\data\\metrics\\recsys_stage11_qlora_sidecar_results.csv",
+      "sha256": "48ec63abbf22043caa0dba1b23b6da2927f693680a5b84e40cee996d2c08aea1",
+      "bytes": 7188
+    },
+    {
+      "path": "D:\\5006_BDA_project\\data\\output\\11_qlora_models\\20260312_221630_stage11_2_dpo_train_9b_v3full_ckpt485_eval_run\\adapter\\adapter_model.safetensors",
+      "sha256": "1c4832286732b78ca57688d99e110b0c48f1a1fa776a4b708190ce5a6258309a",
+      "bytes": 58230048
+    },
+    {
+      "path": "D:\\5006_BDA_project\\data\\output\\11_qlora_models\\20260312_175852_stage11_2_qlora_train\\adapter\\adapter_model.safetensors",
+      "sha256": "d11d26a2c17d3431eb395b67b164e1dec10846666c15f02ac2ce2d392468c41f",
+      "bytes": 116425880
+    }
+  ],
+  "remote_snapshot": {
+    "root": "D:\\5006_BDA_project\\data\\output\\_v1_freeze_20260313\\remote_snapshot",
+    "verified_against_cloud_at": "2026-03-13 18:52:52 +08:00",
+    "pointer_files": [
+      "D:\\5006_BDA_project\\data\\output\\_v1_freeze_20260313\\remote_snapshot\\latest_runs\\stage11_1_qlora_build_dataset.json",
+      "D:\\5006_BDA_project\\data\\output\\_v1_freeze_20260313\\remote_snapshot\\latest_runs\\stage11_2_qlora_train.json",
+      "D:\\5006_BDA_project\\data\\output\\_v1_freeze_20260313\\remote_snapshot\\latest_runs\\stage11_3_qlora_sidecar_eval.json"
+    ],
+    "metric_files": [
+      "D:\\5006_BDA_project\\data\\output\\_v1_freeze_20260313\\remote_snapshot\\metrics\\recsys_stage11_qlora_sidecar_results.csv",
+      "D:\\5006_BDA_project\\data\\output\\_v1_freeze_20260313\\remote_snapshot\\metrics\\stage09_recall_audit_summary_latest.csv"
+    ]
+  },
+  "excluded_or_deferred": [
+    {
+      "path": "/root/autodl-tmp/stage09_fs/20260313_170846_full_stage09_candidate_fusion",
+      "reason": "Verified empty directory at freeze time; not used by latest successful stage11 lineage."
+    },
+    {
+      "path": "/root/autodl-tmp/stage11_fs/models/20260312_175852_stage11_2_qlora_train/trainer_output/checkpoint-*",
+      "reason": "Not copied to local freeze. Adapter and audit essentials are sufficient for lineage, audit, and inference reference."
+    }
+  ],
+  "next_repairs_after_freeze": [
+    "GL-01 rotate cloud credentials immediately",
+    "GL-03 repair repo hygiene and write root README/.gitignore",
+    "GL-06 re-audit stage09 source 20260311_005450 on the current active lineage",
+    "GL-07 align stage10 and stage11 release evaluation on one shared cohort and one shared stage09 source",
+    "Freeze the first true internal-go-live champion after GL-06 and GL-07"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "pointer_name": "stage09_release",
+  "run_dir": "D:\\5006_BDA_project\\data\\output\\09_candidate_fusion\\20260311_005450_full_stage09_candidate_fusion",
+  "release_label": "internal_pilot_v1_champion_20260313",
+  "release_role": "emergency_baseline_source",
+  "source_run_09": "20260311_005450_full_stage09_candidate_fusion",
+  "audit_run_id": "20260313_191007",
+  "audit_metrics_file": "D:\\5006_BDA_project\\data\\metrics\\stage09_recall_audit_summary_latest.csv",
+  "bucket": 10,
+  "truth_in_all": 0.947208,
+  "truth_in_pretrim": 0.882255,
+  "pretrim_cut_loss": 0.064953,
+  "hard_miss": 0.052792
+}

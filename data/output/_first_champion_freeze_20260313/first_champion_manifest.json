@@ -1,0 +1,163 @@
+{
+  "freeze_id": "first_champion_freeze_20260313",
+  "version_label": "internal_pilot_v1_champion_20260313",
+  "freeze_created_at": "2026-03-13 19:39:31 +08:00",
+  "repo_root": "D:\\5006_BDA_project",
+  "status": {
+    "champion_frozen": true,
+    "internal_pilot_champion": true,
+    "production_ready": false,
+    "go_live_operational_gaps_remain": true,
+    "note": "Champion selection is now frozen for version closeout. This is not yet a production-ready release because GL-08 and later operational items remain open."
+  },
+  "release_policy": {
+    "champion_path": "stage11_qlora_sidecar",
+    "aligned_fallback_path": "stage10_learned_xgb",
+    "emergency_baseline_path": "stage09_plus_prescore"
+  },
+  "alignment_contract": {
+    "source_run_09": "20260311_005450_full_stage09_candidate_fusion",
+    "bucket": 10,
+    "eval_users": 738,
+    "candidate_topn": 250,
+    "top_k": 10
+  },
+  "champion_lineage": {
+    "stage09_audit": {
+      "local_metrics_file": "D:\\5006_BDA_project\\data\\metrics\\stage09_recall_audit_summary_latest.csv",
+      "audit_run_id": "20260313_191007",
+      "audit_output_dir": "D:\\5006_BDA_project\\data\\output\\09_recall_audit\\20260313_191007_stage09_recall_audit",
+      "source_run_09": "20260311_005450_full_stage09_candidate_fusion"
+    },
+    "stage11_1_dataset": {
+      "local_run_dir": "D:\\5006_BDA_project\\data\\output\\11_qlora_data\\20260311_011112_stage11_1_qlora_build_dataset",
+      "remote_run_dir": "/root/autodl-tmp/stage11_fs/input11data/20260311_011112_stage11_1_qlora_build_dataset"
+    },
+    "stage11_2_dpo_eval_run": {
+      "local_run_dir": "D:\\5006_BDA_project\\data\\output\\11_qlora_models\\20260312_221630_stage11_2_dpo_train_9b_v3full_ckpt485_eval_run",
+      "remote_run_dir": "/root/autodl-tmp/stage11_fs/models/20260312_221630_stage11_2_dpo_train_9b_v3full_ckpt485_eval_run"
+    },
+    "stage11_3_eval": {
+      "local_run_dir": "D:\\5006_BDA_project\\data\\output\\11_qlora_sidecar_eval\\20260313_151256_stage11_3_qlora_sidecar_eval",
+      "remote_run_dir": "/root/autodl-tmp/stage11_fs/sidecar_eval/20260313_151256_stage11_3_qlora_sidecar_eval",
+      "metrics_file": "D:\\5006_BDA_project\\data\\output\\11_qlora_sidecar_eval\\20260313_151256_stage11_3_qlora_sidecar_eval\\qlora_sidecar_metrics.csv",
+      "alpha_sweep_best_file": "D:\\5006_BDA_project\\data\\output\\11_qlora_sidecar_eval\\20260313_151256_stage11_3_qlora_sidecar_eval\\alpha_sweep_best.json",
+      "recorded_blend_alpha": 0.5,
+      "alpha_sweep_best": 0.54
+    }
+  },
+  "aligned_fallback_lineage": {
+    "stage10_model_run": {
+      "local_model_dir": "D:\\5006_BDA_project\\data\\output\\10_rank_models\\20260307_210530_stage10_1_rank_train",
+      "remote_model_dir": "/root/autodl-tmp/stage10_fs/models/20260307_210530_stage10_1_rank_train",
+      "training_run_id": "20260307_210530"
+    },
+    "stage10_aligned_eval": {
+      "local_run_meta": "D:\\5006_BDA_project\\data\\output\\10_2_rank_infer_eval\\20260313_193213_stage10_2_rank_infer_eval\\run_meta.json",
+      "remote_run_dir": "/root/autodl-tmp/stage10_fs/infer_eval_gl07/20260313_193213_stage10_2_rank_infer_eval",
+      "metrics_file": "D:\\5006_BDA_project\\data\\metrics\\recsys_stage10_results_gl07.csv",
+      "eval_user_cohort_path": "D:\\5006_BDA_project\\data\\output\\11_eval_cohorts\\20260311_011112_bucket10_eval_users.csv"
+    }
+  },
+  "metrics": {
+    "stage09_audit": {
+      "truth_in_all": 0.947208,
+      "truth_in_pretrim": 0.882255,
+      "pretrim_cut_loss": 0.064953,
+      "hard_miss": 0.052792
+    },
+    "stage10_aligned": {
+      "prescore_at_10": {
+        "recall": 0.056911,
+        "ndcg": 0.026467
+      },
+      "learned_blend_xgb_cls_at_10": {
+        "recall": 0.065041,
+        "ndcg": 0.029217
+      },
+      "delta_vs_prescore": {
+        "recall_abs": 0.00813,
+        "recall_rel": 0.14285463,
+        "ndcg_abs": 0.00275,
+        "ndcg_rel": 0.10390297
+      }
+    },
+    "stage11_champion": {
+      "prescore_at_10": {
+        "recall": 0.056910569105691054,
+        "ndcg": 0.02646705876884783
+      },
+      "qlora_sidecar_at_10": {
+        "recall": 0.06775067750677506,
+        "ndcg": 0.02993468209586097
+      },
+      "alpha_sweep_best": {
+        "alpha": 0.54,
+        "recall_at_10": 0.06775067750677506,
+        "ndcg_at_10": 0.03012705082592172
+      }
+    },
+    "champion_vs_fallback": {
+      "recall_abs": 0.00270967750677506,
+      "recall_rel": 0.04166107,
+      "ndcg_abs": 0.00071768209586097,
+      "ndcg_rel": 0.02456385
+    }
+  },
+  "snapshots": {
+    "root": "D:\\5006_BDA_project\\data\\output\\_first_champion_freeze_20260313\\snapshots",
+    "files": [
+      {
+        "path": "D:\\5006_BDA_project\\data\\output\\_first_champion_freeze_20260313\\snapshots\\metrics\\stage09_recall_audit_summary_latest.csv",
+        "sha256": "a30683c4ad1ce76d08c590ea5020eba901f04cb8d2e4ac1b2c8a2f31620f0618",
+        "bytes": 1289
+      },
+      {
+        "path": "D:\\5006_BDA_project\\data\\output\\_first_champion_freeze_20260313\\snapshots\\metrics\\recsys_stage10_results_gl07.csv",
+        "sha256": "0d75f2bedb4bce18d2a3d6146d0d5c0c06bc2957106b63b85eff35a50f549d61",
+        "bytes": 642
+      },
+      {
+        "path": "D:\\5006_BDA_project\\data\\output\\_first_champion_freeze_20260313\\snapshots\\metrics\\qlora_sidecar_metrics.csv",
+        "sha256": "cbfdb76815b25ec7c5b518170ddb1e8e2365b6a3d4cedc646a25c2ab55fdf803",
+        "bytes": 645
+      },
+      {
+        "path": "D:\\5006_BDA_project\\data\\output\\_first_champion_freeze_20260313\\snapshots\\stage09\\stage09_recall_audit.json",
+        "sha256": "c39bc9e11a8bc798468b4b0df433e25032342d02fa91316d902ec03b470cb086",
+        "bytes": 3113
+      },
+      {
+        "path": "D:\\5006_BDA_project\\data\\output\\_first_champion_freeze_20260313\\snapshots\\stage10\\run_meta.json",
+        "sha256": "a7977102dbca22ea8350b733386c583cea9aa60e8160ebe0fa9c34336871a8c0",
+        "bytes": 4093
+      },
+      {
+        "path": "D:\\5006_BDA_project\\data\\output\\_first_champion_freeze_20260313\\snapshots\\stage11\\run_meta.json",
+        "sha256": "2c19ec390964b90b31eb66e5f5996128649160ff906b0bf0e3034eb1d1fc0427",
+        "bytes": 1978
+      },
+      {
+        "path": "D:\\5006_BDA_project\\data\\output\\_first_champion_freeze_20260313\\snapshots\\stage11\\alpha_sweep_best.json",
+        "sha256": "6da30a5b596829c5f7de2adb78bbfd48532c329ab73433d52cb2f81453e73d9d",
+        "bytes": 95
+      }
+    ]
+  },
+  "docs": {
+    "closeout_doc": "D:\\5006_BDA_project\\docs\\first_champion_closeout_20260313.md",
+    "v1_freeze_doc": "D:\\5006_BDA_project\\docs\\v1_freeze_20260313.md",
+    "stage09_reaudit_doc": "D:\\5006_BDA_project\\docs\\stage09_reaudit_20260313.md",
+    "gl07_alignment_doc": "D:\\5006_BDA_project\\docs\\gl07_stage10_stage11_alignment_20260313.md",
+    "go_live_readiness_doc": "D:\\5006_BDA_project\\docs\\go_live_readiness_20260312.md"
+  },
+  "next_actions_after_closeout": [
+    "GL-08 add production pointers for champion, fallback, and emergency baseline",
+    "GL-09 continue path unification and remove remaining hardcoded legacy paths",
+    "GL-10 add smoke tests for stage09 audit, stage10 aligned eval, and stage11 sidecar eval",
+    "GL-11 add release validation script",
+    "GL-12 add one-click batch runner",
+    "GL-13 add rollback and monitoring",
+    "GL-14 add data contract and asset inventory"
+  ]
+}

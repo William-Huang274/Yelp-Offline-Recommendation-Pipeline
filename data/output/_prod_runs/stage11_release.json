@@ -1,0 +1,20 @@
+{
+  "pointer_name": "stage11_release",
+  "run_dir": "D:\\5006_BDA_project\\data\\output\\11_qlora_sidecar_eval\\20260313_151256_stage11_3_qlora_sidecar_eval",
+  "release_label": "internal_pilot_v1_champion_20260313",
+  "release_role": "champion",
+  "source_run_09": "20260311_005450_full_stage09_candidate_fusion",
+  "source_run_11_1_data": "D:\\5006_BDA_project\\data\\output\\11_qlora_data\\20260311_011112_stage11_1_qlora_build_dataset",
+  "source_run_11_2": "D:\\5006_BDA_project\\data\\output\\11_qlora_models\\20260312_221630_stage11_2_dpo_train_9b_v3full_ckpt485_eval_run",
+  "adapter_dir": "D:\\5006_BDA_project\\data\\output\\11_qlora_models\\20260312_221630_stage11_2_dpo_train_9b_v3full_ckpt485_eval_run\\adapter",
+  "metrics_file": "D:\\5006_BDA_project\\data\\output\\11_qlora_sidecar_eval\\20260313_151256_stage11_3_qlora_sidecar_eval\\qlora_sidecar_metrics.csv",
+  "alpha_sweep_best_file": "D:\\5006_BDA_project\\data\\output\\11_qlora_sidecar_eval\\20260313_151256_stage11_3_qlora_sidecar_eval\\alpha_sweep_best.json",
+  "top_k": 10,
+  "rerank_topn": 250,
+  "recorded_blend_alpha": 0.5,
+  "alpha_sweep_best": 0.54,
+  "selected_model": "QLoRASidecar@10",
+  "recall_at_k": 0.06775067750677506,
+  "ndcg_at_k": 0.02993468209586097,
+  "champion_from_release_policy": true
+}
