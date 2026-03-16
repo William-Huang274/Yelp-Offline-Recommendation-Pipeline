@@ -145,11 +145,11 @@
     ]
   },
   "docs": {
-    "closeout_doc": "D:\\5006_BDA_project\\docs\\first_champion_closeout_20260313.md",
-    "v1_freeze_doc": "D:\\5006_BDA_project\\docs\\v1_freeze_20260313.md",
-    "stage09_reaudit_doc": "D:\\5006_BDA_project\\docs\\stage09_reaudit_20260313.md",
-    "gl07_alignment_doc": "D:\\5006_BDA_project\\docs\\gl07_stage10_stage11_alignment_20260313.md",
-    "go_live_readiness_doc": "D:\\5006_BDA_project\\docs\\go_live_readiness_20260312.md"
+    "closeout_doc": "D:\\5006_BDA_project\\docs\\release\\first_champion_closeout_20260313.md",
+    "v1_freeze_doc": "D:\\5006_BDA_project\\docs\\release\\v1_freeze_20260313.md",
+    "stage09_reaudit_doc": "D:\\5006_BDA_project\\docs\\stage09\\stage09_reaudit_20260313.md",
+    "gl07_alignment_doc": "D:\\5006_BDA_project\\docs\\repo\\gl07_stage10_stage11_alignment_20260313.md",
+    "go_live_readiness_doc": "D:\\5006_BDA_project\\docs\\release\\go_live_readiness_20260312.md"
   },
   "next_actions_after_closeout": [
     "GL-08 add production pointers for champion, fallback, and emergency baseline",

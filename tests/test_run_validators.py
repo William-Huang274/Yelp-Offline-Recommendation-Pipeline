@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from pipeline.run_validators import (
     missing_required_fields,
     validate_stage09_candidate_run,
@@ -25,13 +27,18 @@ def test_stage11_validator_accepts_valid_fixture(fake_stage11_dataset_run: Path)
     assert validate_stage11_dataset_run(fake_stage11_dataset_run) == []
 
 
+def _require_local_artifact(run_dir: Path) -> None:
+    if not run_dir.exists():
+        pytest.skip(f"local frozen artifact not available: {run_dir}")
+
+
 def test_stage09_validator_smoke_checks_frozen_local_run() -> None:
     run_dir = REPO_ROOT / "data/output/09_candidate_fusion/20260311_005450_full_stage09_candidate_fusion"
-    assert run_dir.exists(), run_dir
+    _require_local_artifact(run_dir)
     assert validate_stage09_candidate_run(run_dir) == []
 
 
 def test_stage11_validator_smoke_checks_frozen_local_run() -> None:
     run_dir = REPO_ROOT / "data/output/11_qlora_data/20260311_011112_stage11_1_qlora_build_dataset"
-    assert run_dir.exists(), run_dir
+    _require_local_artifact(run_dir)
     assert validate_stage11_dataset_run(run_dir) == []

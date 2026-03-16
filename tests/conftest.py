@@ -58,17 +58,19 @@ def fake_stage09_run(tmp_path: Path) -> Path:
 def fake_stage11_dataset_run(tmp_path: Path) -> Path:
     run_dir = tmp_path / "20260313_000001_stage11_1_qlora_build_dataset"
     bucket_dir = run_dir / "bucket_10"
+    fake_stage09_source = tmp_path / "source_runs" / "stage09_candidate_fusion_example"
+    fake_output_bucket_dir = bucket_dir
     _write_json(
         run_dir / "run_meta.json",
         {
             "run_id": "20260313_000001",
             "run_tag": "stage11_1_qlora_build_dataset",
-            "source_stage09_run": "D:/5006_BDA_project/data/output/09_candidate_fusion/example",
+            "source_stage09_run": str(fake_stage09_source),
             "summary": [
                 {
                     "bucket": 10,
                     "candidate_file": "candidates_pretrim150.parquet",
-                    "output_bucket_dir": "D:/5006_BDA_project/data/output/11_qlora_data/example/bucket_10",
+                    "output_bucket_dir": str(fake_output_bucket_dir),
                 }
             ],
         },

@@ -341,7 +341,7 @@ def seed_everything(seed: int) -> None:
         torch.cuda.manual_seed_all(seed)
 
 
-# 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ main 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+# --- main ---
 def main() -> None:
     seed_everything(SEED)
     source_11 = resolve_stage11_dataset_run()
@@ -376,7 +376,7 @@ def main() -> None:
             "Set QLORA_ENFORCE_REQUIRED_BASE_MODEL=false to override."
         )
     print(f"[CONFIG] base_model={BASE_MODEL}")
-    print(f"[CONFIG] DPO 尾={DPO_BETA}, loss_type={DPO_LOSS_TYPE}, max_pairs_per_user={DPO_MAX_PAIRS_PER_USER}")
+    print(f"[CONFIG] DPO beta={DPO_BETA}, loss_type={DPO_LOSS_TYPE}, max_pairs_per_user={DPO_MAX_PAIRS_PER_USER}")
     print(f"[CONFIG] LR={LR}, epochs={EPOCHS}, batch_size={BATCH_SIZE}, grad_acc={GRAD_ACC}")
     print(f"[CONFIG] max_seq_len={MAX_SEQ_LEN}, pad_to_multiple_of={PAD_TO_MULTIPLE_OF}")
     print(f"[CONFIG] dpo_pretokenize={DPO_PRETOKENIZE}")
@@ -394,7 +394,7 @@ def main() -> None:
         out_dir = OUTPUT_ROOT / f"{run_id}_{RUN_TAG}"
         out_dir.mkdir(parents=True, exist_ok=True)
 
-    # 鈹€鈹€鈹€鈹€ Load raw JSON data 鈹€鈹€鈹€鈹€
+    # --- Load raw JSON data ---
     if source_mode == "rich_sft":
         train_files, eval_files, file_summary = collect_json_files(
             source_11,
@@ -415,7 +415,7 @@ def main() -> None:
     n_neg = int((labels == 0).sum())
     print(f"[DATA] pos={n_pos}, neg={n_neg}, ratio=1:{n_neg / max(1, n_pos):.1f}")
 
-    # 鈹€鈹€鈹€鈹€ Build DPO preference pairs 鈹€鈹€鈹€鈹€
+    # --- Build DPO preference pairs ---
     train_rows = [raw_train[i] for i in range(len(raw_train))]
 
     # Optionally strip ranking features from pre-built prompts
@@ -478,7 +478,7 @@ def main() -> None:
     else:
         eval_pair_audit = {}
 
-    # 鈹€鈹€鈹€鈹€ Model 鈹€鈹€鈹€鈹€
+    # --- Model ---
     has_cuda = torch.cuda.is_available()
     compute_dtype = torch.bfloat16 if (has_cuda and USE_BF16 and torch.cuda.is_bf16_supported()) else torch.float16
     bnb_config = None
@@ -527,7 +527,7 @@ def main() -> None:
             ) from exc
         raise
 
-    # 鈹€鈹€ Optionally load & merge SFT adapter as initialisation 鈹€鈹€
+    # --- Optionally load and merge SFT adapter as initialization ---
     if QLORA_SFT_ADAPTER_DIR:
         sft_path = Path(QLORA_SFT_ADAPTER_DIR)
         if not sft_path.exists():
@@ -610,7 +610,7 @@ def main() -> None:
 
     print(f"[DATA] DPO train_pairs: {len(dpo_train_ds)}")
 
-    # 鈹€鈹€鈹€鈹€ DPO Training 鈹€鈹€鈹€鈹€
+    # --- DPO Training ---
     has_eval = dpo_eval_ds is not None and len(dpo_eval_ds) > 0
     trainer_out_dir = out_dir / "trainer_output"
 
@@ -666,13 +666,13 @@ def main() -> None:
     train_result = trainer.train(resume_from_checkpoint=resume_checkpoint)
     eval_result = trainer.evaluate() if has_eval else {}
 
-    # 鈹€鈹€鈹€鈹€ Save adapter 鈹€鈹€鈹€鈹€
+    # --- Save adapter ---
     adapter_dir = out_dir / "adapter"
     adapter_dir.mkdir(parents=True, exist_ok=True)
     model.save_pretrained(adapter_dir.as_posix())
     tokenizer.save_pretrained(adapter_dir.as_posix())
 
-    # 鈹€鈹€鈹€鈹€ Run metadata 鈹€鈹€鈹€鈹€
+    # --- Run metadata ---
     payload = {
         "run_id": run_id,
         "run_tag": RUN_TAG,

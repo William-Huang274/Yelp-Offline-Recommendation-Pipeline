@@ -121,6 +121,7 @@ def find_release_manifest(release_label: str) -> Path | None:
     return None
 
 
+
 def metric_row_by_model(rows: list[dict[str, str]], model_name: str) -> dict[str, str] | None:
     for row in rows:
         if str(row.get("model", "")).strip() == model_name:
@@ -131,19 +132,19 @@ def metric_row_by_model(rows: list[dict[str, str]], model_name: str) -> dict[str
 def required_docs() -> list[Path]:
     return [
         REPO_ROOT / "README.md",
-        REPO_ROOT / "docs/go_live_readiness_20260312.md",
-        REPO_ROOT / "docs/v1_freeze_20260313.md",
-        REPO_ROOT / "docs/first_champion_closeout_20260313.md",
-        REPO_ROOT / "docs/stage09_reaudit_20260313.md",
-        REPO_ROOT / "docs/gl07_stage10_stage11_alignment_20260313.md",
-        REPO_ROOT / "docs/gl08_prod_pointers_20260313.md",
-        REPO_ROOT / "docs/gl09_path_unification_20260313.md",
-        REPO_ROOT / "docs/gl10_smoke_tests_20260313.md",
-        REPO_ROOT / "docs/gl12_batch_runner_20260313.md",
-        REPO_ROOT / "docs/rollback_and_monitoring.md",
-        REPO_ROOT / "docs/config_reference.md",
-        REPO_ROOT / "docs/data_contract.md",
-        REPO_ROOT / "docs/stage11_cloud_run_profile_20260309.md",
+        REPO_ROOT / "docs/release/go_live_readiness_20260312.md",
+        REPO_ROOT / "docs/release/v1_freeze_20260313.md",
+        REPO_ROOT / "docs/release/first_champion_closeout_20260313.md",
+        REPO_ROOT / "docs/stage09/stage09_reaudit_20260313.md",
+        REPO_ROOT / "docs/repo/gl07_stage10_stage11_alignment_20260313.md",
+        REPO_ROOT / "docs/repo/gl08_prod_pointers_20260313.md",
+        REPO_ROOT / "docs/repo/gl09_path_unification_20260313.md",
+        REPO_ROOT / "docs/repo/gl10_smoke_tests_20260313.md",
+        REPO_ROOT / "docs/repo/gl12_batch_runner_20260313.md",
+        REPO_ROOT / "docs/release/rollback_and_monitoring.md",
+        REPO_ROOT / "docs/contracts/config_reference.md",
+        REPO_ROOT / "docs/contracts/data_contract.md",
+        REPO_ROOT / "docs/stage11/stage11_cloud_run_profile_20260309.md",
     ]
 
 
@@ -174,7 +175,7 @@ def build_report_markdown(
         "",
         f"- generated_at: `{generated_at}`",
         f"- overall_status: `{status}`",
-        f"- report_path: {markdown_link(report_path)}",
+        f"- report_path: [{report_path.name}](./{report_path.name})",
         "",
         "## Summary",
         "",
@@ -200,7 +201,6 @@ def build_report_markdown(
     for item in results:
         lines.append(f"| `{item.level}` | `{item.area}` | {item.message} |")
     return "\n".join(lines) + "\n"
-
 
 def run_checks() -> tuple[str, list[CheckResult], dict[str, Any], str]:
     results: list[CheckResult] = []
@@ -438,7 +438,7 @@ def run_checks() -> tuple[str, list[CheckResult], dict[str, Any], str]:
     else:
         add_result(results, WARN, "ops", "no rollback snapshot found under data/output/_prod_runs")
 
-    monitor_report_path = REPO_ROOT / "docs" / f"release_monitor_report_{sanitize_name(release_label)}.md"
+    monitor_report_path = REPO_ROOT / "docs/release" / f"release_monitor_report_{sanitize_name(release_label)}.md"
     if monitor_report_path.exists() and monitor_report_path.stat().st_size > 0:
         add_result(results, PASS, "ops", f"release monitor report present: {monitor_report_path.name}")
     else:
@@ -480,7 +480,7 @@ def run_checks() -> tuple[str, list[CheckResult], dict[str, Any], str]:
 def main() -> int:
     status, results, summary, release_label = run_checks()
     report_name = f"{RELEASE_REPORT_PREFIX}{sanitize_name(release_label)}.md"
-    report_path = REPO_ROOT / "docs" / report_name
+    report_path = REPO_ROOT / "docs/release" / report_name
     report_text = build_report_markdown(release_label, status, results, summary, report_path)
     report_path.write_text(report_text, encoding="utf-8")
     print(f"{status} {report_path}")
