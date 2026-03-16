@@ -1,9 +1,11 @@
-# Yelp LA Offline Recommendation Pipeline
+# Yelp Offline Recommendation Pipeline
 
-An offline recommendation project built on the Yelp dataset, focused on the state
-of Louisiana food and restaurant discovery. The repository covers the full path 
-from data preparation and business relabeling to candidate generation, structured
-rerank, and LLM-based sidecar rerank experiments.
+[English](./README.md) | [Chinese](./README.zh-CN.md)
+
+An offline recommendation project built on the Yelp dataset, focused on
+Louisiana food and restaurant discovery. The repository covers the full path
+from data preparation and business relabeling to candidate generation,
+structured rerank, and LLM-based sidecar rerank experiments.
 
 This repository is suitable as a portfolio and research-delivery project. It is
 not a production-ready online service.
@@ -69,7 +71,7 @@ Main active scripts:
 
 ## Pipeline Summary
 
-1. `01-08`: prepare Yelp data, filter LA food businesses, relabel and cluster businesses, and build business-profile assets.
+1. `01-08`: prepare Yelp data, filter Louisiana food businesses, relabel and cluster businesses, and build business-profile assets.
 2. `09`: build user profile and item semantics, fuse multi-route candidates, and audit recall quality.
 3. `10`: train structured rerank models and evaluate aligned fallback ranking.
 4. `11`: build QLoRA / DPO datasets, train adapters, and run sidecar rerank evaluation.

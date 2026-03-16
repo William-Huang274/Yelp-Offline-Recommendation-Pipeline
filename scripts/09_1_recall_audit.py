@@ -9,23 +9,27 @@ from typing import Any
 import pandas as pd
 from pyspark import StorageLevel
 from pyspark.sql import DataFrame, SparkSession, functions as F
+from pipeline.project_paths import env_or_project_path, project_path
 from pipeline.spark_tmp_manager import SparkTmpContext, build_spark_tmp_context
 
 
 RUN_TAG = "stage09_recall_audit"
 
 INPUT_09_RUN_DIR = os.getenv("INPUT_09_RUN_DIR", "").strip()
-INPUT_09_ROOT = Path(r"D:/5006 BDA project/data/output/09_candidate_fusion")
+INPUT_09_ROOT = env_or_project_path("INPUT_09_ROOT_DIR", "data/output/09_candidate_fusion")
 INPUT_09_SUFFIX = "_stage09_candidate_fusion"
-OUTPUT_ROOT = Path(r"D:/5006 BDA project/data/output/09_recall_audit")
-METRICS_DIR = Path(r"D:/5006 BDA project/data/metrics")
+OUTPUT_ROOT = env_or_project_path("OUTPUT_09_AUDIT_ROOT_DIR", "data/output/09_recall_audit")
+METRICS_DIR = env_or_project_path("METRICS_DIR", "data/metrics")
 
 SPARK_DRIVER_MEMORY = os.getenv("SPARK_DRIVER_MEMORY", "6g").strip() or "6g"
 SPARK_EXECUTOR_MEMORY = os.getenv("SPARK_EXECUTOR_MEMORY", "6g").strip() or "6g"
 SPARK_MASTER = os.getenv("SPARK_MASTER", "local[2]").strip() or "local[2]"
 SPARK_SHUFFLE_PARTITIONS = os.getenv("SPARK_SQL_SHUFFLE_PARTITIONS", "8").strip() or "8"
 SPARK_DEFAULT_PARALLELISM = os.getenv("SPARK_DEFAULT_PARALLELISM", "8").strip() or "8"
-SPARK_LOCAL_DIR = os.getenv("SPARK_LOCAL_DIR", "D:/5006 BDA project/data/spark-tmp").strip() or "D:/5006 BDA project/data/spark-tmp"
+SPARK_LOCAL_DIR = (
+    os.getenv("SPARK_LOCAL_DIR", project_path("data/spark-tmp").as_posix()).strip()
+    or project_path("data/spark-tmp").as_posix()
+)
 SPARK_TMP_SESSION_ISOLATION = os.getenv("SPARK_TMP_SESSION_ISOLATION", "true").strip().lower() == "true"
 SPARK_TMP_AUTOCLEAN_ENABLED = os.getenv("SPARK_TMP_AUTOCLEAN_ENABLED", "true").strip().lower() == "true"
 SPARK_TMP_CLEAN_ON_EXIT = os.getenv("SPARK_TMP_CLEAN_ON_EXIT", "true").strip().lower() == "true"

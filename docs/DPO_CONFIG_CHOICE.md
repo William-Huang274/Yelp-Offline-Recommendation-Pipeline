@@ -1,128 +1,77 @@
-# DPO 配置选择指南
-# 基于实际数据分析结果
+# DPO Configuration Choice Guide
 
-## 数据分析结果
+## Data-Length Findings
 
-你的 prompt 实际长度：
-- 平均: 432 tokens
-- P95: 477 tokens (95%的数据 ≤ 477)
-- P99: 525 tokens (99%的数据 ≤ 525)
-- 最大: 687 tokens
+The existing prompt-length analysis indicates:
 
-## 配置方案对比
+- mean length: about `432` tokens
+- P95 length: about `477` tokens
+- P99 length: about `525` tokens
 
-### 方案 1: 保守配置 (推荐) ✓
-**文件**: `config/dpo_safe_512.env`
+These statistics support a conservative 512-token baseline and explain why a
+640-token profile may improve coverage but can destabilize 8GB hardware.
 
-```
-MAX_SEQ_LEN=512
-LoRA_R=8
-数据覆盖率: 98.7%
-截断样本: 460个 (1.3%)
-显存需求: ~7.5GB
-```
+## Config Options
 
-**优点**:
-- 显存安全，不会 OOM
-- 覆盖 98.7% 数据，截断很少
-- 训练稳定
+### Option 1: conservative profile (recommended)
 
-**缺点**:
-- 460个样本会被截断（平均截断 43 tokens）
+- `MAX_SEQ_LEN=512`
+- safer memory behavior
+- covers nearly all practical samples
+- best first-run baseline
 
-**适合**:
-- 首次训练
-- 显存不确定
-- 追求稳定性
+### Option 2: optimized profile (aggressive)
 
----
+- `MAX_SEQ_LEN=640`
+- slightly better coverage
+- higher VRAM pressure
+- only worth trying after the conservative run is stable
 
-### 方案 2: 优化配置 (激进)
-**文件**: `config/dpo_optimized_640.env`
+## Recommendation
 
-```
-MAX_SEQ_LEN=640
-LoRA_R=6 (降低以补偿)
-数据覆盖率: 99.9%
-截断样本: 28个 (0.1%)
-显存需求: ~8.5-9GB
-```
+### Start with option 1
 
-**优点**:
-- 几乎不截断数据（只有 28 个样本）
-- 保留更完整的信息
+Use the 512-token profile first. It provides the best balance between retention
+and stability on a local Windows machine.
 
-**缺点**:
-- 显存接近上限，可能 OOM
-- LoRA rank 降低到 6，可能影响效果
-- 训练速度更慢
+### Only try option 2 after stability is proven
 
-**适合**:
-- 显存充足时
-- 追求最佳数据覆盖
-- 愿意承担 OOM 风险
+Move to 640 only when:
 
----
+- page file is already increased
+- no other large GPU jobs are running
+- the 512-token run is stable and quality is still insufficient
 
-## 我的建议
+## Usage
 
-### 推荐：先用方案 1 (512)
+### Conservative profile
 
-**理由**:
-1. **截断影响不大**: 只有 1.3% 数据被截断，平均只截掉 43 tokens
-2. **显存安全**: 7.5GB 留有余地，不会 OOM
-3. **效果可能差不多**: 被截断的通常是末尾的次要信息
-
-### 如果方案 1 效果不好，再试方案 2 (640)
-
-**步骤**:
-1. 先用 512 训练一轮
-2. 评估效果
-3. 如果觉得截断影响大，再用 640 重新训练
-
----
-
-## 使用方法
-
-### 方案 1 (推荐):
 ```bash
-# 加载保守配置
-for /f "delims=" %i in (config\dpo_safe_512.env) do set %i
-python scripts\11_2_dpo_train.py
+scripts\run_dpo_optimized.bat
+# choose [1]
 ```
 
-### 方案 2 (激进):
+### Aggressive profile
+
 ```bash
-# 加载优化配置
-for /f "delims=" %i in (config\dpo_optimized_640.env) do set %i
-python scripts\11_2_dpo_train.py
+scripts\run_dpo_optimized.bat
+# choose [2]
 ```
 
----
+## Truncation Impact
 
-## 截断的影响分析
+At 512 tokens, only a small tail of longer prompts is truncated. That trade-off
+is usually acceptable compared with the instability risk of 640 on 8GB VRAM.
 
-被截断的 460 个样本（1.3%）：
-- 平均被截断 43 tokens
-- 通常是 prompt 末尾的排序特征或次要信息
-- 核心的用户偏好和候选物品信息通常在前面，不会被截断
+## If OOM Happens
 
-**结论**: 1.3% 的截断率对整体效果影响很小。
+Fall back in this order:
 
----
+1. 640 -> 512
+2. 512 -> 384
+3. reduce LoRA rank
+4. reduce pairs per user
 
-## 如果遇到 OOM
+## Summary
 
-方案 2 (640) 如果 OOM，可以：
-1. 降低 LoRA_R 到 4
-2. 减少 DPO_MAX_PAIRS 到 2
-3. 回退到方案 1 (512)
-
----
-
-## 总结
-
-**首选**: `config/dpo_safe_512.env` (98.7% 覆盖，显存安全)
-**备选**: `config/dpo_optimized_640.env` (99.9% 覆盖，显存紧张)
-
-建议先用 512 试试，大概率效果就很好了！
+Pick 512 first. Treat 640 as a deliberate follow-up experiment, not the default.
