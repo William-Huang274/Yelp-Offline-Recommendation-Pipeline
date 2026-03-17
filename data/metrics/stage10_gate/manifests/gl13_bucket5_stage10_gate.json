@@ -1,0 +1,52 @@
+{
+  "manifest_version": 1,
+  "label": "gl13_bucket5_stage10_gate",
+  "bucket": 5,
+  "scope": "stage09_to_stage10",
+  "stage11_status": "pending_admission",
+  "release_pointers_untouched": true,
+  "runner": "D:\\5006_BDA_project\\scripts\\pipeline\\bucket_stage10_gate_runner.py",
+  "artifact_roots": {
+    "legacy_isolated_output_root": "D:\\5006_BDA_project\\data\\output\\backfill",
+    "tracked_metrics_root": "D:\\5006_BDA_project\\data\\metrics\\stage10_gate"
+  },
+  "shared_contracts": {
+    "stage08_cluster_profile_root": "D:\\5006_BDA_project\\data\\output\\08_cluster_labels\\full",
+    "stage09_user_profile_run_dir": "D:\\5006_BDA_project\\data\\output\\09_user_profiles\\20260304_234037_full_stage09_user_profile_build",
+    "stage09_item_semantic_run_dir": "D:\\5006_BDA_project\\data\\output\\09_item_semantics\\20260305_000408_full_stage09_item_semantic_build"
+  },
+  "artifacts": {
+    "stage09_run_dir": "D:\\5006_BDA_project\\data\\output\\backfill\\09_candidate_fusion\\20260317_220710_full_stage09_candidate_fusion",
+    "stage09_recall_audit_run_dir": "D:\\5006_BDA_project\\data\\output\\backfill\\09_recall_audit\\20260317_222500_stage09_recall_audit",
+    "stage10_rank_model_run_dir": "D:\\5006_BDA_project\\data\\output\\backfill\\10_rank_models\\20260317_222609_stage10_1_rank_train",
+    "stage10_rank_model_json": "D:\\5006_BDA_project\\data\\output\\backfill\\10_rank_models\\20260317_222609_stage10_1_rank_train\\rank_model.json",
+    "stage10_infer_eval_run_dir": "D:\\5006_BDA_project\\data\\output\\backfill\\10_2_rank_infer_eval\\20260317_224300_stage10_2_rank_infer_eval",
+    "stage09_summary_metrics": "D:\\5006_BDA_project\\data\\metrics\\stage10_gate\\bucket_5\\stage09_recall_audit_summary_latest.csv",
+    "stage09_route_metrics": "D:\\5006_BDA_project\\data\\metrics\\stage10_gate\\bucket_5\\stage09_recall_audit_routes_latest.csv",
+    "stage10_metrics": "D:\\5006_BDA_project\\data\\metrics\\stage10_gate\\bucket_5\\recsys_stage10_bucket_5_results.csv"
+  },
+  "validators": {
+    "stage09_candidate": "pass",
+    "stage10_rank_model": "pass",
+    "stage10_infer_eval": "pass"
+  },
+  "metrics": {
+    "stage09": {
+      "truth_in_all": 0.838402,
+      "truth_in_pretrim": 0.724834,
+      "pretrim_cut_loss": 0.113569,
+      "hard_miss": 0.161598
+    },
+    "stage10": {
+      "selected_model": "LearnedBlendXGBCls@10",
+      "recall_at10": 0.088115,
+      "ndcg_at10": 0.040522,
+      "n_users": 1952,
+      "n_candidates": 844176
+    }
+  },
+  "notes": [
+    "Run directories were first generated under the legacy local-only name data/output/backfill before the repo-facing rename to stage10_gate.",
+    "Tracked submission surface is metrics plus summary manifests; release pointers remain bucket10-only."
+  ]
+}
