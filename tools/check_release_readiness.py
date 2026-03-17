@@ -16,7 +16,14 @@ if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
 from pipeline.project_paths import production_run_pointer_path, read_production_run_pointer, resolve_production_run_pointer
-from pipeline.run_validators import load_json_object, validate_stage09_candidate_run, validate_stage11_dataset_run
+
+from pipeline.run_validators import (
+    load_json_object,
+    validate_stage09_candidate_run,
+    validate_stage10_infer_eval_run,
+    validate_stage10_rank_model_run,
+    validate_stage11_dataset_run,
+)
 
 
 PASS = "PASS"
@@ -259,6 +266,13 @@ def run_checks() -> tuple[str, list[CheckResult], dict[str, Any], str]:
                 add_result(results, FAIL, "stage09", error)
         else:
             add_result(results, PASS, "stage09", "stage09 candidate run validator passed")
+    if stage10_run is not None:
+        stage10_eval_errors = validate_stage10_infer_eval_run(stage10_run)
+        if stage10_eval_errors:
+            for error in stage10_eval_errors:
+                add_result(results, FAIL, "stage10", error)
+        else:
+            add_result(results, PASS, "stage10", "stage10 infer/eval run validator passed")
     stage11_data_path = Path(str(stage11_pointer.get("source_run_11_1_data", "")).strip())
     if require_path(stage11_data_path, results, "stage11", "stage11 dataset run", expect_dir=True):
         stage11_data_errors = validate_stage11_dataset_run(stage11_data_path)
@@ -289,6 +303,13 @@ def run_checks() -> tuple[str, list[CheckResult], dict[str, Any], str]:
     require_path(stage11_alpha_path, results, "stage11", "stage11 alpha sweep best file", expect_dir=False)
     require_path(stage11_model_dir, results, "stage11", "stage11 model run dir", expect_dir=True)
     require_path(stage11_adapter_dir, results, "stage11", "stage11 adapter dir", expect_dir=True)
+    if stage10_rank_model_path.exists():
+        stage10_model_errors = validate_stage10_rank_model_run(stage10_rank_model_path.parent)
+        if stage10_model_errors:
+            for error in stage10_model_errors:
+                add_result(results, FAIL, "stage10", error)
+        else:
+            add_result(results, PASS, "stage10", "stage10 rank-model run validator passed")
 
     stage09_truth_in_all = None
     stage09_truth_in_pretrim = None

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import math
 import os
+import shutil
 import uuid
 from datetime import datetime
 import heapq
@@ -22,6 +23,7 @@ from pipeline.spark_tmp_manager import (
     alloc_scratch_file,
     build_spark_tmp_context,
 )
+from pipeline.local_parquet_writer import write_spark_df_to_parquet_dir
 
 
 # Run mode
@@ -388,6 +390,8 @@ BUCKET_WRITE_CHECKPOINT_DIR = (
 )
 SKIP_CHECKPOINT_ON_PYTHON_PLAN = os.getenv("SKIP_CHECKPOINT_ON_PYTHON_PLAN", "true").strip().lower() == "true"
 OUTPUT_COALESCE_PARTITIONS = int(os.getenv("OUTPUT_COALESCE_PARTITIONS", "8").strip() or 8)
+LOCAL_PARQUET_WRITE_MODE = (os.getenv("LOCAL_PARQUET_WRITE_MODE", "spark").strip().lower() or "spark")
+LOCAL_PARQUET_WRITE_CHUNK_ROWS = int(os.getenv("LOCAL_PARQUET_WRITE_CHUNK_ROWS", "50000").strip() or 50000)
 _BUCKET_ENV = os.getenv("MIN_TRAIN_BUCKETS_OVERRIDE", "").strip()
 if _BUCKET_ENV:
     MIN_TRAIN_REVIEWS_BUCKETS = [int(x.strip()) for x in _BUCKET_ENV.split(",") if x.strip()]
@@ -842,6 +846,27 @@ def _coalesce_for_write(df: DataFrame) -> DataFrame:
     if current <= target:
         return df
     return df.coalesce(target)
+
+
+def _write_output_df(df: DataFrame, output_dir: Path) -> dict[str, Any]:
+    mode = str(LOCAL_PARQUET_WRITE_MODE).strip().lower() or "spark"
+    if mode == "driver_parquet":
+        meta = write_spark_df_to_parquet_dir(
+            df,
+            output_dir,
+            chunk_rows=LOCAL_PARQUET_WRITE_CHUNK_ROWS,
+            compression="snappy",
+        )
+        print(
+            f"[WRITE] mode=driver_parquet path={output_dir} rows={meta['row_count']} "
+            f"files={meta['file_count']} chunk_rows={meta['chunk_rows']}"
+        )
+        return meta
+    if mode != "spark":
+        raise ValueError(f"unsupported LOCAL_PARQUET_WRITE_MODE={LOCAL_PARQUET_WRITE_MODE}")
+    df.write.mode("overwrite").parquet(str(output_dir))
+    print(f"[WRITE] mode=spark path={output_dir}")
+    return {"output_dir": str(output_dir), "mode": "spark"}
 
 
 def build_source_evidence_df(candidates_scored: DataFrame) -> DataFrame:
@@ -3480,12 +3505,18 @@ def main() -> None:
         fused_pretrim_out = _coalesce_for_write(_checkpoint_for_write(spark, fused_pretrim))
         truth_out = _coalesce_for_write(_checkpoint_for_write(spark, truth.join(user_map, on="user_idx", how="left")))
         train_history_out = _coalesce_for_write(_checkpoint_for_write(spark, train_history))
-        candidates_all_out.write.mode("overwrite").parquet((bucket_dir / "candidates_all.parquet").as_posix())
-        fused_pretrim_out.write.mode("overwrite").parquet((bucket_dir / "candidates_pretrim150.parquet").as_posix())
+        _write_output_df(candidates_all_out, bucket_dir / "candidates_all.parquet")
+        _write_output_df(fused_pretrim_out, bucket_dir / "candidates_pretrim150.parquet")
         if WRITE_GENERIC_PRETRIM_ALIAS:
-            fused_pretrim_out.write.mode("overwrite").parquet((bucket_dir / "candidates_pretrim.parquet").as_posix())
-        truth_out.write.mode("overwrite").parquet((bucket_dir / "truth.parquet").as_posix())
-        train_history_out.write.mode("overwrite").parquet((bucket_dir / "train_history.parquet").as_posix())
+            if LOCAL_PARQUET_WRITE_MODE == "driver_parquet":
+                alias_dir = bucket_dir / "candidates_pretrim.parquet"
+                shutil.rmtree(alias_dir, ignore_errors=True)
+                shutil.copytree(bucket_dir / "candidates_pretrim150.parquet", alias_dir)
+                print(f"[WRITE] mode=driver_parquet-copy path={alias_dir}")
+            else:
+                _write_output_df(fused_pretrim_out, bucket_dir / "candidates_pretrim.parquet")
+        _write_output_df(truth_out, bucket_dir / "truth.parquet")
+        _write_output_df(train_history_out, bucket_dir / "train_history.parquet")
         if should_write_enriched_audit(int(min_train)):
             source_evidence_out = _coalesce_for_write(_checkpoint_for_write(spark, build_source_evidence_df(candidates_scored)))
             enriched_audit_out = _coalesce_for_write(
@@ -3502,8 +3533,8 @@ def main() -> None:
                     ),
                 )
             )
-            source_evidence_out.write.mode("overwrite").parquet((bucket_dir / "candidate_source_evidence.parquet").as_posix())
-            enriched_audit_out.write.mode("overwrite").parquet((bucket_dir / "candidates_enriched_audit.parquet").as_posix())
+            _write_output_df(source_evidence_out, bucket_dir / "candidate_source_evidence.parquet")
+            _write_output_df(enriched_audit_out, bucket_dir / "candidates_enriched_audit.parquet")
             for _tmp_df in (source_evidence_out, enriched_audit_out):
                 try:
                     _tmp_df.unpersist(blocking=False)
@@ -3520,9 +3551,7 @@ def main() -> None:
                     ),
                 )
             )
-            multivector_route_out.write.mode("overwrite").parquet(
-                (bucket_dir / "profile_multivector_route_audit.parquet").as_posix()
-            )
+            _write_output_df(multivector_route_out, bucket_dir / "profile_multivector_route_audit.parquet")
             try:
                 multivector_route_out.unpersist(blocking=False)
             except Exception:

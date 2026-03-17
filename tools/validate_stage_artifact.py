@@ -10,11 +10,18 @@ SCRIPTS_DIR = REPO_ROOT / "scripts"
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
-from pipeline.run_validators import validate_stage09_candidate_run, validate_stage11_dataset_run
+from pipeline.run_validators import (
+    validate_stage09_candidate_run,
+    validate_stage10_infer_eval_run,
+    validate_stage10_rank_model_run,
+    validate_stage11_dataset_run,
+)
 
 
 VALIDATORS = {
     "stage09_candidate": validate_stage09_candidate_run,
+    "stage10_infer_eval": validate_stage10_infer_eval_run,
+    "stage10_rank_model": validate_stage10_rank_model_run,
     "stage11_dataset": validate_stage11_dataset_run,
 }
 

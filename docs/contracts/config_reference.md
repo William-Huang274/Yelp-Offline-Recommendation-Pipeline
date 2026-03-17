@@ -59,6 +59,27 @@ If one of these is set, `scripts/pipeline/project_paths.py` uses it as the repo 
 - `RANK_EVAL_CANDIDATE_TOPN`
   - candidate depth cap for aligned evaluation
 
+## Bucket2/5 Stage10 Gate Runner
+
+- script: `scripts/pipeline/bucket_stage10_gate_runner.py`
+- legacy wrapper: `scripts/pipeline/bucket_backfill_runner.py`
+- default isolated output root: `data/output/stage10_gate`
+- default tracked metrics root: `data/metrics/stage10_gate`
+- default isolated temp root: `data/spark-tmp/stage10_gate`
+- default shared stage08 profile root: `data/output/08_cluster_labels/full`
+- default shared stage09 user profile run:
+  `data/output/09_user_profiles/20260304_234037_full_stage09_user_profile_build`
+- default shared stage09 item semantic run:
+  `data/output/09_item_semantics/20260305_000408_full_stage09_item_semantic_build`
+- stage09 local parquet fallback: `LOCAL_PARQUET_WRITE_MODE=driver_parquet`
+- stage09 local parquet chunk rows: `LOCAL_PARQUET_WRITE_CHUNK_ROWS`
+  - default in the stage10 gate runner: `50000`
+- stage10 xgboost eval batching override: `XGB_BATCH_MODE=hash_partition_memory`
+  - used by the stage10 gate runner to avoid Spark temp parquet writes on local Windows
+- manifest root: `data/metrics/stage10_gate/manifests`
+- tracked submission surface: bucket metrics and summary manifests under
+  `data/metrics/stage10_gate`
+
 ## Stage10 Transformer Rerank Eval
 
 - `INPUT_09_RUN_DIR`

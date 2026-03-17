@@ -68,14 +68,31 @@ Use this path when you already have the frozen local stage outputs and want to v
 
 ```bash
 python tools/validate_stage_artifact.py --kind stage09_candidate --run-dir data/output/09_candidate_fusion/20260311_005450_full_stage09_candidate_fusion
+python tools/validate_stage_artifact.py --kind stage10_rank_model --run-dir data/output/10_rank_models/20260307_210530_stage10_1_rank_train
+python tools/validate_stage_artifact.py --kind stage10_infer_eval --run-dir data/output/10_2_rank_infer_eval/20260313_193213_stage10_2_rank_infer_eval
 python tools/validate_stage_artifact.py --kind stage11_dataset --run-dir data/output/11_qlora_data/20260311_011112_stage11_1_qlora_build_dataset
 ```
 
 What this verifies:
 
 - frozen stage09 candidate artifacts
+- frozen stage10 rank-train artifacts
+- frozen stage10 infer/eval artifacts
 - frozen stage11 dataset artifacts
 - release-lineage consistency with the tracked public freeze
+
+Bucket2/5 stage10 gate helper:
+
+```bash
+python scripts/pipeline/bucket_stage10_gate_runner.py --bucket 5 --mode full --dry-run
+```
+
+This helper keeps future bucket2/5 gate runs isolated under
+`data/output/stage10_gate` and `data/metrics/stage10_gate`.
+The tracked submission surface is the small metrics and manifests under
+`data/metrics/stage10_gate`; the large isolated run directories remain local-only.
+It only rebuilds `stage09 -> stage10` for `bucket_2` or `bucket_5`; any stage11
+admission decision happens later.
 
 ### 3. Full Rebuild From Raw Data
 
@@ -125,11 +142,15 @@ Inside each bucket, users are separately tagged as:
 
 This segment split is different from the bucket definition and is used for per-segment candidate budgets and fusion behavior.
 
-Why the public stage11 line starts with `bucket10`:
+Why the current public stage11 line starts with `bucket10`:
 
 - it is the first slice where users have richer and more diverse preference signals
 - it exposes the hardest head-ordering errors, especially for heavy users
 - it is the most meaningful bucket for testing whether text-aware SFT / DPO sidecars can improve reranking beyond the structured fallback model
+
+`bucket_2` and `bucket_5` now also have completed `stage09 -> stage10` gate
+artifacts, but the repo still treats `bucket10` as the frozen public release
+slice and the only bucket currently admitted to stage11.
 
 ## Training Data Construction
 

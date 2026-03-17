@@ -17,6 +17,7 @@ The repository documentation is now grouped by topic instead of keeping every no
 ## Start Here
 
 - release contract: [contracts/data_contract.md](./contracts/data_contract.md)
+- bucket stage10 gate readiness: [repo/gl13_bucket25_stage10_gate_readiness_20260318.md](./repo/gl13_bucket25_stage10_gate_readiness_20260318.md)
 - latest freeze summary: [release/v1_freeze_20260313.md](./release/v1_freeze_20260313.md)
 - readiness checklist: [release/go_live_readiness_20260312.md](./release/go_live_readiness_20260312.md)
 - smoke-test note: [repo/gl10_smoke_tests_20260313.md](./repo/gl10_smoke_tests_20260313.md)

@@ -68,14 +68,32 @@ python tools/check_release_monitoring.py
 
 ```bash
 python tools/validate_stage_artifact.py --kind stage09_candidate --run-dir data/output/09_candidate_fusion/20260311_005450_full_stage09_candidate_fusion
+python tools/validate_stage_artifact.py --kind stage10_rank_model --run-dir data/output/10_rank_models/20260307_210530_stage10_1_rank_train
+python tools/validate_stage_artifact.py --kind stage10_infer_eval --run-dir data/output/10_2_rank_infer_eval/20260313_193213_stage10_2_rank_infer_eval
 python tools/validate_stage_artifact.py --kind stage11_dataset --run-dir data/output/11_qlora_data/20260311_011112_stage11_1_qlora_build_dataset
 ```
 
-这条路径验证的是：
 
-- stage09 冻结候选产物
-- stage11 冻结数据集产物
-- 与当前公开 freeze 一致的 release lineage
+这条路径会验证：
+
+- 冻结的 stage09 candidate 产物
+- 冻结的 stage10 rank-train 产物
+- 冻结的 stage10 infer/eval 产物
+- 冻结的 stage11 dataset 产物
+- 仓库中公开 freeze 与 release lineage 的一致性
+
+bucket2/5 stage10 gate 辅助入口：
+
+```bash
+python scripts/pipeline/bucket_stage10_gate_runner.py --bucket 5 --mode full --dry-run
+```
+
+这个 runner 会把后续 bucket2/5 的 stage10 gate 运行隔离到
+`data/output/stage10_gate` 和 `data/metrics/stage10_gate`。
+真正适合提交进仓库的是 `data/metrics/stage10_gate` 下的小型指标与 manifest；
+大的隔离 run 目录保持本地资产即可，不进入 prod/latest。
+它只补 `bucket_2` 或 `bucket_5` 的 `stage09 -> stage10` 链条，
+stage11 是否放行要等统一 gate 结论。
 
 ### 3. 基于原始数据全量重跑
 
@@ -130,6 +148,10 @@ bucket 内部还会再划分 user segment：
 - 这是第一个能提供更丰富、更杂偏好的 user slice
 - 最难修复的 head-ordering 问题，尤其 heavy user 问题，会在这个 bucket 上暴露得更明显
 - 这个 bucket 最适合验证 text-aware SFT / DPO sidecar 是否能在结构化 fallback 之上继续提升重排效果
+
+`bucket_2` 和 `bucket_5` 现在也已经补齐了 `stage09 -> stage10` 的 gate 产物，
+但仓库当前仍把 `bucket10` 视作冻结公开 release slice，也是唯一已经进入
+stage11 的 bucket。
 
 ## 训练数据构造
 
