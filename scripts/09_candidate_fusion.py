@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 import math
@@ -57,6 +57,7 @@ PROFILE_CALIBRATION_JSON_OVERRIDE = os.getenv("PROFILE_CALIBRATION_JSON_OVERRIDE
 RECALL_LIMITS_BY_BUCKET_JSON = os.getenv("RECALL_LIMITS_BY_BUCKET_JSON", "").strip()
 LAYERED_PRETRIM_BY_BUCKET_JSON = os.getenv("LAYERED_PRETRIM_BY_BUCKET_JSON", "").strip()
 PRETRIM_SEGMENT_TOPK_BY_BUCKET_JSON = os.getenv("PRETRIM_SEGMENT_TOPK_BY_BUCKET_JSON", "").strip()
+SOURCE_WEIGHTS_BY_BUCKET_JSON = os.getenv("SOURCE_WEIGHTS_BY_BUCKET_JSON", "").strip()
 PRETRIM_HEAD_POLICY_JSON = os.getenv("PRETRIM_HEAD_POLICY_JSON", "").strip()
 ITEM_SEMANTIC_ROOT = env_or_project_path("ITEM_SEMANTIC_ROOT_DIR", "data/output/09_item_semantics")
 ITEM_SEMANTIC_RUN_DIR = os.getenv("ITEM_SEMANTIC_RUN_DIR", "").strip()  # optional explicit path
@@ -64,17 +65,156 @@ ITEM_SEMANTIC_RUN_SUFFIX = "_stage09_item_semantic_build"
 ITEM_SEMANTIC_FEATURE_FILE = "item_semantic_features.csv"
 ITEM_SEMANTIC_TAG_LONG_FILE = "item_tag_profile_long.csv"
 ITEM_SEMANTIC_DENSE_VECTOR_FILE_TEMPLATE = "merchant_dense_vectors_{scope}.npz"
+BUSINESS_CONTEXT_ROOT = env_or_project_path("BUSINESS_CONTEXT_ROOT_DIR", "data/output/09_business_context")
+BUSINESS_CONTEXT_RUN_DIR = os.getenv("BUSINESS_CONTEXT_RUN_DIR", "").strip()
+BUSINESS_CONTEXT_RUN_SUFFIX = "_stage09_business_context_build"
+BUSINESS_CONTEXT_FEATURE_FILE = "business_context_features.parquet"
+REVIEW_EVIDENCE_ROOT = env_or_project_path("REVIEW_EVIDENCE_ROOT_DIR", "data/output/09_review_evidence")
+REVIEW_EVIDENCE_RUN_DIR = os.getenv("REVIEW_EVIDENCE_RUN_DIR", "").strip()
+REVIEW_EVIDENCE_RUN_SUFFIX = "_stage09_review_evidence_weight_build"
+REVIEW_EVIDENCE_BUSINESS_FILE = "business_review_evidence_agg.parquet"
+TIP_SIGNAL_ROOT = env_or_project_path("TIP_SIGNAL_ROOT_DIR", "data/output/09_tip_signals")
+TIP_SIGNAL_RUN_DIR = os.getenv("TIP_SIGNAL_RUN_DIR", "").strip()
+TIP_SIGNAL_RUN_SUFFIX = "_stage09_tip_signal_build"
+TIP_SIGNAL_BUSINESS_FILE = "business_tip_signal_agg.parquet"
+CHECKIN_CONTEXT_ROOT = env_or_project_path("CHECKIN_CONTEXT_ROOT_DIR", "data/output/09_checkin_context")
+CHECKIN_CONTEXT_RUN_DIR = os.getenv("CHECKIN_CONTEXT_RUN_DIR", "").strip()
+CHECKIN_CONTEXT_RUN_SUFFIX = "_stage09_checkin_context_build"
+CHECKIN_CONTEXT_BUSINESS_FILE = "business_checkin_context_agg.parquet"
 ENABLE_ITEM_SEMANTIC = os.getenv("ENABLE_ITEM_SEMANTIC", "true").strip().lower() == "true"
+ENABLE_CONTEXT_SURFACE = os.getenv("ENABLE_CONTEXT_SURFACE", "false").strip().lower() == "true"
+CONTEXT_SURFACE_BUCKETS_RAW = os.getenv("CONTEXT_SURFACE_BUCKETS", "5").strip()
+CONTEXT_SURFACE_TOP_K = int(os.getenv("CONTEXT_SURFACE_TOP_K", "72").strip() or 72)
+CONTEXT_SURFACE_SCORE_MIN = float(os.getenv("CONTEXT_SURFACE_SCORE_MIN", "0.18").strip() or 0.18)
+CONTEXT_SURFACE_BATCH_USERS = int(os.getenv("CONTEXT_SURFACE_BATCH_USERS", "256").strip() or 256)
+CONTEXT_GEO_SCALE_KM = float(os.getenv("CONTEXT_GEO_SCALE_KM", "18.0").strip() or 18.0)
+CONTEXT_ROUTE_DETAIL_RAW = os.getenv("CONTEXT_ROUTE_DETAILS", "attr,time,geo").strip()
 ENABLE_PROFILE_MULTIVECTOR_ROUTE_AUDIT = (
-    os.getenv("ENABLE_PROFILE_MULTIVECTOR_ROUTE_AUDIT", "false").strip().lower() == "true"
+    os.getenv("ENABLE_PROFILE_MULTIVECTOR_ROUTE_AUDIT", "true").strip().lower() == "true"
 )
-PROFILE_MULTIVECTOR_ROUTE_AUDIT_BUCKETS_RAW = os.getenv("PROFILE_MULTIVECTOR_ROUTE_AUDIT_BUCKETS", "10").strip()
+PROFILE_MULTIVECTOR_ROUTE_AUDIT_BUCKETS_RAW = os.getenv("PROFILE_MULTIVECTOR_ROUTE_AUDIT_BUCKETS", "5,10").strip()
 PROFILE_MULTIVECTOR_ROUTE_TOP_K = int(os.getenv("PROFILE_MULTIVECTOR_ROUTE_TOP_K", "120").strip() or 120)
 PROFILE_MULTIVECTOR_ROUTE_SCORE_MIN = float(
     os.getenv("PROFILE_MULTIVECTOR_ROUTE_SCORE_MIN", "0.0").strip() or 0.0
 )
 PROFILE_MULTIVECTOR_ROUTE_BATCH_USERS = int(
     os.getenv("PROFILE_MULTIVECTOR_ROUTE_BATCH_USERS", "128").strip() or 128
+)
+ENABLE_PROFILE_MULTIVECTOR_ROUTE_INTEGRATION = (
+    os.getenv("ENABLE_PROFILE_MULTIVECTOR_ROUTE_INTEGRATION", "false").strip().lower() == "true"
+)
+PROFILE_MULTIVECTOR_ROUTE_INTEGRATION_BUCKETS_RAW = os.getenv(
+    "PROFILE_MULTIVECTOR_ROUTE_INTEGRATION_BUCKETS", "5"
+).strip()
+PROFILE_MULTIVECTOR_ROUTE_INTEGRATION_TOP_K = int(
+    os.getenv("PROFILE_MULTIVECTOR_ROUTE_INTEGRATION_TOP_K", "80").strip() or 80
+)
+PROFILE_MULTIVECTOR_ROUTE_INTEGRATION_SCORE_MIN = float(
+    os.getenv("PROFILE_MULTIVECTOR_ROUTE_INTEGRATION_SCORE_MIN", "0.25").strip() or 0.25
+)
+PROFILE_MULTIVECTOR_ROUTE_INTEGRATION_BATCH_USERS = int(
+    os.getenv("PROFILE_MULTIVECTOR_ROUTE_INTEGRATION_BATCH_USERS", "128").strip() or 128
+)
+ENABLE_PROFILE_EVIDENCE_PROTECTED_LANE = (
+    os.getenv("ENABLE_PROFILE_EVIDENCE_PROTECTED_LANE", "false").strip().lower() == "true"
+)
+PROFILE_EVIDENCE_PROTECTED_LANE_BUCKETS_RAW = os.getenv(
+    "PROFILE_EVIDENCE_PROTECTED_LANE_BUCKETS", "5"
+).strip()
+PROFILE_EVIDENCE_PROTECTED_LANE_QUOTA = int(
+    os.getenv("PROFILE_EVIDENCE_PROTECTED_LANE_QUOTA", "72").strip() or 72
+)
+PROFILE_EVIDENCE_PROTECTED_LANE_MAX_PRE_RANK = int(
+    os.getenv("PROFILE_EVIDENCE_PROTECTED_LANE_MAX_PRE_RANK", "320").strip() or 320
+)
+PROFILE_EVIDENCE_PROTECTED_LANE_MAX_POP_COUNT = int(
+    os.getenv("PROFILE_EVIDENCE_PROTECTED_LANE_MAX_POP_COUNT", "140").strip() or 140
+)
+PROFILE_EVIDENCE_PROTECTED_LANE_MIN_MV_ROUTES = int(
+    os.getenv("PROFILE_EVIDENCE_PROTECTED_LANE_MIN_MV_ROUTES", "1").strip() or 1
+)
+PROFILE_EVIDENCE_PROTECTED_LANE_MIN_SEMANTIC_SCORE = float(
+    os.getenv("PROFILE_EVIDENCE_PROTECTED_LANE_MIN_SEMANTIC_SCORE", "0.82").strip() or 0.82
+)
+PROFILE_EVIDENCE_PROTECTED_LANE_MIN_PROFILE_CLUSTER = int(
+    os.getenv("PROFILE_EVIDENCE_PROTECTED_LANE_MIN_PROFILE_CLUSTER", "1").strip() or 1
+)
+PROFILE_EVIDENCE_PROTECTED_LANE_EXCLUDE_POPULAR = (
+    os.getenv("PROFILE_EVIDENCE_PROTECTED_LANE_EXCLUDE_POPULAR", "false").strip().lower() == "true"
+)
+ENABLE_BUCKET_DEBIAS_REWRITE = (
+    os.getenv("ENABLE_BUCKET_DEBIAS_REWRITE", "false").strip().lower() == "true"
+)
+DEBIAS_BUCKETS_RAW = os.getenv("DEBIAS_BUCKETS", "5").strip()
+DEBIAS_QUALITY_REVIEW_POWER = float(
+    os.getenv("DEBIAS_QUALITY_REVIEW_POWER", "0.35").strip() or 0.35
+)
+DEBIAS_ITEM_POP_CAP = float(os.getenv("DEBIAS_ITEM_POP_CAP", "400").strip() or 400.0)
+DEBIAS_ALS_BACKBONE_MIN_MULT = float(
+    os.getenv("DEBIAS_ALS_BACKBONE_MIN_MULT", "0.55").strip() or 0.55
+)
+DEBIAS_ALS_BACKBONE_POP_PENALTY = float(
+    os.getenv("DEBIAS_ALS_BACKBONE_POP_PENALTY", "0.45").strip() or 0.45
+)
+DEBIAS_NICHE_SEMANTIC_BONUS_WEIGHT = float(
+    os.getenv("DEBIAS_NICHE_SEMANTIC_BONUS_WEIGHT", "0.025").strip() or 0.025
+)
+DEBIAS_QUALITY_BASE_FLOOR = float(
+    os.getenv("DEBIAS_QUALITY_BASE_FLOOR", "0.72").strip() or 0.72
+)
+DEBIAS_SEMANTIC_SUPPORT_POP_ALPHA = float(
+    os.getenv("DEBIAS_SEMANTIC_SUPPORT_POP_ALPHA", "0.65").strip() or 0.65
+)
+DEBIAS_SEMANTIC_SUPPORT_ADJ_CAP = float(
+    os.getenv("DEBIAS_SEMANTIC_SUPPORT_ADJ_CAP", "140").strip() or 140.0
+)
+DEBIAS_SEMANTIC_SUPPORT_GATE_FLOOR = float(
+    os.getenv("DEBIAS_SEMANTIC_SUPPORT_GATE_FLOOR", "0.18").strip() or 0.18
+)
+DEBIAS_ALS_BACKBONE_HEAVY_POP_PENALTY = float(
+    os.getenv("DEBIAS_ALS_BACKBONE_HEAVY_POP_PENALTY", "0.18").strip() or 0.18
+)
+DEBIAS_ALS_BACKBONE_UNCORROBORATED_PENALTY = float(
+    os.getenv("DEBIAS_ALS_BACKBONE_UNCORROBORATED_PENALTY", "0.16").strip() or 0.16
+)
+DEBIAS_NICHE_PROFILE_CLUSTER_BONUS = float(
+    os.getenv("DEBIAS_NICHE_PROFILE_CLUSTER_BONUS", "0.012").strip() or 0.012
+)
+ENABLE_PERSONALIZED_CHALLENGER_SURFACE = (
+    os.getenv("ENABLE_PERSONALIZED_CHALLENGER_SURFACE", "false").strip().lower() == "true"
+)
+PERSONALIZED_CHALLENGER_BUCKETS_RAW = os.getenv(
+    "PERSONALIZED_CHALLENGER_BUCKETS", "5"
+).strip()
+PERSONALIZED_CHALLENGER_QUOTA = int(
+    os.getenv("PERSONALIZED_CHALLENGER_QUOTA", "96").strip() or 96
+)
+PERSONALIZED_CHALLENGER_MAX_PRE_RANK = int(
+    os.getenv("PERSONALIZED_CHALLENGER_MAX_PRE_RANK", "320").strip() or 320
+)
+PERSONALIZED_CHALLENGER_HEAD_WINDOW = int(
+    os.getenv("PERSONALIZED_CHALLENGER_HEAD_WINDOW", "250").strip() or 250
+)
+PERSONALIZED_CHALLENGER_HEAD_BONUS = float(
+    os.getenv("PERSONALIZED_CHALLENGER_HEAD_BONUS", "0.0").strip() or 0.0
+)
+PERSONALIZED_CHALLENGER_MAX_POP_COUNT = int(
+    os.getenv("PERSONALIZED_CHALLENGER_MAX_POP_COUNT", "180").strip() or 180
+)
+PERSONALIZED_CHALLENGER_MIN_MV_ROUTES = int(
+    os.getenv("PERSONALIZED_CHALLENGER_MIN_MV_ROUTES", "1").strip() or 1
+)
+PERSONALIZED_CHALLENGER_MIN_PROFILE_CLUSTER = int(
+    os.getenv("PERSONALIZED_CHALLENGER_MIN_PROFILE_CLUSTER", "1").strip() or 1
+)
+PERSONALIZED_CHALLENGER_MIN_NONPOPULAR_SOURCES = int(
+    os.getenv("PERSONALIZED_CHALLENGER_MIN_NONPOPULAR_SOURCES", "1").strip() or 1
+)
+PERSONALIZED_CHALLENGER_MIN_SEMANTIC_SCORE = float(
+    os.getenv("PERSONALIZED_CHALLENGER_MIN_SEMANTIC_SCORE", "0.80").strip() or 0.80
+)
+PERSONALIZED_CHALLENGER_EXCLUDE_POPULAR = (
+    os.getenv("PERSONALIZED_CHALLENGER_EXCLUDE_POPULAR", "false").strip().lower() == "true"
 )
 PROFILE_MULTIVECTOR_ROUTE_SCOPES = tuple(
     x.strip().lower()
@@ -84,6 +224,7 @@ PROFILE_MULTIVECTOR_ROUTE_SCOPES = tuple(
 ENABLE_TOWER_SEQ_FEATURES = os.getenv("ENABLE_TOWER_SEQ_FEATURES", "true").strip().lower() == "true"
 TOWER_SEQ_MAX_CAND_ROWS = int(os.getenv("TOWER_SEQ_MAX_CAND_ROWS", "2500000").strip() or 2500000)
 TOWER_SEQ_MAX_CAND_ROWS_BY_BUCKET_JSON = os.getenv("TOWER_SEQ_MAX_CAND_ROWS_BY_BUCKET_JSON", "").strip()
+TOWER_SEQ_HEAD_WINDOW_BY_BUCKET_JSON = os.getenv("TOWER_SEQ_HEAD_WINDOW_BY_BUCKET_JSON", "").strip()
 TOWER_SEQ_DIM = int(os.getenv("TOWER_SEQ_DIM", "64").strip() or 64)
 TOWER_SEQ_EPOCHS = int(os.getenv("TOWER_SEQ_EPOCHS", "6").strip() or 6)
 TOWER_SEQ_LR = float(os.getenv("TOWER_SEQ_LR", "0.04").strip() or 0.04)
@@ -91,6 +232,9 @@ TOWER_SEQ_REG = float(os.getenv("TOWER_SEQ_REG", "0.0001").strip() or 0.0001)
 TOWER_SEQ_NEG_TRIES = int(os.getenv("TOWER_SEQ_NEG_TRIES", "6").strip() or 6)
 TOWER_SEQ_STEPS_PER_EPOCH = int(os.getenv("TOWER_SEQ_STEPS_PER_EPOCH", "0").strip() or 0)
 TOWER_SEQ_OUTPUT_MODE = (os.getenv("TOWER_SEQ_OUTPUT_MODE", "csv").strip().lower() or "csv")
+TOWER_SEQ_APPLY_HEAD_WINDOW_FIRST = (
+    os.getenv("TOWER_SEQ_APPLY_HEAD_WINDOW_FIRST", "false").strip().lower() == "true"
+)
 PROFILE_OUTPUT_MODE = (os.getenv("PROFILE_OUTPUT_MODE", "csv").strip().lower() or "csv")
 PROFILE_OUTPUT_SPARK_DF_MAX_ROWS = int(os.getenv("PROFILE_OUTPUT_SPARK_DF_MAX_ROWS", "800000").strip() or 800000)
 PANDAS_TO_SPARK_OUTPUT_PARTITIONS = int(os.getenv("PANDAS_TO_SPARK_OUTPUT_PARTITIONS", "4").strip() or 4)
@@ -141,6 +285,7 @@ CLUSTER_USER_TOPN = 3
 RECALL_LIMITS_BY_BUCKET: dict[int, dict[str, int]] = {}
 PRETRIM_SEGMENT_TOPK_BY_BUCKET: dict[int, dict[str, int]] = {}
 TOWER_SEQ_MAX_CAND_ROWS_BY_BUCKET: dict[int, int] = {}
+TOWER_SEQ_HEAD_WINDOW_BY_BUCKET: dict[int, int] = {}
 PROFILE_ROUTE_POLICY_DEFAULT_BY_BUCKET: dict[int, dict[str, Any]] = {}
 PROFILE_ROUTE_THRESHOLDS_DEFAULT_BY_BUCKET: dict[int, dict[str, Any]] = {}
 PRETRIM_HEAD_POLICY_DEFAULT_BY_BUCKET: dict[int, dict[str, Any]] = {}
@@ -318,10 +463,11 @@ SEMANTIC_SUPPORT_CAP = float(os.getenv("SEMANTIC_SUPPORT_CAP", "120").strip() or
 SEMANTIC_RICHNESS_CAP = float(os.getenv("SEMANTIC_RICHNESS_CAP", "3").strip() or 3.0)
 SEMANTIC_RICHNESS_BLEND = float(os.getenv("SEMANTIC_RICHNESS_BLEND", "0.3").strip() or 0.3)
 SOURCE_WEIGHTS = {
-    "light": {"als": 0.45, "cluster": 0.25, "popular": 0.15, "profile": 0.15},
-    "mid": {"als": 0.70, "cluster": 0.15, "popular": 0.08, "profile": 0.07},
-    "heavy": {"als": 0.85, "cluster": 0.08, "popular": 0.03, "profile": 0.04},
+    "light": {"als": 0.45, "cluster": 0.25, "popular": 0.15, "profile": 0.15, "context": 0.14},
+    "mid": {"als": 0.70, "cluster": 0.15, "popular": 0.08, "profile": 0.07, "context": 0.08},
+    "heavy": {"als": 0.85, "cluster": 0.08, "popular": 0.03, "profile": 0.04, "context": 0.05},
 }
+SOURCE_WEIGHTS_BY_BUCKET: dict[int, dict[str, dict[str, float]]] = {}
 PROFILE_RECALL_BATCH_USERS = 256
 CLUSTER_CONF_FLOOR = 0.35
 PROFILE_CONFIDENCE_MIN = 0.30
@@ -347,7 +493,15 @@ ENABLE_PRETRIM_CONSENSUS_RESCUE = os.getenv("ENABLE_PRETRIM_CONSENSUS_RESCUE", "
 ENABLE_LAYERED_PRETRIM_FINAL_RANK = (
     os.getenv("ENABLE_LAYERED_PRETRIM_FINAL_RANK", "true").strip().lower() == "true"
 )
-WRITE_GENERIC_PRETRIM_ALIAS = os.getenv("WRITE_GENERIC_PRETRIM_ALIAS", "true").strip().lower() == "true"
+_write_generic_pretrim_alias_legacy = os.getenv("WRITE_GENERIC_PRETRIM_ALIAS", "true").strip().lower() == "true"
+WRITE_LEGACY_PRETRIM150_ALIAS = (
+    os.getenv(
+        "WRITE_LEGACY_PRETRIM150_ALIAS",
+        "true" if _write_generic_pretrim_alias_legacy else "false",
+    ).strip().lower()
+    == "true"
+)
+WRITE_TRUTH_USER_ROSTER = os.getenv("WRITE_TRUTH_USER_ROSTER", "true").strip().lower() == "true"
 WRITE_ENRICHED_AUDIT_EXPORT = os.getenv("WRITE_ENRICHED_AUDIT_EXPORT", "false").strip().lower() == "true"
 ENRICHED_AUDIT_BUCKETS_RAW = os.getenv("ENRICHED_AUDIT_BUCKETS", "10").strip()
 ALS_BACKBONE_TOPN = {"light": 3, "mid": 5, "heavy": 8}
@@ -356,6 +510,7 @@ ALS_SAFETY_KEEP_TOPK = 20
 PROFILE_ROUTE_POLICY_BY_BUCKET = dict(PROFILE_ROUTE_POLICY_DEFAULT_BY_BUCKET)
 PROFILE_ROUTE_THRESHOLDS_BY_BUCKET = dict(PROFILE_ROUTE_THRESHOLDS_DEFAULT_BY_BUCKET)
 PRETRIM_HEAD_POLICY_BY_BUCKET = dict(PRETRIM_HEAD_POLICY_DEFAULT_BY_BUCKET)
+STAGE09_CLOUD_FAST_MODE = os.getenv("STAGE09_CLOUD_FAST_MODE", "false").strip().lower() == "true"
 SPARK_DRIVER_MEMORY = os.getenv("SPARK_DRIVER_MEMORY", "6g").strip() or "6g"
 SPARK_EXECUTOR_MEMORY = os.getenv("SPARK_EXECUTOR_MEMORY", "6g").strip() or "6g"
 SPARK_MASTER = os.getenv("SPARK_MASTER", "local[4]").strip() or "local[4]"
@@ -366,6 +521,18 @@ SPARK_LOCAL_DIR = (
 SPARK_SQL_SHUFFLE_PARTITIONS = os.getenv("SPARK_SQL_SHUFFLE_PARTITIONS", "12").strip() or "12"
 SPARK_DEFAULT_PARALLELISM = os.getenv("SPARK_DEFAULT_PARALLELISM", "12").strip() or "12"
 SPARK_SQL_ADAPTIVE_ENABLED = os.getenv("SPARK_SQL_ADAPTIVE_ENABLED", "true").strip().lower() == "true"
+_spark_sql_parquet_vectorized_raw = os.getenv("SPARK_SQL_PARQUET_ENABLE_VECTORIZED", "").strip()
+if _spark_sql_parquet_vectorized_raw:
+    SPARK_SQL_PARQUET_ENABLE_VECTORIZED = _spark_sql_parquet_vectorized_raw.lower() == "true"
+else:
+    SPARK_SQL_PARQUET_ENABLE_VECTORIZED = STAGE09_CLOUD_FAST_MODE
+SPARK_SQL_FILES_MAX_PARTITION_BYTES = (
+    os.getenv(
+        "SPARK_SQL_FILES_MAX_PARTITION_BYTES",
+        "128m" if STAGE09_CLOUD_FAST_MODE else "64m",
+    ).strip()
+    or ("128m" if STAGE09_CLOUD_FAST_MODE else "64m")
+)
 SPARK_SQL_MAX_PLAN_STRING_LENGTH = (
     os.getenv("SPARK_SQL_MAX_PLAN_STRING_LENGTH", "8192").strip() or "8192"
 )
@@ -373,6 +540,26 @@ SPARK_NETWORK_TIMEOUT = os.getenv("SPARK_NETWORK_TIMEOUT", "600s").strip() or "6
 SPARK_EXECUTOR_HEARTBEAT_INTERVAL = (
     os.getenv("SPARK_EXECUTOR_HEARTBEAT_INTERVAL", "60s").strip() or "60s"
 )
+SPARK_DRIVER_EXTRA_JAVA_OPTIONS = os.getenv(
+    "SPARK_DRIVER_EXTRA_JAVA_OPTIONS",
+    (
+        "-XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:InitiatingHeapOccupancyPercent=35 "
+        "-XX:ReservedCodeCacheSize=256m -XX:MaxMetaspaceSize=512m -Xss1m"
+        if STAGE09_CLOUD_FAST_MODE
+        else "-XX:+UseSerialGC -XX:TieredStopAtLevel=1 -XX:CICompilerCount=2 "
+        "-XX:ReservedCodeCacheSize=128m -XX:MaxMetaspaceSize=256m -Xss512k"
+    ),
+).strip()
+SPARK_EXECUTOR_EXTRA_JAVA_OPTIONS = os.getenv(
+    "SPARK_EXECUTOR_EXTRA_JAVA_OPTIONS",
+    (
+        "-XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:InitiatingHeapOccupancyPercent=35 "
+        "-XX:ReservedCodeCacheSize=256m -XX:MaxMetaspaceSize=512m -Xss1m"
+        if STAGE09_CLOUD_FAST_MODE
+        else "-XX:+UseSerialGC -XX:TieredStopAtLevel=1 -XX:CICompilerCount=2 "
+        "-XX:ReservedCodeCacheSize=128m -XX:MaxMetaspaceSize=256m -Xss512k"
+    ),
+).strip()
 SPARK_DRIVER_HOST = os.getenv("SPARK_DRIVER_HOST", "127.0.0.1").strip() or "127.0.0.1"
 SPARK_DRIVER_BIND_ADDRESS = os.getenv("SPARK_DRIVER_BIND_ADDRESS", "127.0.0.1").strip() or "127.0.0.1"
 SPARK_PYTHON_WORKER_REUSE = os.getenv("SPARK_PYTHON_WORKER_REUSE", "true").strip().lower() == "true"
@@ -392,6 +579,12 @@ SKIP_CHECKPOINT_ON_PYTHON_PLAN = os.getenv("SKIP_CHECKPOINT_ON_PYTHON_PLAN", "tr
 OUTPUT_COALESCE_PARTITIONS = int(os.getenv("OUTPUT_COALESCE_PARTITIONS", "8").strip() or 8)
 LOCAL_PARQUET_WRITE_MODE = (os.getenv("LOCAL_PARQUET_WRITE_MODE", "spark").strip().lower() or "spark")
 LOCAL_PARQUET_WRITE_CHUNK_ROWS = int(os.getenv("LOCAL_PARQUET_WRITE_CHUNK_ROWS", "50000").strip() or 50000)
+TOWER_SEQ_INPUT_MATERIALIZE_MODE = (
+    os.getenv("TOWER_SEQ_INPUT_MATERIALIZE_MODE", "pandas").strip().lower() or "pandas"
+)
+TOWER_SEQ_INPUT_PARQUET_CHUNK_ROWS = int(
+    os.getenv("TOWER_SEQ_INPUT_PARQUET_CHUNK_ROWS", "50000").strip() or 50000
+)
 _BUCKET_ENV = os.getenv("MIN_TRAIN_BUCKETS_OVERRIDE", "").strip()
 if _BUCKET_ENV:
     MIN_TRAIN_REVIEWS_BUCKETS = [int(x.strip()) for x in _BUCKET_ENV.split(",") if x.strip()]
@@ -546,6 +739,14 @@ def _parse_int_set(raw: str) -> set[int]:
 
 ENRICHED_AUDIT_BUCKETS = _parse_int_set(ENRICHED_AUDIT_BUCKETS_RAW)
 PROFILE_MULTIVECTOR_ROUTE_AUDIT_BUCKETS = _parse_int_set(PROFILE_MULTIVECTOR_ROUTE_AUDIT_BUCKETS_RAW)
+PROFILE_MULTIVECTOR_ROUTE_INTEGRATION_BUCKETS = _parse_int_set(PROFILE_MULTIVECTOR_ROUTE_INTEGRATION_BUCKETS_RAW)
+PROFILE_EVIDENCE_PROTECTED_LANE_BUCKETS = _parse_int_set(PROFILE_EVIDENCE_PROTECTED_LANE_BUCKETS_RAW)
+DEBIAS_BUCKETS = _parse_int_set(DEBIAS_BUCKETS_RAW)
+PERSONALIZED_CHALLENGER_BUCKETS = _parse_int_set(PERSONALIZED_CHALLENGER_BUCKETS_RAW)
+CONTEXT_SURFACE_BUCKETS = _parse_int_set(CONTEXT_SURFACE_BUCKETS_RAW)
+CONTEXT_ROUTE_DETAILS = tuple(
+    x.strip().lower() for x in CONTEXT_ROUTE_DETAIL_RAW.split(",") if x.strip().lower() in {"attr", "time", "geo"}
+)
 
 
 def should_write_enriched_audit(bucket: int) -> bool:
@@ -562,6 +763,46 @@ def should_write_profile_multivector_route_audit(bucket: int) -> bool:
     if not PROFILE_MULTIVECTOR_ROUTE_AUDIT_BUCKETS:
         return True
     return int(bucket) in PROFILE_MULTIVECTOR_ROUTE_AUDIT_BUCKETS
+
+
+def should_integrate_profile_multivector_routes(bucket: int) -> bool:
+    if not ENABLE_PROFILE_MULTIVECTOR_ROUTE_INTEGRATION:
+        return False
+    if not PROFILE_MULTIVECTOR_ROUTE_INTEGRATION_BUCKETS:
+        return True
+    return int(bucket) in PROFILE_MULTIVECTOR_ROUTE_INTEGRATION_BUCKETS
+
+
+def should_enable_profile_evidence_protected_lane(bucket: int) -> bool:
+    if not ENABLE_PROFILE_EVIDENCE_PROTECTED_LANE:
+        return False
+    if not PROFILE_EVIDENCE_PROTECTED_LANE_BUCKETS:
+        return True
+    return int(bucket) in PROFILE_EVIDENCE_PROTECTED_LANE_BUCKETS
+
+
+def should_enable_bucket_debias_rewrite(bucket: int) -> bool:
+    if not ENABLE_BUCKET_DEBIAS_REWRITE:
+        return False
+    if not DEBIAS_BUCKETS:
+        return True
+    return int(bucket) in DEBIAS_BUCKETS
+
+
+def should_enable_personalized_challenger_surface(bucket: int) -> bool:
+    if not ENABLE_PERSONALIZED_CHALLENGER_SURFACE:
+        return False
+    if not PERSONALIZED_CHALLENGER_BUCKETS:
+        return True
+    return int(bucket) in PERSONALIZED_CHALLENGER_BUCKETS
+
+
+def should_enable_context_surface(bucket: int) -> bool:
+    if not ENABLE_CONTEXT_SURFACE:
+        return False
+    if not CONTEXT_SURFACE_BUCKETS:
+        return True
+    return int(bucket) in CONTEXT_SURFACE_BUCKETS
 
 
 def _apply_env_overrides() -> None:
@@ -582,9 +823,11 @@ def _apply_env_overrides() -> None:
     global LAYERED_PRETRIM_BY_BUCKET
     global PRETRIM_SEGMENT_TOPK_BY_BUCKET
     global TOWER_SEQ_MAX_CAND_ROWS_BY_BUCKET
+    global TOWER_SEQ_HEAD_WINDOW_BY_BUCKET
     global PROFILE_ROUTE_POLICY_BY_BUCKET
     global PROFILE_ROUTE_THRESHOLDS_BY_BUCKET
     global PRETRIM_HEAD_POLICY_BY_BUCKET
+    global SOURCE_WEIGHTS_BY_BUCKET
 
     PROFILE_ITEM_WEIGHT_CONF_POWER = _env_float(
         "PROFILE_ITEM_WEIGHT_CONF_POWER_OVERRIDE", PROFILE_ITEM_WEIGHT_CONF_POWER
@@ -622,6 +865,10 @@ def _apply_env_overrides() -> None:
         TOWER_SEQ_MAX_CAND_ROWS_BY_BUCKET_JSON,
         key="tower_seq_max_cand_rows",
     )
+    TOWER_SEQ_HEAD_WINDOW_BY_BUCKET = _parse_bucket_int_map(
+        TOWER_SEQ_HEAD_WINDOW_BY_BUCKET_JSON,
+        key="tower_seq_head_window",
+    )
     PROFILE_ROUTE_POLICY_BY_BUCKET = _merge_bucket_any_policy(
         PROFILE_ROUTE_POLICY_BY_BUCKET, PROFILE_ROUTE_POLICY_JSON
     )
@@ -630,6 +877,9 @@ def _apply_env_overrides() -> None:
     )
     PRETRIM_HEAD_POLICY_BY_BUCKET = _merge_bucket_any_policy(
         PRETRIM_HEAD_POLICY_BY_BUCKET, PRETRIM_HEAD_POLICY_JSON
+    )
+    SOURCE_WEIGHTS_BY_BUCKET = _merge_bucket_any_policy(
+        SOURCE_WEIGHTS_BY_BUCKET, SOURCE_WEIGHTS_BY_BUCKET_JSON
     )
 
 
@@ -660,6 +910,13 @@ def get_tower_seq_max_cand_rows(min_train: int) -> int:
     if per_bucket is not None:
         return int(max(1, int(per_bucket)))
     return int(max(1, TOWER_SEQ_MAX_CAND_ROWS))
+
+
+def get_tower_seq_head_window(min_train: int) -> int:
+    per_bucket = TOWER_SEQ_HEAD_WINDOW_BY_BUCKET.get(int(min_train))
+    if per_bucket is None:
+        return 0
+    return int(max(0, int(per_bucket)))
 
 
 def get_pretrim_segment_policy(min_train: int, default_topk: int) -> dict[str, int]:
@@ -798,12 +1055,16 @@ def build_spark() -> SparkSession:
         .master(SPARK_MASTER)
         .config("spark.driver.memory", SPARK_DRIVER_MEMORY)
         .config("spark.executor.memory", SPARK_EXECUTOR_MEMORY)
+        .config("spark.driver.extraJavaOptions", SPARK_DRIVER_EXTRA_JAVA_OPTIONS)
+        .config("spark.executor.extraJavaOptions", SPARK_EXECUTOR_EXTRA_JAVA_OPTIONS)
         .config("spark.driver.host", SPARK_DRIVER_HOST)
         .config("spark.driver.bindAddress", SPARK_DRIVER_BIND_ADDRESS)
         .config("spark.local.dir", str(local_dir))
         .config("spark.sql.shuffle.partitions", SPARK_SQL_SHUFFLE_PARTITIONS)
         .config("spark.default.parallelism", SPARK_DEFAULT_PARALLELISM)
         .config("spark.sql.adaptive.enabled", "true" if SPARK_SQL_ADAPTIVE_ENABLED else "false")
+        .config("spark.sql.parquet.enableVectorizedReader", "true" if SPARK_SQL_PARQUET_ENABLE_VECTORIZED else "false")
+        .config("spark.sql.files.maxPartitionBytes", SPARK_SQL_FILES_MAX_PARTITION_BYTES)
         .config("spark.sql.maxPlanStringLength", SPARK_SQL_MAX_PLAN_STRING_LENGTH)
         .config("spark.network.timeout", SPARK_NETWORK_TIMEOUT)
         .config("spark.executor.heartbeatInterval", SPARK_EXECUTOR_HEARTBEAT_INTERVAL)
@@ -819,6 +1080,14 @@ def _alloc_stage_tmp_csv(subdir: str, prefix: str) -> Path:
     fallback_root = Path(SPARK_LOCAL_DIR) / "_scratch" / subdir
     fallback_root.mkdir(parents=True, exist_ok=True)
     return fallback_root / f"{prefix}_{uuid.uuid4().hex}.csv"
+
+
+def _alloc_stage_tmp_path(subdir: str, prefix: str, suffix: str = "") -> Path:
+    if _SPARK_TMP_CTX is not None:
+        return alloc_scratch_file(ctx=_SPARK_TMP_CTX, subdir=subdir, prefix=prefix, suffix=suffix)
+    fallback_root = Path(SPARK_LOCAL_DIR) / "_scratch" / subdir
+    fallback_root.mkdir(parents=True, exist_ok=True)
+    return fallback_root / f"{prefix}_{uuid.uuid4().hex}{suffix}"
 
 
 def _checkpoint_for_write(spark: SparkSession, df: DataFrame) -> DataFrame:
@@ -867,6 +1136,35 @@ def _write_output_df(df: DataFrame, output_dir: Path) -> dict[str, Any]:
     df.write.mode("overwrite").parquet(str(output_dir))
     print(f"[WRITE] mode=spark path={output_dir}")
     return {"output_dir": str(output_dir), "mode": "spark"}
+
+
+def _materialize_small_df_to_pandas(
+    df: DataFrame,
+    *,
+    subdir: str,
+    prefix: str,
+    mode: str,
+) -> tuple[pd.DataFrame, dict[str, Any]]:
+    mat_mode = str(mode or "pandas").strip().lower() or "pandas"
+    meta: dict[str, Any] = {"mode": mat_mode, "path": ""}
+    if mat_mode == "pandas":
+        return df.toPandas(), meta
+
+    tmp_dir = _alloc_stage_tmp_path(subdir, prefix, suffix="_parquet")
+    meta["path"] = tmp_dir.as_posix()
+    write_df = _coalesce_for_write(df)
+    if mat_mode == "spark_parquet":
+        write_df.write.mode("overwrite").parquet(tmp_dir.as_posix())
+    elif mat_mode == "driver_parquet":
+        write_spark_df_to_parquet_dir(
+            write_df,
+            tmp_dir,
+            chunk_rows=TOWER_SEQ_INPUT_PARQUET_CHUNK_ROWS,
+            compression="snappy",
+        )
+    else:
+        raise ValueError(f"unsupported TOWER_SEQ_INPUT_MATERIALIZE_MODE={mat_mode}")
+    return pd.read_parquet(tmp_dir.as_posix()), meta
 
 
 def build_source_evidence_df(candidates_scored: DataFrame) -> DataFrame:
@@ -927,6 +1225,12 @@ def build_enriched_audit_df(
         _src_max("popular", "source_weight", "popular_source_weight"),
         _src_max("popular", "source_norm", "popular_source_norm"),
         _src_sum("popular", "signal_score", "popular_signal_score"),
+        _src_max("context", "source_rank", "context_source_rank"),
+        _src_max("context", "source_score", "context_source_score"),
+        _src_max("context", "source_confidence", "context_source_confidence"),
+        _src_max("context", "source_weight", "context_source_weight"),
+        _src_max("context", "source_norm", "context_source_norm"),
+        _src_sum("context", "signal_score", "context_signal_score"),
     )
 
     final_rank = fused_pretrim.select(
@@ -959,6 +1263,7 @@ def build_enriched_audit_df(
             "cluster_rank",
             "profile_rank",
             "popular_rank",
+            "context_rank",
             "signal_score",
             "quality_score",
             "semantic_score",
@@ -968,11 +1273,17 @@ def build_enriched_audit_df(
             "semantic_effective_score",
             "als_backbone_score",
             "pre_score",
+            "head_score_seed",
             "head_multisource_boost",
             "head_profile_boost",
             "head_cluster_boost",
             "head_popular_penalty",
+            "head_challenger_bonus",
             "head_score",
+            "pre_head_seed_rank",
+            "challenger_candidate_ok",
+            "has_context",
+            "context_detail_count",
         )
         .join(route_summary, on=["user_idx", "item_idx"], how="left")
         .join(final_rank, on=["user_idx", "item_idx"], how="left")
@@ -996,6 +1307,13 @@ def build_enriched_audit_df(
         .withColumn(
             "popular_rank_pct",
             F.when(F.col("popular_source_rank").isNotNull(), F.col("popular_source_rank").cast("double") / F.lit(float(max(1, popular_top_k)))).otherwise(F.lit(None).cast("double")),
+        )
+        .withColumn(
+            "context_rank_pct",
+            F.when(
+                F.col("context_source_rank").isNotNull(),
+                F.col("context_source_rank").cast("double") / F.lit(float(max(1, CONTEXT_SURFACE_TOP_K))),
+            ).otherwise(F.lit(None).cast("double")),
         )
     )
     return enriched
@@ -1147,6 +1465,186 @@ def resolve_item_semantic_dense_vector_file(features_path: Path, scope: str) -> 
     if p.exists():
         return p
     return None
+
+
+def resolve_business_context_features() -> Path:
+    if BUSINESS_CONTEXT_RUN_DIR.strip():
+        run = Path(BUSINESS_CONTEXT_RUN_DIR.strip())
+        p = run / BUSINESS_CONTEXT_FEATURE_FILE
+        if not p.exists():
+            raise FileNotFoundError(f"BUSINESS_CONTEXT_FEATURE_FILE not found: {p}")
+        return p
+    suffix = f"_{RUN_PROFILE}{BUSINESS_CONTEXT_RUN_SUFFIX}"
+    run = pick_latest_run(BUSINESS_CONTEXT_ROOT, suffix, BUSINESS_CONTEXT_FEATURE_FILE)
+    return run / BUSINESS_CONTEXT_FEATURE_FILE
+
+
+def resolve_review_evidence_business_agg() -> Path:
+    if REVIEW_EVIDENCE_RUN_DIR.strip():
+        run = Path(REVIEW_EVIDENCE_RUN_DIR.strip())
+        p = run / REVIEW_EVIDENCE_BUSINESS_FILE
+        if not p.exists():
+            raise FileNotFoundError(f"REVIEW_EVIDENCE_BUSINESS_FILE not found: {p}")
+        return p
+    suffix = f"_{RUN_PROFILE}{REVIEW_EVIDENCE_RUN_SUFFIX}"
+    run = pick_latest_run(REVIEW_EVIDENCE_ROOT, suffix, REVIEW_EVIDENCE_BUSINESS_FILE)
+    return run / REVIEW_EVIDENCE_BUSINESS_FILE
+
+
+def resolve_tip_signal_business_agg() -> Path:
+    if TIP_SIGNAL_RUN_DIR.strip():
+        run = Path(TIP_SIGNAL_RUN_DIR.strip())
+        p = run / TIP_SIGNAL_BUSINESS_FILE
+        if not p.exists():
+            raise FileNotFoundError(f"TIP_SIGNAL_BUSINESS_FILE not found: {p}")
+        return p
+    suffix = f"_{RUN_PROFILE}{TIP_SIGNAL_RUN_SUFFIX}"
+    run = pick_latest_run(TIP_SIGNAL_ROOT, suffix, TIP_SIGNAL_BUSINESS_FILE)
+    return run / TIP_SIGNAL_BUSINESS_FILE
+
+
+def resolve_checkin_context_business_agg() -> Path:
+    if CHECKIN_CONTEXT_RUN_DIR.strip():
+        run = Path(CHECKIN_CONTEXT_RUN_DIR.strip())
+        p = run / CHECKIN_CONTEXT_BUSINESS_FILE
+        if not p.exists():
+            raise FileNotFoundError(f"CHECKIN_CONTEXT_BUSINESS_FILE not found: {p}")
+        return p
+    suffix = f"_{RUN_PROFILE}{CHECKIN_CONTEXT_RUN_SUFFIX}"
+    run = pick_latest_run(CHECKIN_CONTEXT_ROOT, suffix, CHECKIN_CONTEXT_BUSINESS_FILE)
+    return run / CHECKIN_CONTEXT_BUSINESS_FILE
+
+
+def load_business_context_features(spark: SparkSession, parquet_path: Path) -> DataFrame:
+    return (
+        spark.read.parquet(parquet_path.as_posix())
+        .select(
+            "business_id",
+            F.col("latitude").cast("double").alias("ctx_latitude"),
+            F.col("longitude").cast("double").alias("ctx_longitude"),
+            F.coalesce(F.col("has_hours").cast("double"), F.lit(0.0)).alias("ctx_has_hours"),
+            F.coalesce(F.col("open_weekend").cast("double"), F.lit(0.0)).alias("ctx_open_weekend"),
+            F.coalesce(F.col("open_late_any").cast("double"), F.lit(0.0)).alias("ctx_open_late_any"),
+            F.coalesce(F.col("meal_any").cast("double"), F.lit(0.0)).alias("ctx_meal_any"),
+            F.coalesce(F.col("meal_breakfast").cast("double"), F.lit(0.0)).alias("ctx_meal_breakfast"),
+            F.coalesce(F.col("meal_brunch").cast("double"), F.lit(0.0)).alias("ctx_meal_brunch"),
+            F.coalesce(F.col("meal_lunch").cast("double"), F.lit(0.0)).alias("ctx_meal_lunch"),
+            F.coalesce(F.col("meal_dinner").cast("double"), F.lit(0.0)).alias("ctx_meal_dinner"),
+            F.coalesce(F.col("meal_latenight").cast("double"), F.lit(0.0)).alias("ctx_meal_latenight"),
+            F.coalesce(F.col("meal_dessert").cast("double"), F.lit(0.0)).alias("ctx_meal_dessert"),
+            F.coalesce(F.col("attr_delivery").cast("double"), F.lit(0.0)).alias("ctx_attr_delivery"),
+            F.coalesce(F.col("attr_takeout").cast("double"), F.lit(0.0)).alias("ctx_attr_takeout"),
+            F.coalesce(F.col("attr_reservations").cast("double"), F.lit(0.0)).alias("ctx_attr_reservations"),
+            F.coalesce(F.col("attr_groups").cast("double"), F.lit(0.0)).alias("ctx_attr_groups"),
+            F.coalesce(F.col("attr_good_for_kids").cast("double"), F.lit(0.0)).alias("ctx_attr_good_for_kids"),
+            F.coalesce(F.col("attr_outdoor").cast("double"), F.lit(0.0)).alias("ctx_attr_outdoor"),
+            F.coalesce(F.col("attr_table_service").cast("double"), F.lit(0.0)).alias("ctx_attr_table_service"),
+            F.coalesce(F.col("attr_alcohol_full_bar").cast("double"), F.lit(0.0)).alias("ctx_attr_alcohol_full_bar"),
+            F.coalesce(F.col("attr_alcohol_beer_wine").cast("double"), F.lit(0.0)).alias("ctx_attr_alcohol_beer_wine"),
+            F.coalesce(F.col("attr_price_range").cast("double"), F.lit(0.0)).alias("ctx_attr_price_range"),
+        )
+        .withColumn(
+            "ctx_attr_price_range_norm",
+            F.when(F.col("ctx_attr_price_range") > F.lit(0.0), F.least(F.col("ctx_attr_price_range") / F.lit(4.0), F.lit(1.0)))
+            .otherwise(F.lit(0.0)),
+        )
+        .drop("ctx_attr_price_range")
+    )
+
+
+def load_review_evidence_business_agg(spark: SparkSession, parquet_path: Path) -> DataFrame:
+    return (
+        spark.read.parquet(parquet_path.as_posix())
+        .select(
+            "business_id",
+            F.coalesce(F.col("review_rows").cast("double"), F.lit(0.0)).alias("ctx_review_rows"),
+            F.coalesce(F.col("avg_evidence_weight_v1").cast("double"), F.lit(0.0)).alias("ctx_review_avg_evidence"),
+            F.coalesce(F.col("high_vote_review_rows").cast("double"), F.lit(0.0)).alias("ctx_review_high_vote_rows"),
+            F.coalesce(F.col("recent_2y_review_rows").cast("double"), F.lit(0.0)).alias("ctx_review_recent_rows"),
+        )
+        .withColumn(
+            "ctx_review_high_vote_share",
+            F.when(F.col("ctx_review_rows") > F.lit(0.0), F.col("ctx_review_high_vote_rows") / F.col("ctx_review_rows"))
+            .otherwise(F.lit(0.0)),
+        )
+        .withColumn(
+            "ctx_review_recent_share",
+            F.when(F.col("ctx_review_rows") > F.lit(0.0), F.col("ctx_review_recent_rows") / F.col("ctx_review_rows"))
+            .otherwise(F.lit(0.0)),
+        )
+    )
+
+
+def load_tip_signal_business_agg(spark: SparkSession, parquet_path: Path) -> DataFrame:
+    return (
+        spark.read.parquet(parquet_path.as_posix())
+        .select(
+            "business_id",
+            F.coalesce(F.col("tip_rows").cast("double"), F.lit(0.0)).alias("ctx_tip_rows"),
+            F.coalesce(F.col("avg_tip_weight_v1").cast("double"), F.lit(0.0)).alias("ctx_tip_avg_weight"),
+            F.coalesce(F.col("recommend_tip_rows").cast("double"), F.lit(0.0)).alias("ctx_tip_recommend_rows"),
+            F.coalesce(F.col("time_tip_rows").cast("double"), F.lit(0.0)).alias("ctx_tip_time_rows"),
+            F.coalesce(F.col("dish_tip_rows").cast("double"), F.lit(0.0)).alias("ctx_tip_dish_rows"),
+            F.coalesce(F.col("recent_1y_tip_rows").cast("double"), F.lit(0.0)).alias("ctx_tip_recent_rows"),
+        )
+        .withColumn(
+            "ctx_tip_recommend_share",
+            F.when(F.col("ctx_tip_rows") > F.lit(0.0), F.col("ctx_tip_recommend_rows") / F.col("ctx_tip_rows"))
+            .otherwise(F.lit(0.0)),
+        )
+        .withColumn(
+            "ctx_tip_time_share",
+            F.when(F.col("ctx_tip_rows") > F.lit(0.0), F.col("ctx_tip_time_rows") / F.col("ctx_tip_rows"))
+            .otherwise(F.lit(0.0)),
+        )
+        .withColumn(
+            "ctx_tip_dish_share",
+            F.when(F.col("ctx_tip_rows") > F.lit(0.0), F.col("ctx_tip_dish_rows") / F.col("ctx_tip_rows"))
+            .otherwise(F.lit(0.0)),
+        )
+        .withColumn(
+            "ctx_tip_recent_share",
+            F.when(F.col("ctx_tip_rows") > F.lit(0.0), F.col("ctx_tip_recent_rows") / F.col("ctx_tip_rows"))
+            .otherwise(F.lit(0.0)),
+        )
+    )
+
+
+def load_checkin_context_business_agg(spark: SparkSession, parquet_path: Path) -> DataFrame:
+    return (
+        spark.read.parquet(parquet_path.as_posix())
+        .select(
+            "business_id",
+            F.coalesce(F.col("checkin_rows").cast("double"), F.lit(0.0)).alias("ctx_checkin_rows"),
+            F.coalesce(F.col("weekend_share").cast("double"), F.lit(0.0)).alias("ctx_checkin_weekend_share"),
+            F.coalesce(F.col("breakfast_rows").cast("double"), F.lit(0.0)).alias("ctx_checkin_breakfast_rows"),
+            F.coalesce(F.col("lunch_rows").cast("double"), F.lit(0.0)).alias("ctx_checkin_lunch_rows"),
+            F.coalesce(F.col("dinner_rows").cast("double"), F.lit(0.0)).alias("ctx_checkin_dinner_rows"),
+            F.coalesce(F.col("late_rows").cast("double"), F.lit(0.0)).alias("ctx_checkin_late_rows"),
+            F.coalesce(F.col("recent_2y_checkin_rows").cast("double"), F.lit(0.0)).alias("ctx_checkin_recent_rows"),
+            F.coalesce(F.col("repeat_density_proxy").cast("double"), F.lit(0.0)).alias("ctx_checkin_repeat_density"),
+        )
+        .withColumn(
+            "ctx_checkin_lunch_share",
+            F.when(F.col("ctx_checkin_rows") > F.lit(0.0), F.col("ctx_checkin_lunch_rows") / F.col("ctx_checkin_rows"))
+            .otherwise(F.lit(0.0)),
+        )
+        .withColumn(
+            "ctx_checkin_dinner_share",
+            F.when(F.col("ctx_checkin_rows") > F.lit(0.0), F.col("ctx_checkin_dinner_rows") / F.col("ctx_checkin_rows"))
+            .otherwise(F.lit(0.0)),
+        )
+        .withColumn(
+            "ctx_checkin_late_share",
+            F.when(F.col("ctx_checkin_rows") > F.lit(0.0), F.col("ctx_checkin_late_rows") / F.col("ctx_checkin_rows"))
+            .otherwise(F.lit(0.0)),
+        )
+        .withColumn(
+            "ctx_checkin_recent_share",
+            F.when(F.col("ctx_checkin_rows") > F.lit(0.0), F.col("ctx_checkin_recent_rows") / F.col("ctx_checkin_rows"))
+            .otherwise(F.lit(0.0)),
+        )
+    )
 
 
 def load_item_semantic_features(spark: SparkSession, csv_path: Path) -> DataFrame:
@@ -1654,6 +2152,194 @@ def build_profile_multivector_route_audit_df(
     return route_df, meta
 
 
+def build_profile_multivector_candidate_pdf(
+    test_pdf_conf: pd.DataFrame,
+    item_map: DataFrame,
+    user_vectors_by_scope: dict[str, tuple[np.ndarray, np.ndarray]] | None,
+    merchant_vectors_by_scope: dict[str, tuple[np.ndarray, np.ndarray]] | None,
+    route_top_k: int,
+    route_score_min: float,
+    batch_users: int,
+) -> tuple[pd.DataFrame, dict[str, Any]]:
+    empty_pdf = pd.DataFrame(
+        columns=[
+            "user_idx",
+            "item_idx",
+            "source_rank",
+            "source_score",
+            "source_confidence",
+            "source",
+            "source_detail",
+        ]
+    )
+    if test_pdf_conf.empty:
+        return empty_pdf, {"status": "empty_test_users"}
+    if not user_vectors_by_scope:
+        return empty_pdf, {"status": "no_user_multivectors"}
+    if not merchant_vectors_by_scope:
+        return empty_pdf, {"status": "no_merchant_dense_vectors"}
+
+    scope_pairs = [
+        (user_scope, merchant_scope, route_role)
+        for user_scope, merchant_scope, route_role in _build_multivector_scope_pair_list()
+        if str(route_role) == "candidate"
+    ]
+    if not scope_pairs:
+        return empty_pdf, {"status": "no_candidate_scope_pairs"}
+
+    item_pdf = item_map.select("item_idx", "business_id").dropDuplicates(["item_idx"]).toPandas()
+    if item_pdf.empty:
+        return empty_pdf, {"status": "empty_item_map"}
+    item_pdf["item_idx"] = item_pdf["item_idx"].astype(np.int32)
+    item_pdf["business_id"] = item_pdf["business_id"].astype(str)
+
+    merchant_index_by_scope: dict[str, tuple[np.ndarray, np.ndarray]] = {}
+    for merchant_scope, (business_ids, merchant_vectors) in merchant_vectors_by_scope.items():
+        bid_to_vecidx = {str(bid): int(i) for i, bid in enumerate(business_ids.tolist())}
+        scope_item_pdf = item_pdf.copy()
+        scope_item_pdf["vec_idx"] = scope_item_pdf["business_id"].map(bid_to_vecidx)
+        scope_item_pdf = scope_item_pdf.dropna(subset=["vec_idx"]).copy()
+        if scope_item_pdf.empty:
+            continue
+        scope_item_pdf["vec_idx"] = scope_item_pdf["vec_idx"].astype(np.int32)
+        item_indices = scope_item_pdf["item_idx"].to_numpy(np.int32)
+        vec_indices = scope_item_pdf["vec_idx"].to_numpy(np.int32)
+        merchant_index_by_scope[str(merchant_scope)] = (
+            item_indices,
+            merchant_vectors[vec_indices],
+        )
+    if not merchant_index_by_scope:
+        return empty_pdf, {"status": "no_items_with_dense_vectors"}
+
+    rows: list[tuple[int, int, int, float, float, str, str]] = []
+    route_rows: dict[str, int] = {}
+    route_users: dict[str, int] = {}
+    route_status: dict[str, Any] = {}
+    batch_n = int(max(1, batch_users))
+    min_score = float(route_score_min)
+
+    for user_scope, merchant_scope, _route_role in scope_pairs:
+        route_name = f"profile_mv_{user_scope}_{merchant_scope}"
+        user_entry = user_vectors_by_scope.get(str(user_scope))
+        merchant_entry = merchant_index_by_scope.get(str(merchant_scope))
+        if user_entry is None:
+            route_status[route_name] = {"status": "missing_user_scope"}
+            continue
+        if merchant_entry is None:
+            route_status[route_name] = {"status": "missing_merchant_scope"}
+            continue
+
+        scope_user_ids, scope_user_vectors = user_entry
+        uid_to_vecidx = {str(uid): int(i) for i, uid in enumerate(scope_user_ids.tolist())}
+        route_user_pdf = test_pdf_conf[["user_idx", "user_id", "profile_conf"]].copy()
+        route_user_pdf["vec_idx"] = route_user_pdf["user_id"].map(uid_to_vecidx)
+        route_user_pdf = route_user_pdf.dropna(subset=["vec_idx"]).copy()
+        if route_user_pdf.empty:
+            route_status[route_name] = {"status": "no_users_with_scope_vector"}
+            continue
+        route_user_pdf["vec_idx"] = route_user_pdf["vec_idx"].astype(np.int32)
+        item_indices, merchant_vectors = merchant_entry
+        if merchant_vectors.shape[0] == 0:
+            route_status[route_name] = {"status": "empty_merchant_matrix"}
+            continue
+        kk = min(int(max(1, route_top_k)), int(merchant_vectors.shape[0]))
+        written_before = len(rows)
+        route_user_count = 0
+
+        for start in range(0, int(route_user_pdf.shape[0]), batch_n):
+            batch_pdf = route_user_pdf.iloc[start : start + batch_n].copy()
+            if batch_pdf.empty:
+                continue
+            batch_vecs = scope_user_vectors[batch_pdf["vec_idx"].to_numpy(np.int32)]
+            score = np.matmul(batch_vecs, merchant_vectors.T).astype(np.float32)
+            if score.size == 0:
+                continue
+            top_idx = np.argpartition(-score, kth=kk - 1, axis=1)[:, :kk]
+            batch_conf = batch_pdf["profile_conf"].to_numpy(np.float32)
+            batch_uidx = batch_pdf["user_idx"].to_numpy(np.int32)
+            for row_pos in range(top_idx.shape[0]):
+                idxs = top_idx[row_pos]
+                order = idxs[np.argsort(-score[row_pos, idxs], kind="mergesort")]
+                src_conf = float(
+                    PROFILE_CONFIDENCE_FLOOR
+                    + (1.0 - float(PROFILE_CONFIDENCE_FLOOR)) * float(np.clip(batch_conf[row_pos], 0.0, 1.0))
+                )
+                rank_j = 0
+                for item_pos in order.tolist():
+                    sc = float(score[row_pos, int(item_pos)])
+                    if sc < min_score:
+                        continue
+                    rank_j += 1
+                    rows.append(
+                        (
+                            int(batch_uidx[row_pos]),
+                            int(item_indices[int(item_pos)]),
+                            int(rank_j),
+                            float(sc),
+                            float(src_conf),
+                            "profile",
+                            route_name,
+                        )
+                    )
+                if rank_j > 0:
+                    route_user_count += 1
+
+        route_rows[route_name] = int(len(rows) - written_before)
+        route_users[route_name] = int(route_user_count)
+        route_status[route_name] = {
+            "status": "ok",
+            "rows": int(route_rows[route_name]),
+            "users": int(route_user_count),
+            "top_k": int(kk),
+        }
+
+    if not rows:
+        return empty_pdf, {"status": "no_multivector_candidate_rows", "route_status": route_status}
+
+    route_pdf = pd.DataFrame(
+        rows,
+        columns=[
+            "user_idx",
+            "item_idx",
+            "source_rank",
+            "source_score",
+            "source_confidence",
+            "source",
+            "source_detail",
+        ],
+    )
+    route_pdf["user_idx"] = pd.to_numeric(route_pdf["user_idx"], errors="coerce").fillna(-1).astype(np.int32)
+    route_pdf["item_idx"] = pd.to_numeric(route_pdf["item_idx"], errors="coerce").fillna(-1).astype(np.int32)
+    route_pdf["source_rank"] = pd.to_numeric(route_pdf["source_rank"], errors="coerce").fillna(0).astype(np.int32)
+    route_pdf["source_score"] = pd.to_numeric(route_pdf["source_score"], errors="coerce").fillna(0.0).astype(np.float64)
+    route_pdf["source_confidence"] = (
+        pd.to_numeric(route_pdf["source_confidence"], errors="coerce").fillna(0.0).astype(np.float64)
+    )
+    route_pdf = route_pdf[(route_pdf["user_idx"] >= 0) & (route_pdf["item_idx"] >= 0) & (route_pdf["source_rank"] > 0)].copy()
+    route_pdf = route_pdf.sort_values(
+        ["source_detail", "user_idx", "source_rank", "item_idx"],
+        ascending=[True, True, True, True],
+        kind="mergesort",
+    )
+    if route_pdf.empty:
+        return empty_pdf, {
+            "status": "multivector_candidate_rows_invalid_after_cast",
+            "route_status": route_status,
+        }
+
+    meta = {
+        "status": "ok",
+        "rows": int(route_pdf.shape[0]),
+        "route_rows": {str(k): int(v) for k, v in route_rows.items()},
+        "route_users": {str(k): int(v) for k, v in route_users.items()},
+        "route_status": route_status,
+        "batch_users": int(batch_n),
+        "top_k": int(route_top_k),
+        "score_min": float(route_score_min),
+    }
+    return route_pdf, meta
+
+
 def build_profile_candidates(
     spark: SparkSession,
     train_idx: DataFrame,
@@ -1669,6 +2355,9 @@ def build_profile_candidates(
     item_tag_long_pdf: pd.DataFrame | None,
     profile_route_policy: dict[str, Any] | None = None,
     profile_threshold_policy: dict[str, Any] | None = None,
+    bucket_min_train: int | None = None,
+    profile_multivector_data: dict[str, tuple[np.ndarray, np.ndarray]] | None = None,
+    merchant_dense_vector_data: dict[str, tuple[np.ndarray, np.ndarray]] | None = None,
 ) -> tuple[DataFrame, dict[str, Any]]:
     route_policy = dict(profile_route_policy or {})
     threshold_policy = dict(profile_threshold_policy or {})
@@ -1709,6 +2398,15 @@ def build_profile_candidates(
     profile_bridge_score_min = float(
         threshold_policy.get("profile_bridge_score_min", PROFILE_BRIDGE_SCORE_MIN)
     )
+    enable_multivector_route_integration = (
+        bucket_min_train is not None
+        and should_integrate_profile_multivector_routes(int(bucket_min_train))
+        and bool(profile_multivector_data)
+        and bool(merchant_dense_vector_data)
+    )
+    multivector_route_top_k = max(1, min(int(profile_top_k), int(PROFILE_MULTIVECTOR_ROUTE_INTEGRATION_TOP_K)))
+    multivector_route_score_min = float(PROFILE_MULTIVECTOR_ROUTE_INTEGRATION_SCORE_MIN)
+    multivector_route_batch_users = int(max(1, PROFILE_MULTIVECTOR_ROUTE_INTEGRATION_BATCH_USERS))
     uid_to_vec = {str(uid): int(i) for i, uid in enumerate(profile_user_ids.tolist())}
 
     user_scope = user_map.select("user_idx")
@@ -1772,9 +2470,11 @@ def build_profile_candidates(
     rows: list[tuple[int, int, int, float, float, str]] = []
     profile_parts: list[pd.DataFrame] = []
     route_rows: dict[str, int] = {"vector": 0, "shared": 0, "bridge_user": 0, "bridge_type": 0}
+    multivector_route_rows: dict[str, int] = {}
     calibration_applied_rows = 0
     enabled_routes: list[str] = []
     item_ids_final = np.array([], dtype=np.int32)
+    multivector_meta: dict[str, Any] = {"status": "disabled"}
 
     # Route 0: original profile-vector route (kept for compatibility / ablation).
     if bool(enable_profile_vector_route) and profile_vectors.shape[0] > 0:
@@ -1909,6 +2609,28 @@ def build_profile_candidates(
                             )
                         )
                         route_rows["vector"] += int(uid_col.shape[0])
+
+    if bool(enable_multivector_route_integration):
+        multivector_pdf, multivector_meta = build_profile_multivector_candidate_pdf(
+            test_pdf_conf=test_pdf_conf,
+            item_map=item_map,
+            user_vectors_by_scope=profile_multivector_data,
+            merchant_vectors_by_scope=merchant_dense_vector_data,
+            route_top_k=multivector_route_top_k,
+            route_score_min=multivector_route_score_min,
+            batch_users=multivector_route_batch_users,
+        )
+        if not multivector_pdf.empty:
+            profile_parts.append(multivector_pdf)
+            for route_name, row_count in multivector_meta.get("route_rows", {}).items():
+                multivector_route_rows[str(route_name)] = int(row_count)
+            enabled_routes.extend(
+                [
+                    str(route_name)
+                    for route_name, row_count in multivector_meta.get("route_rows", {}).items()
+                    if int(row_count) > 0
+                ]
+            )
 
     # Prepare typed-tag tables for shared/bridge routes.
     user_map_pdf = user_pdf[["user_idx", "user_id"]].copy()
@@ -2155,14 +2877,82 @@ def build_profile_candidates(
     profile_pdf = profile_pdf[(profile_pdf["user_idx"] >= 0) & (profile_pdf["item_idx"] >= 0)].copy()
     if profile_pdf.empty:
         return _empty_source_df(spark, "profile"), {"status": "profile_rows_invalid_after_cast"}
+    if bool(enable_multivector_route_integration):
+        profile_pdf = profile_pdf.sort_values(
+            ["user_idx", "item_idx", "source_detail", "source_score", "source_confidence", "source_rank"],
+            ascending=[True, True, True, False, False, True],
+            kind="mergesort",
+        ).drop_duplicates(subset=["user_idx", "item_idx", "source_detail"], keep="first")
+        profile_pdf["is_profile_mv_route"] = profile_pdf["source_detail"].astype(str).str.startswith("profile_mv_").astype(np.int8)
+        profile_pdf["profile_mv_short_rank_src"] = np.where(
+            profile_pdf["source_detail"] == "profile_mv_short_semantic",
+            profile_pdf["source_rank"].astype(np.float64),
+            np.nan,
+        )
+        profile_pdf["profile_mv_long_rank_src"] = np.where(
+            profile_pdf["source_detail"] == "profile_mv_long_core",
+            profile_pdf["source_rank"].astype(np.float64),
+            np.nan,
+        )
+        profile_pdf["profile_mv_pos_rank_src"] = np.where(
+            profile_pdf["source_detail"] == "profile_mv_pos_pos",
+            profile_pdf["source_rank"].astype(np.float64),
+            np.nan,
+        )
+        profile_detail_pdf = (
+            profile_pdf.groupby(["user_idx", "item_idx"], sort=False)
+            .agg(
+                profile_detail_count=("source_detail", "size"),
+                profile_mv_route_count=("is_profile_mv_route", "sum"),
+                profile_mv_short_rank=("profile_mv_short_rank_src", "min"),
+                profile_mv_long_rank=("profile_mv_long_rank_src", "min"),
+                profile_mv_pos_rank=("profile_mv_pos_rank_src", "min"),
+            )
+            .reset_index()
+        )
+        profile_best_pdf = profile_pdf.sort_values(
+            ["user_idx", "item_idx", "source_score", "source_confidence", "source_rank"],
+            ascending=[True, True, False, False, True],
+            kind="mergesort",
+        ).drop_duplicates(subset=["user_idx", "item_idx"], keep="first")
+        profile_pdf = profile_best_pdf.merge(
+            profile_detail_pdf,
+            on=["user_idx", "item_idx"],
+            how="left",
+        )
+    else:
+        profile_pdf = profile_pdf.sort_values(
+            ["user_idx", "item_idx", "source_score", "source_confidence", "source_rank"],
+            ascending=[True, True, False, False, True],
+            kind="mergesort",
+        ).drop_duplicates(subset=["user_idx", "item_idx"], keep="first")
+    for col_name, default_value in [
+        ("profile_detail_count", 1.0),
+        ("profile_mv_route_count", 0.0),
+        ("profile_mv_short_rank", np.nan),
+        ("profile_mv_long_rank", np.nan),
+        ("profile_mv_pos_rank", np.nan),
+    ]:
+        if col_name not in profile_pdf.columns:
+            profile_pdf[col_name] = default_value
+    profile_pdf["profile_detail_count"] = pd.to_numeric(
+        profile_pdf["profile_detail_count"], errors="coerce"
+    ).fillna(1.0).astype(np.float64)
+    profile_pdf["profile_mv_route_count"] = pd.to_numeric(
+        profile_pdf["profile_mv_route_count"], errors="coerce"
+    ).fillna(0.0).astype(np.float64)
+    profile_pdf["profile_mv_short_rank"] = pd.to_numeric(
+        profile_pdf["profile_mv_short_rank"], errors="coerce"
+    ).astype(np.float64)
+    profile_pdf["profile_mv_long_rank"] = pd.to_numeric(
+        profile_pdf["profile_mv_long_rank"], errors="coerce"
+    ).astype(np.float64)
+    profile_pdf["profile_mv_pos_rank"] = pd.to_numeric(
+        profile_pdf["profile_mv_pos_rank"], errors="coerce"
+    ).astype(np.float64)
     profile_pdf = profile_pdf.sort_values(
-        ["user_idx", "item_idx", "source_score", "source_confidence", "source_rank"],
-        ascending=[True, True, False, False, True],
-        kind="mergesort",
-    ).drop_duplicates(subset=["user_idx", "item_idx"], keep="first")
-    profile_pdf = profile_pdf.sort_values(
-        ["user_idx", "source_score", "source_confidence", "item_idx"],
-        ascending=[True, False, False, True],
+        ["user_idx", "source_score", "source_confidence", "profile_mv_route_count", "item_idx"],
+        ascending=[True, False, False, False, True],
         kind="mergesort",
     )
     profile_pdf["source_rank"] = profile_pdf.groupby("user_idx", sort=False).cumcount() + 1
@@ -2192,6 +2982,11 @@ def build_profile_candidates(
                 F.col("source_confidence").cast("double"),
                 F.col("source").cast("string"),
                 F.col("source_detail").cast("string"),
+                F.col("profile_detail_count").cast("double"),
+                F.col("profile_mv_route_count").cast("double"),
+                F.col("profile_mv_short_rank").cast("double"),
+                F.col("profile_mv_long_rank").cast("double"),
+                F.col("profile_mv_pos_rank").cast("double"),
             )
         except Exception:
             profile_df = None
@@ -2206,6 +3001,11 @@ def build_profile_candidates(
             F.col("source_confidence").cast("double"),
             F.col("source").cast("string"),
             F.col("source_detail").cast("string"),
+            F.col("profile_detail_count").cast("double"),
+            F.col("profile_mv_route_count").cast("double"),
+            F.col("profile_mv_short_rank").cast("double"),
+            F.col("profile_mv_long_rank").cast("double"),
+            F.col("profile_mv_pos_rank").cast("double"),
         )
     if profile_df is None:
         raise RuntimeError("profile dataframe conversion failed; enable ALLOW_PROFILE_CSV_FALLBACK=true for debug fallback")
@@ -2225,6 +3025,18 @@ def build_profile_candidates(
         "enable_tag_shared_route": bool(enable_tag_shared_route),
         "enable_bridge_user_route": bool(enable_bridge_user_route),
         "enable_bridge_type_route": bool(enable_bridge_type_route),
+        "profile_multivector_integration_enabled": bool(enable_multivector_route_integration),
+        "profile_multivector_integration_bucket": int(bucket_min_train) if bucket_min_train is not None else None,
+        "profile_multivector_integration_status": str(multivector_meta.get("status", "disabled")),
+        "profile_multivector_integration_top_k": int(multivector_route_top_k),
+        "profile_multivector_integration_score_min": float(multivector_route_score_min),
+        "profile_multivector_integration_batch_users": int(multivector_route_batch_users),
+        "profile_multivector_integration_route_rows": {
+            str(k): int(v) for k, v in multivector_meta.get("route_rows", {}).items()
+        },
+        "profile_multivector_integration_route_users": {
+            str(k): int(v) for k, v in multivector_meta.get("route_users", {}).items()
+        },
         "profile_tag_shared_top_k": int(profile_tag_shared_top_k),
         "profile_bridge_user_top_k": int(profile_bridge_user_top_k),
         "profile_bridge_type_top_k": int(profile_bridge_type_top_k),
@@ -2238,6 +3050,7 @@ def build_profile_candidates(
         "rows_shared": int(route_rows["shared"]),
         "rows_bridge_user": int(route_rows["bridge_user"]),
         "rows_bridge_type": int(route_rows["bridge_type"]),
+        "rows_multivector": int(sum(int(v) for v in multivector_route_rows.values())),
         "profile_scope_users_only_relevant": bool(PROFILE_PANDAS_SCOPE_ONLY_RELEVANT_USERS),
         "profile_scope_items_only_relevant": bool(PROFILE_PANDAS_SCOPE_ONLY_RELEVANT_ITEMS),
         "user_map_rows_scoped": int(user_pdf.shape[0]),
@@ -2246,6 +3059,449 @@ def build_profile_candidates(
         "profile_output_mode_effective": str(output_mode_effective),
     }
     return profile_df, meta
+
+
+def build_context_candidates(
+    spark: SparkSession,
+    train_idx: DataFrame,
+    test_users: DataFrame,
+    item_map: DataFrame,
+    business_context_df: DataFrame | None,
+    review_evidence_df: DataFrame | None,
+    tip_signal_df: DataFrame | None,
+    checkin_context_df: DataFrame | None,
+    context_top_k: int,
+    context_score_min: float,
+    batch_users: int,
+) -> tuple[DataFrame, dict[str, Any]]:
+    if business_context_df is None:
+        return _empty_source_df(spark, "context"), {"status": "missing_business_context", "route_rows": {}, "route_users": {}}
+    if review_evidence_df is None:
+        review_evidence_df = spark.range(0).select(F.lit(None).cast("string").alias("business_id")).limit(0)
+    if tip_signal_df is None:
+        tip_signal_df = spark.range(0).select(F.lit(None).cast("string").alias("business_id")).limit(0)
+    if checkin_context_df is None:
+        checkin_context_df = spark.range(0).select(F.lit(None).cast("string").alias("business_id")).limit(0)
+    route_details = [r for r in CONTEXT_ROUTE_DETAILS if r in {"attr", "time", "geo"}]
+    if not route_details:
+        return _empty_source_df(spark, "context"), {"status": "no_context_route_details", "route_rows": {}, "route_users": {}}
+
+    item_ctx = (
+        item_map.join(business_context_df, on="business_id", how="left")
+        .join(review_evidence_df, on="business_id", how="left")
+        .join(tip_signal_df, on="business_id", how="left")
+        .join(checkin_context_df, on="business_id", how="left")
+        .withColumn("ctx_has_hours", F.coalesce(F.col("ctx_has_hours"), F.lit(0.0)))
+        .withColumn("ctx_open_weekend", F.coalesce(F.col("ctx_open_weekend"), F.lit(0.0)))
+        .withColumn("ctx_open_late_any", F.coalesce(F.col("ctx_open_late_any"), F.lit(0.0)))
+        .withColumn("ctx_meal_any", F.coalesce(F.col("ctx_meal_any"), F.lit(0.0)))
+        .withColumn("ctx_meal_breakfast", F.coalesce(F.col("ctx_meal_breakfast"), F.lit(0.0)))
+        .withColumn("ctx_meal_brunch", F.coalesce(F.col("ctx_meal_brunch"), F.lit(0.0)))
+        .withColumn("ctx_meal_lunch", F.coalesce(F.col("ctx_meal_lunch"), F.lit(0.0)))
+        .withColumn("ctx_meal_dinner", F.coalesce(F.col("ctx_meal_dinner"), F.lit(0.0)))
+        .withColumn("ctx_meal_latenight", F.coalesce(F.col("ctx_meal_latenight"), F.lit(0.0)))
+        .withColumn("ctx_meal_dessert", F.coalesce(F.col("ctx_meal_dessert"), F.lit(0.0)))
+        .withColumn("ctx_attr_delivery", F.coalesce(F.col("ctx_attr_delivery"), F.lit(0.0)))
+        .withColumn("ctx_attr_takeout", F.coalesce(F.col("ctx_attr_takeout"), F.lit(0.0)))
+        .withColumn("ctx_attr_reservations", F.coalesce(F.col("ctx_attr_reservations"), F.lit(0.0)))
+        .withColumn("ctx_attr_groups", F.coalesce(F.col("ctx_attr_groups"), F.lit(0.0)))
+        .withColumn("ctx_attr_good_for_kids", F.coalesce(F.col("ctx_attr_good_for_kids"), F.lit(0.0)))
+        .withColumn("ctx_attr_outdoor", F.coalesce(F.col("ctx_attr_outdoor"), F.lit(0.0)))
+        .withColumn("ctx_attr_table_service", F.coalesce(F.col("ctx_attr_table_service"), F.lit(0.0)))
+        .withColumn("ctx_attr_alcohol_full_bar", F.coalesce(F.col("ctx_attr_alcohol_full_bar"), F.lit(0.0)))
+        .withColumn("ctx_attr_alcohol_beer_wine", F.coalesce(F.col("ctx_attr_alcohol_beer_wine"), F.lit(0.0)))
+        .withColumn("ctx_attr_price_range_norm", F.coalesce(F.col("ctx_attr_price_range_norm"), F.lit(0.0)))
+        .withColumn("ctx_review_rows", F.coalesce(F.col("ctx_review_rows"), F.lit(0.0)))
+        .withColumn("ctx_review_avg_evidence", F.coalesce(F.col("ctx_review_avg_evidence"), F.lit(0.0)))
+        .withColumn("ctx_review_high_vote_share", F.coalesce(F.col("ctx_review_high_vote_share"), F.lit(0.0)))
+        .withColumn("ctx_review_recent_share", F.coalesce(F.col("ctx_review_recent_share"), F.lit(0.0)))
+        .withColumn("ctx_tip_rows", F.coalesce(F.col("ctx_tip_rows"), F.lit(0.0)))
+        .withColumn("ctx_tip_avg_weight", F.coalesce(F.col("ctx_tip_avg_weight"), F.lit(0.0)))
+        .withColumn("ctx_tip_recommend_share", F.coalesce(F.col("ctx_tip_recommend_share"), F.lit(0.0)))
+        .withColumn("ctx_tip_time_share", F.coalesce(F.col("ctx_tip_time_share"), F.lit(0.0)))
+        .withColumn("ctx_tip_dish_share", F.coalesce(F.col("ctx_tip_dish_share"), F.lit(0.0)))
+        .withColumn("ctx_tip_recent_share", F.coalesce(F.col("ctx_tip_recent_share"), F.lit(0.0)))
+        .withColumn("ctx_checkin_rows", F.coalesce(F.col("ctx_checkin_rows"), F.lit(0.0)))
+        .withColumn("ctx_checkin_weekend_share", F.coalesce(F.col("ctx_checkin_weekend_share"), F.lit(0.0)))
+        .withColumn("ctx_checkin_lunch_share", F.coalesce(F.col("ctx_checkin_lunch_share"), F.lit(0.0)))
+        .withColumn("ctx_checkin_dinner_share", F.coalesce(F.col("ctx_checkin_dinner_share"), F.lit(0.0)))
+        .withColumn("ctx_checkin_late_share", F.coalesce(F.col("ctx_checkin_late_share"), F.lit(0.0)))
+        .withColumn("ctx_checkin_recent_share", F.coalesce(F.col("ctx_checkin_recent_share"), F.lit(0.0)))
+        .withColumn("ctx_checkin_repeat_density", F.coalesce(F.col("ctx_checkin_repeat_density"), F.lit(0.0)))
+        .withColumn(
+            "ctx_business_gate",
+            F.lit(0.5) * F.col("ctx_has_hours") + F.lit(0.5) * F.col("ctx_meal_any"),
+        )
+        .withColumn(
+            "ctx_review_gate",
+            F.least(F.col("ctx_review_avg_evidence") / F.lit(1.0), F.lit(1.0))
+            * (F.lit(0.5) + F.lit(0.5) * F.col("ctx_review_recent_share")),
+        )
+        .withColumn(
+            "ctx_tip_gate",
+            F.least(F.log(F.col("ctx_tip_rows") + F.lit(1.0)) / F.log(F.lit(11.0)), F.lit(1.0))
+            * (
+                F.lit(0.5)
+                + F.lit(0.5)
+                * F.greatest("ctx_tip_recommend_share", "ctx_tip_time_share", "ctx_tip_dish_share")
+            ),
+        )
+        .withColumn(
+            "ctx_checkin_gate",
+            F.least(F.log(F.col("ctx_checkin_rows") + F.lit(1.0)) / F.log(F.lit(51.0)), F.lit(1.0))
+            * (
+                F.lit(0.5)
+                + F.lit(0.5)
+                * F.greatest("ctx_checkin_weekend_share", "ctx_checkin_dinner_share", "ctx_checkin_late_share")
+            ),
+        )
+        .withColumn(
+            "ctx_support_gate",
+            F.lit(0.25) * F.col("ctx_business_gate")
+            + F.lit(0.25) * F.col("ctx_review_gate")
+            + F.lit(0.20) * F.col("ctx_tip_gate")
+            + F.lit(0.30) * F.col("ctx_checkin_gate"),
+        )
+        .persist(StorageLevel.DISK_ONLY)
+    )
+
+    attr_cols = [
+        "ctx_attr_delivery",
+        "ctx_attr_takeout",
+        "ctx_attr_reservations",
+        "ctx_attr_groups",
+        "ctx_attr_good_for_kids",
+        "ctx_attr_outdoor",
+        "ctx_attr_table_service",
+        "ctx_attr_alcohol_full_bar",
+        "ctx_attr_alcohol_beer_wine",
+        "ctx_attr_price_range_norm",
+    ]
+    time_cols = [
+        "ctx_open_weekend",
+        "ctx_open_late_any",
+        "ctx_meal_breakfast",
+        "ctx_meal_brunch",
+        "ctx_meal_lunch",
+        "ctx_meal_dinner",
+        "ctx_meal_latenight",
+        "ctx_meal_dessert",
+        "ctx_tip_time_share",
+        "ctx_tip_recent_share",
+        "ctx_checkin_weekend_share",
+        "ctx_checkin_lunch_share",
+        "ctx_checkin_dinner_share",
+        "ctx_checkin_late_share",
+        "ctx_checkin_recent_share",
+    ]
+
+    test_scope = test_users.select("user_idx").dropDuplicates(["user_idx"]).persist(StorageLevel.DISK_ONLY)
+    train_anchor = (
+        train_idx.join(test_scope, on="user_idx", how="inner")
+        .groupBy("user_idx")
+        .agg(F.max("ts").alias("anchor_ts"))
+    )
+    weighted_train = (
+        train_idx.join(test_scope, on="user_idx", how="inner")
+        .join(train_anchor, on="user_idx", how="left")
+        .join(item_ctx, on="item_idx", how="left")
+        .withColumn(
+            "rating_norm",
+            F.least(
+                F.greatest((F.col("rating").cast("double") - F.lit(1.0)) / F.lit(4.0), F.lit(0.0)),
+                F.lit(1.0),
+            ),
+        )
+        .withColumn(
+            "ctx_days_since_anchor",
+            F.when(
+                F.col("anchor_ts").isNotNull() & F.col("ts").isNotNull(),
+                F.datediff(F.col("anchor_ts"), F.col("ts")).cast("double"),
+            ).otherwise(F.lit(0.0)),
+        )
+        .withColumn(
+            "ctx_event_weight",
+            (F.lit(0.35) + F.lit(0.65) * F.col("rating_norm"))
+            * F.exp(-F.greatest(F.col("ctx_days_since_anchor"), F.lit(0.0)) / F.lit(180.0)),
+        )
+        .withColumn(
+            "ctx_geo_weight",
+            F.when(
+                F.col("ctx_latitude").isNotNull() & F.col("ctx_longitude").isNotNull(),
+                F.col("ctx_event_weight"),
+            ).otherwise(F.lit(0.0)),
+        )
+        .persist(StorageLevel.DISK_ONLY)
+    )
+
+    agg_exprs: list[Any] = [
+        F.sum("ctx_event_weight").alias("ctx_total_weight"),
+        F.count("*").alias("ctx_event_rows"),
+        F.sum("ctx_geo_weight").alias("ctx_geo_weight_sum"),
+    ]
+    for col_name in attr_cols + time_cols:
+        agg_exprs.append(F.sum(F.col("ctx_event_weight") * F.coalesce(F.col(col_name), F.lit(0.0))).alias(f"{col_name}_sum"))
+    agg_exprs.extend(
+        [
+            F.sum(F.col("ctx_geo_weight") * F.coalesce(F.col("ctx_latitude"), F.lit(0.0))).alias("ctx_latitude_sum"),
+            F.sum(F.col("ctx_geo_weight") * F.coalesce(F.col("ctx_longitude"), F.lit(0.0))).alias("ctx_longitude_sum"),
+        ]
+    )
+    user_ctx = weighted_train.groupBy("user_idx").agg(*agg_exprs)
+    for col_name in attr_cols + time_cols:
+        user_ctx = user_ctx.withColumn(
+            f"user_{col_name}",
+            F.when(F.col("ctx_total_weight") > F.lit(0.0), F.col(f"{col_name}_sum") / F.col("ctx_total_weight")).otherwise(F.lit(0.0)),
+        )
+    user_ctx = (
+        user_ctx.withColumn(
+            "user_ctx_latitude",
+            F.when(F.col("ctx_geo_weight_sum") > F.lit(0.0), F.col("ctx_latitude_sum") / F.col("ctx_geo_weight_sum")).otherwise(F.lit(None).cast("double")),
+        )
+        .withColumn(
+            "user_ctx_longitude",
+            F.when(F.col("ctx_geo_weight_sum") > F.lit(0.0), F.col("ctx_longitude_sum") / F.col("ctx_geo_weight_sum")).otherwise(F.lit(None).cast("double")),
+        )
+        .select(
+            "user_idx",
+            "ctx_total_weight",
+            "ctx_event_rows",
+            "ctx_geo_weight_sum",
+            *[f"user_{c}" for c in attr_cols + time_cols],
+            "user_ctx_latitude",
+            "user_ctx_longitude",
+        )
+    )
+
+    item_cols = [
+        "item_idx",
+        "business_id",
+        "ctx_latitude",
+        "ctx_longitude",
+        "ctx_support_gate",
+        *attr_cols,
+        *time_cols,
+    ]
+    item_pdf = item_ctx.select(*item_cols).dropDuplicates(["item_idx"]).toPandas()
+    user_pdf = user_ctx.join(test_scope, on="user_idx", how="inner").toPandas()
+    test_scope.unpersist()
+    weighted_train.unpersist()
+    item_ctx.unpersist()
+
+    if item_pdf.empty:
+        return _empty_source_df(spark, "context"), {"status": "empty_item_context", "route_rows": {}, "route_users": {}}
+    if user_pdf.empty:
+        return _empty_source_df(spark, "context"), {"status": "empty_user_context", "route_rows": {}, "route_users": {}}
+
+    item_pdf["item_idx"] = pd.to_numeric(item_pdf["item_idx"], errors="coerce").fillna(-1).astype(np.int32)
+    item_pdf = item_pdf[item_pdf["item_idx"] >= 0].copy()
+    if item_pdf.empty:
+        return _empty_source_df(spark, "context"), {"status": "invalid_item_context", "route_rows": {}, "route_users": {}}
+    for col_name in ["ctx_latitude", "ctx_longitude", "ctx_support_gate", *attr_cols, *time_cols]:
+        item_pdf[col_name] = pd.to_numeric(item_pdf[col_name], errors="coerce")
+    item_pdf["ctx_support_gate"] = (
+        item_pdf["ctx_support_gate"].fillna(0.0).clip(lower=0.0, upper=1.0).astype(np.float32)
+    )
+    item_indices = item_pdf["item_idx"].to_numpy(np.int32)
+    item_support = item_pdf["ctx_support_gate"].to_numpy(np.float32)
+    item_lat = pd.to_numeric(item_pdf["ctx_latitude"], errors="coerce").to_numpy(np.float32)
+    item_lon = pd.to_numeric(item_pdf["ctx_longitude"], errors="coerce").to_numpy(np.float32)
+    item_geo_valid = np.isfinite(item_lat) & np.isfinite(item_lon)
+
+    user_pdf["user_idx"] = pd.to_numeric(user_pdf["user_idx"], errors="coerce").fillna(-1).astype(np.int32)
+    user_pdf = user_pdf[user_pdf["user_idx"] >= 0].copy()
+    if user_pdf.empty:
+        return _empty_source_df(spark, "context"), {"status": "invalid_user_context", "route_rows": {}, "route_users": {}}
+    for col_name in ["ctx_total_weight", "ctx_event_rows", "ctx_geo_weight_sum", "user_ctx_latitude", "user_ctx_longitude"]:
+        user_pdf[col_name] = pd.to_numeric(user_pdf[col_name], errors="coerce")
+    for col_name in [f"user_{c}" for c in attr_cols + time_cols]:
+        user_pdf[col_name] = pd.to_numeric(user_pdf[col_name], errors="coerce").fillna(0.0).astype(np.float32)
+
+    def _norm_rows(mat: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        norms = np.linalg.norm(mat, axis=1, keepdims=True)
+        norms[norms == 0.0] = 1.0
+        return (mat / norms).astype(np.float32), norms.reshape(-1).astype(np.float32)
+
+    item_attr_mat = item_pdf[attr_cols].fillna(0.0).to_numpy(np.float32)
+    item_time_mat = item_pdf[time_cols].fillna(0.0).to_numpy(np.float32)
+    item_attr_normed, item_attr_norm = _norm_rows(item_attr_mat)
+    item_time_normed, item_time_norm = _norm_rows(item_time_mat)
+    user_weight_gate = np.clip(
+        np.log1p(
+            np.maximum(
+                pd.to_numeric(user_pdf["ctx_total_weight"], errors="coerce").fillna(0.0).to_numpy(np.float32),
+                0.0,
+            )
+        )
+        / np.log(8.0),
+        0.0,
+        1.0,
+    ).astype(np.float32)
+
+    rows: list[tuple[int, int, int, float, float, str, str]] = []
+    route_rows: dict[str, int] = {}
+    route_users: dict[str, int] = {}
+    route_status: dict[str, Any] = {}
+    top_k = max(1, min(int(context_top_k), int(item_pdf.shape[0])))
+    batch_n = int(max(1, batch_users))
+    min_score = float(context_score_min)
+
+    def _append_route_rows(route_name: str, user_batch: np.ndarray, score: np.ndarray, conf: np.ndarray) -> None:
+        written_before = len(rows)
+        active_users = 0
+        if score.size == 0:
+            route_rows.setdefault(route_name, 0)
+            route_users.setdefault(route_name, 0)
+            route_status[route_name] = {"status": "empty_score"}
+            return
+        top_idx = np.argpartition(-score, kth=top_k - 1, axis=1)[:, :top_k]
+        for row_pos in range(top_idx.shape[0]):
+            idxs = top_idx[row_pos]
+            order = idxs[np.argsort(-score[row_pos, idxs], kind="mergesort")]
+            rank_j = 0
+            for item_pos in order.tolist():
+                sc = float(score[row_pos, int(item_pos)])
+                if (not np.isfinite(sc)) or sc < min_score:
+                    continue
+                rank_j += 1
+                rows.append(
+                    (
+                        int(user_batch[row_pos]),
+                        int(item_indices[int(item_pos)]),
+                        int(rank_j),
+                        float(sc),
+                        float(np.clip(conf[row_pos, int(item_pos)], 0.0, 1.0)),
+                        "context",
+                        str(route_name),
+                    )
+                )
+            if rank_j > 0:
+                active_users += 1
+        route_rows[route_name] = int(route_rows.get(route_name, 0) + int(len(rows) - written_before))
+        route_users[route_name] = int(route_users.get(route_name, 0) + int(active_users))
+        route_status[route_name] = {
+            "status": "ok",
+            "rows": int(route_rows[route_name]),
+            "users": int(route_users[route_name]),
+            "top_k": int(top_k),
+            "score_min": float(min_score),
+        }
+
+    for start in range(0, int(user_pdf.shape[0]), batch_n):
+        batch_pdf = user_pdf.iloc[start : start + batch_n].copy()
+        if batch_pdf.empty:
+            continue
+        user_batch = batch_pdf["user_idx"].to_numpy(np.int32)
+        batch_user_gate = user_weight_gate[start : start + batch_pdf.shape[0]]
+        if "attr" in route_details:
+            user_attr_mat = batch_pdf[[f"user_{c}" for c in attr_cols]].fillna(0.0).to_numpy(np.float32)
+            user_attr_normed, user_attr_norm = _norm_rows(user_attr_mat)
+            attr_score = np.matmul(user_attr_normed, item_attr_normed.T).astype(np.float32)
+            attr_score = np.where(user_attr_norm[:, None] > 1e-6, attr_score, np.float32(0.0))
+            attr_score = np.clip(0.82 * attr_score + 0.18 * item_support[None, :], 0.0, 1.5)
+            attr_conf = np.clip(
+                batch_user_gate[:, None] * (0.55 + 0.45 * item_support[None, :]),
+                0.0,
+                1.0,
+            ).astype(np.float32)
+            _append_route_rows("context_attr", user_batch, attr_score, attr_conf)
+        if "time" in route_details:
+            user_time_mat = batch_pdf[[f"user_{c}" for c in time_cols]].fillna(0.0).to_numpy(np.float32)
+            user_time_normed, user_time_norm = _norm_rows(user_time_mat)
+            time_score = np.matmul(user_time_normed, item_time_normed.T).astype(np.float32)
+            time_score = np.where(user_time_norm[:, None] > 1e-6, time_score, np.float32(0.0))
+            time_score = np.clip(0.78 * time_score + 0.22 * item_support[None, :], 0.0, 1.5)
+            time_conf = np.clip(
+                batch_user_gate[:, None] * (0.50 + 0.50 * item_support[None, :]),
+                0.0,
+                1.0,
+            ).astype(np.float32)
+            _append_route_rows("context_time", user_batch, time_score, time_conf)
+        if "geo" in route_details:
+            batch_lat = pd.to_numeric(batch_pdf["user_ctx_latitude"], errors="coerce").to_numpy(np.float32)
+            batch_lon = pd.to_numeric(batch_pdf["user_ctx_longitude"], errors="coerce").to_numpy(np.float32)
+            geo_score = np.zeros((batch_pdf.shape[0], item_indices.shape[0]), dtype=np.float32)
+            valid_user = np.isfinite(batch_lat) & np.isfinite(batch_lon)
+            if valid_user.any() and item_geo_valid.any():
+                lat1 = np.deg2rad(batch_lat[valid_user])[:, None]
+                lon1 = np.deg2rad(batch_lon[valid_user])[:, None]
+                lat2 = np.deg2rad(item_lat[item_geo_valid])[None, :]
+                lon2 = np.deg2rad(item_lon[item_geo_valid])[None, :]
+                dlat = lat2 - lat1
+                dlon = lon2 - lon1
+                a = np.sin(dlat / 2.0) ** 2 + np.cos(lat1) * np.cos(lat2) * (np.sin(dlon / 2.0) ** 2)
+                dist_km = 6371.0 * 2.0 * np.arcsin(np.minimum(1.0, np.sqrt(np.maximum(a, 0.0))))
+                geo_valid_score = np.exp(-dist_km / float(max(CONTEXT_GEO_SCALE_KM, 1.0))).astype(np.float32)
+                geo_score[np.where(valid_user)[0][:, None], np.where(item_geo_valid)[0][None, :]] = geo_valid_score
+            geo_score = np.clip(0.88 * geo_score + 0.12 * item_support[None, :], 0.0, 1.5)
+            geo_conf = np.clip(
+                batch_user_gate[:, None]
+                * (0.50 + 0.50 * item_support[None, :])
+                * valid_user[:, None].astype(np.float32),
+                0.0,
+                1.0,
+            ).astype(np.float32)
+            _append_route_rows("context_geo", user_batch, geo_score, geo_conf)
+
+    if not rows:
+        return _empty_source_df(spark, "context"), {
+            "status": "no_context_rows",
+            "route_rows": route_rows,
+            "route_users": route_users,
+            "top_k": int(top_k),
+            "score_min": float(min_score),
+        }
+
+    context_pdf = pd.DataFrame(
+        rows,
+        columns=["user_idx", "item_idx", "source_rank", "source_score", "source_confidence", "source", "source_detail"],
+    )
+    context_pdf["user_idx"] = pd.to_numeric(context_pdf["user_idx"], errors="coerce").fillna(-1).astype(np.int32)
+    context_pdf["item_idx"] = pd.to_numeric(context_pdf["item_idx"], errors="coerce").fillna(-1).astype(np.int32)
+    context_pdf["source_rank"] = pd.to_numeric(context_pdf["source_rank"], errors="coerce").fillna(0).astype(np.int32)
+    context_pdf["source_score"] = pd.to_numeric(context_pdf["source_score"], errors="coerce").fillna(0.0).astype(np.float64)
+    context_pdf["source_confidence"] = (
+        pd.to_numeric(context_pdf["source_confidence"], errors="coerce").fillna(0.0).clip(lower=0.0, upper=1.0).astype(np.float64)
+    )
+    context_pdf = context_pdf[
+        (context_pdf["user_idx"] >= 0)
+        & (context_pdf["item_idx"] >= 0)
+        & (context_pdf["source_rank"] > 0)
+        & np.isfinite(context_pdf["source_score"].to_numpy(np.float64))
+    ].copy()
+    context_pdf = context_pdf.sort_values(
+        ["source_detail", "user_idx", "source_rank", "item_idx"],
+        ascending=[True, True, True, True],
+        kind="mergesort",
+    )
+    if context_pdf.empty:
+        return _empty_source_df(spark, "context"), {
+            "status": "context_rows_invalid_after_cast",
+            "route_rows": route_rows,
+            "route_users": route_users,
+            "top_k": int(top_k),
+            "score_min": float(min_score),
+        }
+    context_df = _create_spark_df_from_pandas_safe(spark=spark, pdf=context_pdf).select(
+        F.col("user_idx").cast("int"),
+        F.col("item_idx").cast("int"),
+        F.col("source_rank").cast("int"),
+        F.col("source_score").cast("double"),
+        F.col("source_confidence").cast("double"),
+        F.col("source").cast("string"),
+        F.col("source_detail").cast("string"),
+    )
+    return context_df, {
+        "status": "ok",
+        "rows": int(context_pdf.shape[0]),
+        "top_k": int(top_k),
+        "score_min": float(min_score),
+        "route_rows": {str(k): int(v) for k, v in route_rows.items()},
+        "route_users": {str(k): int(v) for k, v in route_users.items()},
+        "route_status": route_status,
+        "n_item_rows": int(item_pdf.shape[0]),
+        "n_user_rows": int(user_pdf.shape[0]),
+    }
 
 
 def load_business_pool(spark: SparkSession) -> tuple[DataFrame, dict[str, Any]]:
@@ -2350,14 +3606,17 @@ def index_ids(
     return _transform(train), _transform(valid), _transform(test)
 
 
-def build_source_weight_expr() -> Any:
+def build_source_weight_expr(min_train: int) -> Any:
     expr = F.lit(0.0)
-    source_order = ["als", "cluster", "popular", "profile"]
+    source_order = ["als", "cluster", "popular", "profile", "context"]
+    bucket_cfg = SOURCE_WEIGHTS_BY_BUCKET.get(int(min_train), {})
     for seg in ("light", "mid", "heavy"):
         for src in source_order:
+            seg_cfg = bucket_cfg.get(seg, {})
+            value = float(seg_cfg.get(src, SOURCE_WEIGHTS[seg][src]))
             expr = F.when(
                 (F.col("user_segment") == F.lit(seg)) & (F.col("source") == F.lit(src)),
-                F.lit(float(SOURCE_WEIGHTS[seg][src])),
+                F.lit(value),
             ).otherwise(expr)
     return expr
 
@@ -2461,6 +3720,9 @@ def build_tower_seq_features_for_candidates(
         "status": "disabled",
         "rows": 0,
         "tower_seq_max_cand_rows_effective": 0,
+        "tower_seq_candidate_window_mode": "full",
+        "tower_seq_candidate_window_topk": 0,
+        "tower_seq_rows_total_before_window_probe": 0,
         "n_users": 0,
         "n_items": 0,
         "updates": 0,
@@ -2468,24 +3730,60 @@ def build_tower_seq_features_for_candidates(
         "tower_seq_scope_users_only": bool(TOWER_SEQ_SCOPE_USERS_ONLY),
         "tower_seq_scope_items_only": bool(TOWER_SEQ_SCOPE_ITEMS_ONLY),
         "tower_seq_train_max_per_user": int(TOWER_SEQ_TRAIN_MAX_PER_USER),
+        "tower_seq_apply_head_window_first": bool(TOWER_SEQ_APPLY_HEAD_WINDOW_FIRST),
+        "tower_seq_input_materialize_mode": str(TOWER_SEQ_INPUT_MATERIALIZE_MODE),
+        "tower_seq_input_candidate_path": "",
+        "tower_seq_input_train_path": "",
     }
     if not ENABLE_TOWER_SEQ_FEATURES:
         return None, meta
 
-    # Avoid full count action: only probe up to cap+1.
+    # Probe only a bounded candidate surface before materializing Pandas data.
+    # For buckets with a configured head window, optionally apply that window
+    # before the probe so large pretrim surfaces do not force a heavy full-DAG
+    # count just to decide whether tower/seq is feasible.
     cap = int(get_tower_seq_max_cand_rows(bucket))
     meta["tower_seq_max_cand_rows_effective"] = int(cap)
-    cand_rows = int(fused_pretrim.limit(cap + 1).count())
-    meta["rows"] = int(cand_rows)
-    if cand_rows <= 0:
+    cand_source = fused_pretrim
+    head_window = int(get_tower_seq_head_window(bucket))
+    if bool(TOWER_SEQ_APPLY_HEAD_WINDOW_FIRST) and head_window > 0:
+        cand_source = fused_pretrim.filter(F.col("pre_rank") <= F.lit(int(head_window)))
+        meta["tower_seq_candidate_window_mode"] = "pre_rank_head"
+        meta["tower_seq_candidate_window_topk"] = int(head_window)
+    probed_rows = int(cand_source.limit(cap + 1).count())
+    meta["tower_seq_rows_total_before_window_probe"] = int(probed_rows)
+    cand_rows = int(probed_rows)
+    if probed_rows <= 0:
+        meta["rows"] = int(probed_rows)
         meta["status"] = "empty_candidates"
         return None, meta
-    if cand_rows > cap:
-        meta["status"] = "skip_row_cap"
-        return None, meta
+    if probed_rows > cap:
+        if meta["tower_seq_candidate_window_mode"] == "pre_rank_head" or head_window <= 0:
+            meta["rows"] = int(probed_rows)
+            meta["status"] = "skip_row_cap"
+            return None, meta
+        cand_source = fused_pretrim.filter(F.col("pre_rank") <= F.lit(int(head_window)))
+        cand_rows = int(cand_source.limit(cap + 1).count())
+        meta["tower_seq_candidate_window_mode"] = "pre_rank_head"
+        meta["tower_seq_candidate_window_topk"] = int(head_window)
+        meta["rows"] = int(cand_rows)
+        if cand_rows <= 0:
+            meta["status"] = "empty_windowed_candidates"
+            return None, meta
+        if cand_rows > cap:
+            meta["status"] = "skip_row_cap"
+            return None, meta
+    else:
+        meta["rows"] = int(cand_rows)
 
-    cand_base = fused_pretrim.select("user_idx", "item_idx").dropDuplicates(["user_idx", "item_idx"])
-    cand_pdf = cand_base.toPandas()
+    cand_base = cand_source.select("user_idx", "item_idx").dropDuplicates(["user_idx", "item_idx"])
+    cand_pdf, cand_pdf_meta = _materialize_small_df_to_pandas(
+        cand_base,
+        subdir="tower_seq_inputs",
+        prefix="tower_seq_cand",
+        mode=TOWER_SEQ_INPUT_MATERIALIZE_MODE,
+    )
+    meta["tower_seq_input_candidate_path"] = str(cand_pdf_meta.get("path", ""))
     train_src = train_idx.select("user_idx", "item_idx", "ts")
     if TOWER_SEQ_SCOPE_USERS_ONLY:
         train_src = train_src.join(cand_base.select("user_idx").dropDuplicates(["user_idx"]), on="user_idx", how="inner")
@@ -2498,7 +3796,13 @@ def build_tower_seq_features_for_candidates(
             .filter(F.col("_rn") <= F.lit(int(TOWER_SEQ_TRAIN_MAX_PER_USER)))
             .drop("_rn")
         )
-    train_pdf = train_src.toPandas()
+    train_pdf, train_pdf_meta = _materialize_small_df_to_pandas(
+        train_src,
+        subdir="tower_seq_inputs",
+        prefix="tower_seq_train",
+        mode=TOWER_SEQ_INPUT_MATERIALIZE_MODE,
+    )
+    meta["tower_seq_input_train_path"] = str(train_pdf_meta.get("path", ""))
     if cand_pdf.empty or train_pdf.empty:
         meta["status"] = "empty_mapping"
         return None, meta
@@ -2638,7 +3942,9 @@ def main() -> None:
 
     print("[STEP] load interactions")
     rvw = load_interactions(spark, biz)
-    print(f"[COUNT] interactions={rvw.count()} users={rvw.select('user_id').distinct().count()}")
+    scoped_interaction_rows = int(rvw.count())
+    scoped_interaction_users = int(rvw.select("user_id").distinct().count())
+    print(f"[COUNT] interactions={scoped_interaction_rows} users={scoped_interaction_users}")
 
     print("[STEP] load cluster profile map")
     profile_csv = resolve_cluster_profile_csv()
@@ -2695,7 +4001,7 @@ def main() -> None:
             f"[INFO] user_profile_tag_long={profile_tag_long_path if profile_tag_long_path is not None else '<missing>'} "
             f"rows={int(user_profile_tag_long_pdf.shape[0])}"
         )
-        if ENABLE_PROFILE_MULTIVECTOR_ROUTE_AUDIT:
+        if ENABLE_PROFILE_MULTIVECTOR_ROUTE_AUDIT or ENABLE_PROFILE_MULTIVECTOR_ROUTE_INTEGRATION:
             for scope in PROFILE_MULTIVECTOR_ROUTE_SCOPES:
                 path = resolve_user_profile_multivector_file(profile_vec_path, scope)
                 if path is None:
@@ -2733,7 +4039,7 @@ def main() -> None:
                 f"[INFO] item_semantic_tag_long={item_semantic_tag_long_path if item_semantic_tag_long_path is not None else '<missing>'} "
                 f"rows={int(item_semantic_tag_long_pdf.shape[0])}"
             )
-            if ENABLE_PROFILE_MULTIVECTOR_ROUTE_AUDIT:
+            if ENABLE_PROFILE_MULTIVECTOR_ROUTE_AUDIT or ENABLE_PROFILE_MULTIVECTOR_ROUTE_INTEGRATION:
                 for merchant_scope in sorted({pair[1] for pair in _build_multivector_scope_pair_list()}):
                     path = resolve_item_semantic_dense_vector_file(item_semantic_path, merchant_scope)
                     if path is None:
@@ -2755,6 +4061,41 @@ def main() -> None:
             )
     else:
         print("[STEP] item semantic disabled by ENABLE_ITEM_SEMANTIC=false")
+
+    business_context_df: DataFrame | None = None
+    review_evidence_business_df: DataFrame | None = None
+    tip_signal_business_df: DataFrame | None = None
+    checkin_context_business_df: DataFrame | None = None
+    if ENABLE_CONTEXT_SURFACE:
+        print("[STEP] loading P0 context assets for stage09 context surface")
+        try:
+            business_context_features_path = resolve_business_context_features()
+            review_evidence_business_path = resolve_review_evidence_business_agg()
+            tip_signal_business_path = resolve_tip_signal_business_agg()
+            checkin_context_business_path = resolve_checkin_context_business_agg()
+            business_context_df = load_business_context_features(spark, business_context_features_path).persist(StorageLevel.DISK_ONLY)
+            review_evidence_business_df = load_review_evidence_business_agg(
+                spark, review_evidence_business_path
+            ).persist(StorageLevel.DISK_ONLY)
+            tip_signal_business_df = load_tip_signal_business_agg(spark, tip_signal_business_path).persist(
+                StorageLevel.DISK_ONLY
+            )
+            checkin_context_business_df = load_checkin_context_business_agg(
+                spark, checkin_context_business_path
+            ).persist(StorageLevel.DISK_ONLY)
+            print(
+                "[INFO] context_assets "
+                f"business={business_context_features_path.parent.name} "
+                f"review={review_evidence_business_path.parent.name} "
+                f"tip={tip_signal_business_path.parent.name} "
+                f"checkin={checkin_context_business_path.parent.name}"
+            )
+        except Exception as exc:
+            print(f"[WARN] context surface assets disabled due to load failure: {exc}")
+            business_context_df = None
+            review_evidence_business_df = None
+            tip_signal_business_df = None
+            checkin_context_business_df = None
 
     bucket_rows: list[dict[str, Any]] = []
     for min_train in MIN_TRAIN_REVIEWS_BUCKETS:
@@ -3043,20 +4384,59 @@ def main() -> None:
                 item_tag_long_pdf=item_semantic_tag_long_pdf,
                 profile_route_policy=profile_route_policy_bucket,
                 profile_threshold_policy=profile_threshold_policy_bucket,
+                bucket_min_train=int(min_train),
+                profile_multivector_data=profile_multivector_data,
+                merchant_dense_vector_data=merchant_dense_vector_data,
             )
         else:
             profile_cand = _empty_source_df(spark, "profile")
             profile_meta = {"status": "disabled"}
         print(f"[INFO] bucket={min_train} profile_recall={profile_meta}")
 
+        context_enabled = should_enable_context_surface(int(min_train))
+        context_cand = _empty_source_df(spark, "context")
+        context_meta: dict[str, Any] = {"status": "disabled", "route_rows": {}, "route_users": {}}
+        if context_enabled:
+            context_cand, context_meta = build_context_candidates(
+                spark=spark,
+                train_idx=train_idx,
+                test_users=test_users,
+                item_map=item_map,
+                business_context_df=business_context_df,
+                review_evidence_df=review_evidence_business_df,
+                tip_signal_df=tip_signal_business_df,
+                checkin_context_df=checkin_context_business_df,
+                context_top_k=int(CONTEXT_SURFACE_TOP_K),
+                context_score_min=float(CONTEXT_SURFACE_SCORE_MIN),
+                batch_users=int(CONTEXT_SURFACE_BATCH_USERS),
+            )
+        print(f"[INFO] bucket={min_train} context_surface={context_meta}")
+
         candidates_all = (
-            als_cand.unionByName(cluster_cand)
-            .unionByName(pop_cand)
-            .unionByName(profile_cand)
+            als_cand.unionByName(cluster_cand, allowMissingColumns=True)
+            .unionByName(pop_cand, allowMissingColumns=True)
+            .unionByName(profile_cand, allowMissingColumns=True)
+            .unionByName(context_cand, allowMissingColumns=True)
             .persist(StorageLevel.DISK_ONLY)
         )
-        source_weight_expr = build_source_weight_expr()
+        source_weight_expr = build_source_weight_expr(int(min_train))
         log2_const = float(math.log(2.0))
+        debias_rewrite_enabled = should_enable_bucket_debias_rewrite(int(min_train))
+        review_volume_gate_expr = F.least(
+            F.log(F.coalesce(F.col("review_count"), F.lit(0)) + F.lit(1.0)) / F.log(F.lit(501.0)),
+            F.lit(1.0),
+        )
+        if debias_rewrite_enabled:
+            quality_review_gate_expr = F.pow(
+                review_volume_gate_expr,
+                F.lit(float(DEBIAS_QUALITY_REVIEW_POWER)),
+            )
+            quality_score_expr = (F.coalesce(F.col("stars"), F.lit(0.0)) / F.lit(5.0)) * (
+                F.lit(float(DEBIAS_QUALITY_BASE_FLOOR))
+                + F.lit(1.0 - float(DEBIAS_QUALITY_BASE_FLOOR)) * quality_review_gate_expr
+            )
+        else:
+            quality_score_expr = (F.coalesce(F.col("stars"), F.lit(0.0)) / F.lit(5.0)) * review_volume_gate_expr
         candidates_scored = (
             candidates_all.join(user_train_counts, on="user_idx", how="left")
             .join(biz_by_item, on="item_idx", how="left")
@@ -3068,15 +4448,7 @@ def main() -> None:
             )
             .withColumn("source_weight", source_weight_expr)
             .withColumn("signal_score", F.col("source_weight") * F.col("source_norm") * F.col("source_confidence"))
-            .withColumn(
-                "quality_score",
-                (F.coalesce(F.col("stars"), F.lit(0.0)) / F.lit(5.0))
-                * F.least(
-                    F.log(F.coalesce(F.col("review_count"), F.lit(0)) + F.lit(1.0))
-                    / F.log(F.lit(501.0)),
-                    F.lit(1.0),
-                ),
-            )
+            .withColumn("quality_score", quality_score_expr)
         )
 
         fused_base = (
@@ -3093,10 +4465,17 @@ def main() -> None:
                 F.first("user_train_count", ignorenulls=True).alias("user_train_count"),
                 F.first("user_segment", ignorenulls=True).alias("user_segment"),
                 F.collect_set("source").alias("source_set"),
+                F.collect_set("source_detail").alias("source_detail_set"),
+                F.max(F.coalesce(F.col("profile_detail_count"), F.lit(0.0))).alias("profile_detail_count"),
+                F.max(F.coalesce(F.col("profile_mv_route_count"), F.lit(0.0))).alias("profile_mv_route_count"),
+                F.min(F.col("profile_mv_short_rank")).alias("profile_mv_short_rank"),
+                F.min(F.col("profile_mv_long_rank")).alias("profile_mv_long_rank"),
+                F.min(F.col("profile_mv_pos_rank")).alias("profile_mv_pos_rank"),
                 F.min(F.when(F.col("source") == F.lit("als"), F.col("source_rank"))).alias("als_rank"),
                 F.min(F.when(F.col("source") == F.lit("cluster"), F.col("source_rank"))).alias("cluster_rank"),
                 F.min(F.when(F.col("source") == F.lit("profile"), F.col("source_rank"))).alias("profile_rank"),
                 F.min(F.when(F.col("source") == F.lit("popular"), F.col("source_rank"))).alias("popular_rank"),
+                F.min(F.when(F.col("source") == F.lit("context"), F.col("source_rank"))).alias("context_rank"),
             )
         )
         if item_semantic_df is not None:
@@ -3133,15 +4512,74 @@ def main() -> None:
                 F.when(F.array_contains(F.col("source_set"), F.lit("popular")), F.lit(1.0)).otherwise(F.lit(0.0)),
             )
             .withColumn(
+                "has_context",
+                F.when(F.array_contains(F.col("source_set"), F.lit("context")), F.lit(1.0)).otherwise(F.lit(0.0)),
+            )
+            .withColumn(
                 "nonpopular_source_count",
-                F.col("has_als") + F.col("has_cluster") + F.col("has_profile"),
+                F.col("has_als") + F.col("has_cluster") + F.col("has_profile") + F.col("has_context"),
             )
             .withColumn(
                 "profile_cluster_source_count",
                 F.col("has_cluster") + F.col("has_profile"),
             )
+            .withColumn("profile_detail_count", F.coalesce(F.col("profile_detail_count"), F.lit(0.0)))
+            .withColumn("profile_mv_route_count", F.coalesce(F.col("profile_mv_route_count"), F.lit(0.0)))
+            .withColumn(
+                "has_profile_mv_short",
+                F.when(
+                    F.array_contains(F.col("source_detail_set"), F.lit("profile_mv_short_semantic")),
+                    F.lit(1.0),
+                ).otherwise(F.lit(0.0)),
+            )
+            .withColumn(
+                "has_profile_mv_long",
+                F.when(
+                    F.array_contains(F.col("source_detail_set"), F.lit("profile_mv_long_core")),
+                    F.lit(1.0),
+                ).otherwise(F.lit(0.0)),
+            )
+            .withColumn(
+                "has_profile_mv_pos",
+                F.when(
+                    F.array_contains(F.col("source_detail_set"), F.lit("profile_mv_pos_pos")),
+                    F.lit(1.0),
+                ).otherwise(F.lit(0.0)),
+            )
+            .withColumn(
+                "has_context_attr",
+                F.when(F.array_contains(F.col("source_detail_set"), F.lit("context_attr")), F.lit(1.0)).otherwise(F.lit(0.0)),
+            )
+            .withColumn(
+                "has_context_time",
+                F.when(F.array_contains(F.col("source_detail_set"), F.lit("context_time")), F.lit(1.0)).otherwise(F.lit(0.0)),
+            )
+            .withColumn(
+                "has_context_geo",
+                F.when(F.array_contains(F.col("source_detail_set"), F.lit("context_geo")), F.lit(1.0)).otherwise(F.lit(0.0)),
+            )
+            .withColumn(
+                "context_detail_count",
+                F.col("has_context_attr") + F.col("has_context_time") + F.col("has_context_geo"),
+            )
         )
+        protected_lane_enabled = should_enable_profile_evidence_protected_lane(int(min_train))
+        protected_lane_quota = max(0, int(PROFILE_EVIDENCE_PROTECTED_LANE_QUOTA)) if protected_lane_enabled else 0
+        protected_lane_max_pre_rank = max(0, int(PROFILE_EVIDENCE_PROTECTED_LANE_MAX_PRE_RANK))
+        protected_lane_max_pop_count = max(0, int(PROFILE_EVIDENCE_PROTECTED_LANE_MAX_POP_COUNT))
+        protected_lane_min_mv_routes = max(0, int(PROFILE_EVIDENCE_PROTECTED_LANE_MIN_MV_ROUTES))
+        protected_lane_min_semantic_score = float(PROFILE_EVIDENCE_PROTECTED_LANE_MIN_SEMANTIC_SCORE)
+        protected_lane_min_profile_cluster = max(0, int(PROFILE_EVIDENCE_PROTECTED_LANE_MIN_PROFILE_CLUSTER))
+        protected_lane_exclude_popular = bool(PROFILE_EVIDENCE_PROTECTED_LANE_EXCLUDE_POPULAR)
         als_backbone_topn_expr = build_segment_value_expr(ALS_BACKBONE_TOPN, default_value=0.0)
+        item_pop_gate_expr = F.least(
+            F.log(F.coalesce(F.col("item_train_pop_count"), F.lit(0.0)) + F.lit(1.0))
+            / F.log(F.lit(float(DEBIAS_ITEM_POP_CAP) + 1.0)),
+            F.lit(1.0),
+        )
+        item_pop_inv_expr = F.lit(1.0) / (
+            F.log(F.coalesce(F.col("item_train_pop_count"), F.lit(0.0)) + F.lit(2.0)) / F.lit(log2_const)
+        )
         als_rank_inv_expr = F.when(
             F.col("als_rank").isNotNull(),
             F.lit(1.0) / (F.log(F.col("als_rank").cast("double") + F.lit(1.0)) / F.lit(log2_const)),
@@ -3154,17 +4592,47 @@ def main() -> None:
             F.col("cluster_rank").isNotNull(),
             F.lit(1.0) / (F.log(F.col("cluster_rank").cast("double") + F.lit(1.0)) / F.lit(log2_const)),
         ).otherwise(F.lit(0.0))
+        profile_mv_short_rank_inv_expr = F.when(
+            F.col("profile_mv_short_rank").isNotNull(),
+            F.lit(1.0) / (F.log(F.col("profile_mv_short_rank").cast("double") + F.lit(1.0)) / F.lit(log2_const)),
+        ).otherwise(F.lit(0.0))
+        profile_mv_long_rank_inv_expr = F.when(
+            F.col("profile_mv_long_rank").isNotNull(),
+            F.lit(1.0) / (F.log(F.col("profile_mv_long_rank").cast("double") + F.lit(1.0)) / F.lit(log2_const)),
+        ).otherwise(F.lit(0.0))
+        profile_mv_pos_rank_inv_expr = F.when(
+            F.col("profile_mv_pos_rank").isNotNull(),
+            F.lit(1.0) / (F.log(F.col("profile_mv_pos_rank").cast("double") + F.lit(1.0)) / F.lit(log2_const)),
+        ).otherwise(F.lit(0.0))
         fused_base = fused_base.withColumn("als_backbone_topn", als_backbone_topn_expr)
+        item_pop_log2_expr = (
+            F.log(F.coalesce(F.col("item_train_pop_count"), F.lit(0.0)) + F.lit(2.0)) / F.lit(log2_const)
+        )
+        semantic_support_adj_expr = F.col("semantic_support").cast("double")
+        if debias_rewrite_enabled:
+            semantic_support_adj_expr = F.col("semantic_support").cast("double") / F.pow(
+                F.greatest(item_pop_log2_expr, F.lit(1.0)),
+                F.lit(float(DEBIAS_SEMANTIC_SUPPORT_POP_ALPHA)),
+            )
+        fused_base = fused_base.withColumn("semantic_support_adj", semantic_support_adj_expr)
         if ENABLE_SEMANTIC_GATES:
-            fused_base = (
-                fused_base.withColumn(
-                    "semantic_support_gate",
-                    F.least(
-                        F.log(F.col("semantic_support").cast("double") + F.lit(1.0))
-                        / F.log(F.lit(float(SEMANTIC_SUPPORT_CAP) + 1.0)),
-                        F.lit(1.0),
-                    ),
+            semantic_support_cap_value = (
+                float(DEBIAS_SEMANTIC_SUPPORT_ADJ_CAP) if debias_rewrite_enabled else float(SEMANTIC_SUPPORT_CAP)
+            )
+            semantic_support_gate_core_expr = F.least(
+                F.log(F.col("semantic_support_adj").cast("double") + F.lit(1.0))
+                / F.log(F.lit(float(semantic_support_cap_value) + 1.0)),
+                F.lit(1.0),
+            )
+            if debias_rewrite_enabled:
+                semantic_support_gate_expr = (
+                    F.lit(float(DEBIAS_SEMANTIC_SUPPORT_GATE_FLOOR))
+                    + F.lit(1.0 - float(DEBIAS_SEMANTIC_SUPPORT_GATE_FLOOR)) * semantic_support_gate_core_expr
                 )
+            else:
+                semantic_support_gate_expr = semantic_support_gate_core_expr
+            fused_base = (
+                fused_base.withColumn("semantic_support_gate", semantic_support_gate_expr)
                 .withColumn(
                     "semantic_richness_gate",
                     F.least(
@@ -3184,9 +4652,12 @@ def main() -> None:
                 )
             )
         else:
-            fused_base = fused_base.withColumn(
-                "semantic_effective_score",
-                F.col("semantic_score") * F.col("semantic_confidence"),
+            fused_base = (
+                fused_base.withColumn("semantic_support_gate", F.lit(1.0))
+                .withColumn(
+                    "semantic_effective_score",
+                    F.col("semantic_score") * F.col("semantic_confidence"),
+                )
             )
         head_source_count_weight = float(pretrim_head_policy.get("source_count_weight", 0.0))
         head_source_count_cap = max(0, int(pretrim_head_policy.get("source_count_cap", 0)))
@@ -3225,30 +4696,87 @@ def main() -> None:
                 (F.col("has_popular") > F.lit(0.5)) & (F.col("source_count") <= F.lit(1.0)),
                 F.lit(float(head_popular_only_penalty)),
             ).otherwise(F.lit(0.0))
+        profile_mv_evidence_expr = F.lit(0.0)
+        if should_integrate_profile_multivector_routes(int(min_train)):
+            profile_mv_evidence_expr = (
+                F.lit(0.010) * F.least(F.col("profile_mv_route_count"), F.lit(3.0))
+                + F.lit(0.010) * profile_mv_short_rank_inv_expr
+                + F.lit(0.008) * profile_mv_pos_rank_inv_expr
+                + F.lit(0.006) * profile_mv_long_rank_inv_expr
+            )
+        als_uncorroborated_expr = F.when(
+            F.col("profile_cluster_source_count") <= F.lit(0.5),
+            F.lit(1.0),
+        ).otherwise(F.lit(0.0))
+        user_heavy_expr = F.when(F.col("user_segment") == F.lit("heavy"), F.lit(1.0)).otherwise(F.lit(0.0))
+        profile_cluster_support_expr = F.greatest(F.col("has_profile"), F.col("has_cluster"))
+        als_backbone_mult_expr = F.lit(1.0)
+        niche_semantic_bonus_expr = F.lit(0.0)
+        niche_profile_cluster_bonus_expr = F.lit(0.0)
+        if debias_rewrite_enabled:
+            als_backbone_mult_expr = F.greatest(
+                F.lit(float(DEBIAS_ALS_BACKBONE_MIN_MULT)),
+                F.lit(1.0)
+                - F.lit(float(DEBIAS_ALS_BACKBONE_POP_PENALTY)) * item_pop_gate_expr
+                - F.lit(float(DEBIAS_ALS_BACKBONE_HEAVY_POP_PENALTY)) * item_pop_gate_expr * user_heavy_expr
+                - F.lit(float(DEBIAS_ALS_BACKBONE_UNCORROBORATED_PENALTY))
+                * item_pop_gate_expr
+                * als_uncorroborated_expr,
+            )
+            niche_semantic_bonus_expr = (
+                F.lit(float(DEBIAS_NICHE_SEMANTIC_BONUS_WEIGHT))
+                * F.col("semantic_effective_score")
+                * (F.lit(1.0) - item_pop_gate_expr)
+                * (F.lit(0.5) + F.lit(0.5) * F.col("semantic_support_gate"))
+                * profile_cluster_support_expr
+            )
+            niche_profile_cluster_bonus_expr = (
+                F.lit(float(DEBIAS_NICHE_PROFILE_CLUSTER_BONUS))
+                * (F.lit(1.0) - item_pop_gate_expr)
+                * profile_cluster_support_expr
+                * item_pop_inv_expr
+            )
+        profile_lane_score_expr = (
+            F.col("profile_mv_evidence_score")
+            + F.lit(0.45) * F.col("profile_rank_inv")
+            + F.lit(0.18) * F.col("cluster_rank_inv")
+            + F.lit(0.14) * F.col("semantic_effective_score")
+            + F.lit(0.03) * F.col("nonpopular_source_count")
+            + F.lit(0.08) * item_pop_inv_expr
+        )
         fused = (
             fused_base.withColumn(
                 "als_backbone_score",
                 F.when(
                     F.col("als_rank").isNotNull() & (F.col("als_rank").cast("double") <= F.col("als_backbone_topn")),
-                    F.lit(float(ALS_BACKBONE_WEIGHT)) * als_rank_inv_expr,
+                    F.lit(float(ALS_BACKBONE_WEIGHT)) * als_rank_inv_expr * als_backbone_mult_expr,
                 ).otherwise(F.lit(0.0)),
             )
             .withColumn("als_rank_inv", als_rank_inv_expr)
             .withColumn("cluster_rank_inv", cluster_rank_inv_expr)
             .withColumn("profile_rank_inv", profile_rank_inv_expr)
+            .withColumn("profile_mv_short_rank_inv", profile_mv_short_rank_inv_expr)
+            .withColumn("profile_mv_long_rank_inv", profile_mv_long_rank_inv_expr)
+            .withColumn("profile_mv_pos_rank_inv", profile_mv_pos_rank_inv_expr)
+            .withColumn("profile_mv_evidence_score", profile_mv_evidence_expr)
+            .withColumn("niche_semantic_bonus", niche_semantic_bonus_expr)
+            .withColumn("niche_profile_cluster_bonus", niche_profile_cluster_bonus_expr)
             .withColumn(
                 "pre_score",
                 F.col("signal_score")
                 + F.lit(float(QUALITY_WEIGHT)) * F.col("quality_score")
                 + F.lit(float(SEMANTIC_WEIGHT)) * F.col("semantic_effective_score")
-                + F.col("als_backbone_score"),
+                + F.col("als_backbone_score")
+                + F.col("profile_mv_evidence_score")
+                + F.col("niche_semantic_bonus")
+                + F.col("niche_profile_cluster_bonus"),
             )
             .withColumn("head_multisource_boost", multi_source_boost_expr)
             .withColumn("head_profile_boost", profile_rank_boost_expr)
             .withColumn("head_cluster_boost", cluster_rank_boost_expr)
             .withColumn("head_popular_penalty", popular_only_penalty_expr)
             .withColumn(
-                "head_score",
+                "head_score_seed",
                 F.col("pre_score")
                 + F.col("head_multisource_boost")
                 + F.col("head_profile_boost")
@@ -3261,14 +4789,17 @@ def main() -> None:
                 + F.col("cluster_rank_inv")
                 + F.lit(0.75) * F.col("als_rank_inv")
                 + F.lit(0.03) * F.col("nonpopular_source_count")
-                + F.lit(0.01) * F.col("source_count"),
+                + F.lit(0.01) * F.col("source_count")
+                + F.lit(0.02) * F.col("profile_mv_route_count")
+                + F.lit(0.01) * F.col("has_profile_mv_short")
+                + F.lit(0.01) * F.col("has_profile_mv_pos"),
             )
             .persist(StorageLevel.DISK_ONLY)
         )
 
         w_pre_base = Window.partitionBy("user_idx").orderBy(F.desc("pre_score"), F.asc("item_idx"))
-        w_pre = Window.partitionBy("user_idx").orderBy(
-            F.desc("head_score"),
+        w_pre_seed = Window.partitionBy("user_idx").orderBy(
+            F.desc("head_score_seed"),
             F.desc("pre_score"),
             F.asc("item_idx"),
         )
@@ -3281,6 +4812,106 @@ def main() -> None:
                 .otherwise(F.lit(int(pretrim_segment_policy["unknown"]))),
             )
             .withColumn("pre_base_rank", F.row_number().over(w_pre_base))
+            .withColumn("pre_head_seed_rank", F.row_number().over(w_pre_seed))
+        )
+        challenger_enabled = should_enable_personalized_challenger_surface(int(min_train))
+        challenger_tower_seq_meta: dict[str, Any] = {"status": "disabled"}
+        if challenger_enabled:
+            challenger_window_topk = max(1, int(PERSONALIZED_CHALLENGER_HEAD_WINDOW))
+            challenger_window_df = fused_ranked.filter(
+                F.col("pre_head_seed_rank") <= F.lit(int(challenger_window_topk))
+            ).select("user_idx", "item_idx", F.col("pre_head_seed_rank").alias("pre_rank"))
+            challenger_tower_seq_df, challenger_tower_seq_meta = build_tower_seq_features_for_candidates(
+                spark=spark,
+                fused_pretrim=challenger_window_df,
+                train_idx=train_idx,
+                bucket=int(min_train),
+            )
+            if challenger_tower_seq_df is not None:
+                fused_ranked = (
+                    fused_ranked.join(
+                        challenger_tower_seq_df.select(
+                            "user_idx",
+                            "item_idx",
+                            F.col("tower_score").cast("double").alias("challenger_tower_score"),
+                            F.col("seq_score").cast("double").alias("challenger_seq_score"),
+                            F.col("tower_inv").cast("double").alias("challenger_tower_inv"),
+                            F.col("seq_inv").cast("double").alias("challenger_seq_inv"),
+                        ),
+                        on=["user_idx", "item_idx"],
+                        how="left",
+                    )
+                    .withColumn("challenger_tower_score", F.coalesce(F.col("challenger_tower_score"), F.lit(0.0)))
+                    .withColumn("challenger_seq_score", F.coalesce(F.col("challenger_seq_score"), F.lit(0.0)))
+                    .withColumn("challenger_tower_inv", F.coalesce(F.col("challenger_tower_inv"), F.lit(0.0)))
+                    .withColumn("challenger_seq_inv", F.coalesce(F.col("challenger_seq_inv"), F.lit(0.0)))
+                )
+            else:
+                fused_ranked = (
+                    fused_ranked.withColumn("challenger_tower_score", F.lit(0.0))
+                    .withColumn("challenger_seq_score", F.lit(0.0))
+                    .withColumn("challenger_tower_inv", F.lit(0.0))
+                    .withColumn("challenger_seq_inv", F.lit(0.0))
+                )
+            challenger_score_expr = (
+                F.col("profile_mv_evidence_score")
+                + F.lit(0.32) * F.col("profile_rank_inv")
+                + F.lit(0.16) * F.col("cluster_rank_inv")
+                + F.lit(0.16) * F.col("semantic_effective_score")
+                + F.lit(0.10) * F.col("semantic_support_gate")
+                + F.lit(0.16) * F.col("challenger_tower_inv")
+                + F.lit(0.12) * F.col("challenger_seq_inv")
+                + F.lit(0.04) * F.col("nonpopular_source_count")
+                + F.lit(0.03) * F.col("profile_mv_route_count")
+                + F.lit(0.05) * F.col("profile_cluster_source_count")
+                + F.lit(0.10) * item_pop_inv_expr
+                - F.lit(0.08) * item_pop_gate_expr
+                - F.lit(0.04) * F.col("has_popular")
+            )
+            challenger_candidate_ok_expr = (
+                (F.col("pre_head_seed_rank") <= F.lit(int(PERSONALIZED_CHALLENGER_MAX_PRE_RANK)))
+                & (F.col("item_train_pop_count") <= F.lit(float(PERSONALIZED_CHALLENGER_MAX_POP_COUNT)))
+                & (F.col("semantic_score") >= F.lit(float(PERSONALIZED_CHALLENGER_MIN_SEMANTIC_SCORE)))
+                & (F.col("nonpopular_source_count") >= F.lit(float(PERSONALIZED_CHALLENGER_MIN_NONPOPULAR_SOURCES)))
+                & (F.col("profile_cluster_source_count") >= F.lit(float(PERSONALIZED_CHALLENGER_MIN_PROFILE_CLUSTER)))
+                & (
+                    (F.col("profile_mv_route_count") >= F.lit(float(PERSONALIZED_CHALLENGER_MIN_MV_ROUTES)))
+                    | F.col("profile_rank").isNotNull()
+                )
+            )
+            if PERSONALIZED_CHALLENGER_EXCLUDE_POPULAR:
+                challenger_candidate_ok_expr = challenger_candidate_ok_expr & (F.col("has_popular") < F.lit(0.5))
+            fused_ranked = (
+                fused_ranked.withColumn("challenger_candidate_ok", challenger_candidate_ok_expr)
+                .withColumn(
+                    "challenger_score",
+                    F.when(F.col("challenger_candidate_ok"), challenger_score_expr).otherwise(F.lit(0.0)),
+                )
+            )
+        else:
+            fused_ranked = (
+                fused_ranked.withColumn("challenger_tower_score", F.lit(0.0))
+                .withColumn("challenger_seq_score", F.lit(0.0))
+                .withColumn("challenger_tower_inv", F.lit(0.0))
+                .withColumn("challenger_seq_inv", F.lit(0.0))
+                .withColumn("challenger_candidate_ok", F.lit(False))
+                .withColumn("challenger_score", F.lit(0.0))
+            )
+        w_pre = Window.partitionBy("user_idx").orderBy(
+            F.desc("head_score"),
+            F.desc("head_score_seed"),
+            F.desc("pre_score"),
+            F.asc("item_idx"),
+        )
+        fused_ranked = (
+            fused_ranked.withColumn(
+                "head_challenger_bonus",
+                F.when(
+                    F.col("challenger_candidate_ok"),
+                    F.lit(float(PERSONALIZED_CHALLENGER_HEAD_BONUS)),
+                ).otherwise(F.lit(0.0)),
+            )
+            .withColumn("head_score", F.col("head_score_seed") + F.col("head_challenger_bonus"))
             .withColumn("pre_rank", F.row_number().over(w_pre))
             .withColumn("pre_rank_before_layered", F.col("pre_rank"))
         )
@@ -3288,6 +4919,7 @@ def main() -> None:
         layered_pretrim_enabled = layered_policy is not None
         if layered_pretrim_enabled:
             front_guard_topk = int(layered_policy["front_guard_topk"])
+            challenger_quota = max(0, int(PERSONALIZED_CHALLENGER_QUOTA)) if challenger_enabled else 0
             rescue_quota = (
                 max(0, int(layered_policy.get("rescue_quota", 0))) if ENABLE_PRETRIM_CONSENSUS_RESCUE else 0
             )
@@ -3332,6 +4964,12 @@ def main() -> None:
                 )
             else:
                 is_rescue = F.lit(False)
+            is_challenger = F.lit(False)
+            if challenger_enabled and challenger_quota > 0 and PERSONALIZED_CHALLENGER_MAX_PRE_RANK > front_guard_topk:
+                is_challenger = (
+                    (F.col("pre_rank") > F.lit(front_guard_topk))
+                    & F.col("challenger_candidate_ok")
+                )
             is_l1 = (
                 (F.col("als_rank").isNotNull() & (F.col("als_rank") <= F.lit(int(layered_policy["l1_als_rank_max"]))))
                 | (F.col("cluster_rank").isNotNull() & (F.col("cluster_rank") <= F.lit(int(layered_policy["l1_cluster_rank_max"]))))
@@ -3342,14 +4980,34 @@ def main() -> None:
                 | (F.col("cluster_rank").isNotNull() & (F.col("cluster_rank") <= F.lit(int(layered_policy["l2_cluster_rank_max"]))))
                 | (F.col("profile_rank").isNotNull() & (F.col("profile_rank") <= F.lit(int(layered_policy["l2_profile_rank_max"]))))
             )
+            is_profile_lane = F.lit(False)
+            if protected_lane_enabled and protected_lane_quota > 0 and protected_lane_max_pre_rank > front_guard_topk:
+                is_profile_lane = (
+                    (F.col("pre_rank") > F.lit(front_guard_topk))
+                    & (F.col("pre_rank") <= F.lit(int(protected_lane_max_pre_rank)))
+                    & (F.col("profile_mv_route_count") >= F.lit(float(protected_lane_min_mv_routes)))
+                    & (F.col("semantic_score") >= F.lit(float(protected_lane_min_semantic_score)))
+                    & (F.col("item_train_pop_count") <= F.lit(float(protected_lane_max_pop_count)))
+                    & (F.col("profile_cluster_source_count") >= F.lit(float(protected_lane_min_profile_cluster)))
+                )
+                if protected_lane_exclude_popular:
+                    is_profile_lane = is_profile_lane & (F.col("has_popular") < F.lit(0.5))
             layer_tiered = (
                 fused_ranked.withColumn(
                     "layer_tier",
-                    F.when(is_rescue, F.lit(0)).when(is_l1, F.lit(1)).when(is_l2, F.lit(2)).otherwise(F.lit(3)),
+                    F.when(is_challenger, F.lit(0))
+                    .when(is_profile_lane, F.lit(1))
+                    .when(is_rescue, F.lit(2))
+                    .when(is_l1, F.lit(3))
+                    .when(is_l2, F.lit(4))
+                    .otherwise(F.lit(5)),
                 )
                 .withColumn(
                     "layer_sort_score",
-                    F.when(F.col("layer_tier") == F.lit(0), F.col("consensus_rescue_score")).otherwise(F.lit(0.0)),
+                    F.when(F.col("layer_tier") == F.lit(0), F.col("challenger_score"))
+                    .when(F.col("layer_tier") == F.lit(1), profile_lane_score_expr)
+                    .when(F.col("layer_tier") == F.lit(2), F.col("consensus_rescue_score"))
+                    .otherwise(F.lit(0.0)),
                 )
                 .persist(StorageLevel.DISK_ONLY)
             )
@@ -3366,7 +5024,9 @@ def main() -> None:
                     .when(F.col("layer_tier") == F.lit(0), F.lit(1))
                     .when(F.col("layer_tier") == F.lit(1), F.lit(2))
                     .when(F.col("layer_tier") == F.lit(2), F.lit(3))
-                    .otherwise(F.lit(4)),
+                    .when(F.col("layer_tier") == F.lit(3), F.lit(4))
+                    .when(F.col("layer_tier") == F.lit(4), F.lit(5))
+                    .otherwise(F.lit(6)),
                 )
                 .withColumn(
                     "pretrim_priority_rank",
@@ -3376,10 +5036,12 @@ def main() -> None:
             layered_seed = (
                 layer_ranked.filter(
                     (F.col("pre_rank") <= F.lit(front_guard_topk))
-                    | ((F.col("layer_tier") == F.lit(0)) & (F.col("layer_rank") <= F.lit(rescue_quota)))
-                    | ((F.col("layer_tier") == F.lit(1)) & (F.col("layer_rank") <= F.lit(l1_quota)))
-                    | ((F.col("layer_tier") == F.lit(2)) & (F.col("layer_rank") <= F.lit(l2_quota)))
-                    | ((F.col("layer_tier") == F.lit(3)) & (F.col("layer_rank") <= F.lit(l3_quota)))
+                    | ((F.col("layer_tier") == F.lit(0)) & (F.col("layer_rank") <= F.lit(challenger_quota)))
+                    | ((F.col("layer_tier") == F.lit(1)) & (F.col("layer_rank") <= F.lit(protected_lane_quota)))
+                    | ((F.col("layer_tier") == F.lit(2)) & (F.col("layer_rank") <= F.lit(rescue_quota)))
+                    | ((F.col("layer_tier") == F.lit(3)) & (F.col("layer_rank") <= F.lit(l1_quota)))
+                    | ((F.col("layer_tier") == F.lit(4)) & (F.col("layer_rank") <= F.lit(l2_quota)))
+                    | ((F.col("layer_tier") == F.lit(5)) & (F.col("layer_rank") <= F.lit(l3_quota)))
                 )
                 .dropDuplicates(["user_idx", "item_idx"])
                 .persist(StorageLevel.DISK_ONLY)
@@ -3506,16 +5168,31 @@ def main() -> None:
         truth_out = _coalesce_for_write(_checkpoint_for_write(spark, truth.join(user_map, on="user_idx", how="left")))
         train_history_out = _coalesce_for_write(_checkpoint_for_write(spark, train_history))
         _write_output_df(candidates_all_out, bucket_dir / "candidates_all.parquet")
-        _write_output_df(fused_pretrim_out, bucket_dir / "candidates_pretrim150.parquet")
-        if WRITE_GENERIC_PRETRIM_ALIAS:
+        # `candidates_pretrim.parquet` is the canonical Stage09 handoff.
+        # Keep `candidates_pretrim150.parquet` as a legacy compatibility alias
+        # because older Stage10/11 runs and external notebooks still reference it.
+        canonical_pretrim_path = bucket_dir / "candidates_pretrim.parquet"
+        legacy_pretrim_alias_path = bucket_dir / "candidates_pretrim150.parquet"
+        _write_output_df(fused_pretrim_out, canonical_pretrim_path)
+        if WRITE_LEGACY_PRETRIM150_ALIAS:
             if LOCAL_PARQUET_WRITE_MODE == "driver_parquet":
-                alias_dir = bucket_dir / "candidates_pretrim.parquet"
-                shutil.rmtree(alias_dir, ignore_errors=True)
-                shutil.copytree(bucket_dir / "candidates_pretrim150.parquet", alias_dir)
-                print(f"[WRITE] mode=driver_parquet-copy path={alias_dir}")
+                shutil.rmtree(legacy_pretrim_alias_path, ignore_errors=True)
+                shutil.copytree(canonical_pretrim_path, legacy_pretrim_alias_path)
+                print(f"[WRITE] mode=driver_parquet-copy path={legacy_pretrim_alias_path}")
             else:
-                _write_output_df(fused_pretrim_out, bucket_dir / "candidates_pretrim.parquet")
+                _write_output_df(fused_pretrim_out, legacy_pretrim_alias_path)
         _write_output_df(truth_out, bucket_dir / "truth.parquet")
+        if WRITE_TRUTH_USER_ROSTER:
+            truth_roster_cols = [c for c in ("user_id", "user_idx") if c in truth_out.columns]
+            truth_roster_dedupe_cols = ["user_id"] if "user_id" in truth_roster_cols else truth_roster_cols
+            (
+                truth_out.select(*truth_roster_cols)
+                .dropDuplicates(truth_roster_dedupe_cols)
+                .coalesce(1)
+                .write.mode("overwrite")
+                .option("header", True)
+                .csv((bucket_dir / "truth_user_roster.csv").as_posix())
+            )
         _write_output_df(train_history_out, bucket_dir / "train_history.parquet")
         if should_write_enriched_audit(int(min_train)):
             source_evidence_out = _coalesce_for_write(_checkpoint_for_write(spark, build_source_evidence_df(candidates_scored)))
@@ -3524,7 +5201,7 @@ def main() -> None:
                     spark,
                     build_enriched_audit_df(
                         candidates_scored=candidates_scored,
-                        fused=fused,
+                        fused=fused_ranked,
                         fused_pretrim=fused_pretrim,
                         als_top_k=als_top_k,
                         cluster_top_k=cluster_top_k,
@@ -3661,6 +5338,10 @@ def main() -> None:
             "segment_light_users": int(seg_map.get("light", 0)),
             "segment_mid_users": int(seg_map.get("mid", 0)),
             "segment_heavy_users": int(seg_map.get("heavy", 0)),
+            "scope_business_before_hard_filter": int(biz_stats["n_scope_before_hard_filter"]),
+            "scope_business_after_hard_filter": int(biz_stats["n_scope_after_hard_filter"]),
+            "scope_interaction_rows": int(scoped_interaction_rows),
+            "scope_interaction_users": int(scoped_interaction_users),
             "total_train_events": total_train_events,
             "implicit_rank": int(params["rank"]),
             "implicit_reg": float(params["reg"]),
@@ -3674,7 +5355,8 @@ def main() -> None:
             "pretrim_output_max_top_k": int(pretrim_output_max_top_k),
             "pretrim_segment_variable": bool(pretrim_segment_variable),
             "pretrim_head_policy_used": pretrim_head_policy,
-            "write_generic_pretrim_alias": bool(WRITE_GENERIC_PRETRIM_ALIAS),
+                "write_generic_pretrim_alias": True,
+                "write_legacy_pretrim150_alias": bool(WRITE_LEGACY_PRETRIM150_ALIAS),
             "write_enriched_audit_export": bool(should_write_enriched_audit(int(min_train))),
             "cluster_user_topn_used": int(cluster_user_topn),
             "layered_pretrim_enabled": bool(layered_pretrim_enabled),
@@ -3690,6 +5372,34 @@ def main() -> None:
             "profile_recall_rows_shared": int(profile_meta.get("rows_shared", 0)),
             "profile_recall_rows_bridge_user": int(profile_meta.get("rows_bridge_user", 0)),
             "profile_recall_rows_bridge_type": int(profile_meta.get("rows_bridge_type", 0)),
+            "profile_recall_rows_multivector": int(profile_meta.get("rows_multivector", 0)),
+            "profile_multivector_integration_enabled": bool(
+                profile_meta.get("profile_multivector_integration_enabled", False)
+            ),
+            "profile_multivector_integration_status": str(
+                profile_meta.get("profile_multivector_integration_status", "")
+            ),
+            "profile_multivector_integration_route_rows": profile_meta.get(
+                "profile_multivector_integration_route_rows", {}
+            ),
+            "profile_multivector_integration_route_users": profile_meta.get(
+                "profile_multivector_integration_route_users", {}
+            ),
+            "profile_evidence_protected_lane_enabled": bool(protected_lane_enabled),
+            "personalized_challenger_enabled": bool(challenger_enabled),
+            "personalized_challenger_quota": int(challenger_quota) if layered_pretrim_enabled else 0,
+            "personalized_challenger_max_pre_rank": int(PERSONALIZED_CHALLENGER_MAX_PRE_RANK),
+            "personalized_challenger_head_window": int(PERSONALIZED_CHALLENGER_HEAD_WINDOW),
+            "personalized_challenger_head_bonus": float(PERSONALIZED_CHALLENGER_HEAD_BONUS),
+            "personalized_challenger_tower_seq_status": str(challenger_tower_seq_meta.get("status", "")),
+            "personalized_challenger_tower_seq_rows": int(challenger_tower_seq_meta.get("rows", 0)),
+            "personalized_challenger_tower_seq_window_mode": str(
+                challenger_tower_seq_meta.get("tower_seq_candidate_window_mode", "")
+            ),
+            "personalized_challenger_tower_seq_window_topk": int(
+                challenger_tower_seq_meta.get("tower_seq_candidate_window_topk", 0)
+            ),
+            "bucket_debias_rewrite_enabled": bool(debias_rewrite_enabled),
             "profile_recall_users_with_vector": int(profile_meta.get("users_with_vector", 0)),
             "profile_recall_test_users_with_vector": int(profile_meta.get("test_users_with_vector", 0)),
             "profile_recall_test_users_with_confident_profile": int(
@@ -3701,11 +5411,27 @@ def main() -> None:
             "profile_multivector_route_rows": int(profile_multivector_route_meta.get("rows", 0)),
             "profile_multivector_route_route_rows": profile_multivector_route_meta.get("route_rows", {}),
             "profile_multivector_route_route_users": profile_multivector_route_meta.get("route_users", {}),
+            "context_surface_enabled": bool(context_enabled),
+            "context_surface_status": str(context_meta.get("status", "")),
+            "context_surface_rows": int(context_meta.get("rows", 0)),
+            "context_surface_top_k": int(context_meta.get("top_k", 0)),
+            "context_surface_score_min": float(context_meta.get("score_min", 0.0)),
+            "context_surface_route_rows": context_meta.get("route_rows", {}),
+            "context_surface_route_users": context_meta.get("route_users", {}),
             "profile_calibration_applied": bool(profile_meta.get("profile_calibration_applied", False)),
             "profile_calibration_rows": int(profile_meta.get("profile_calibration_rows", 0)),
             "train_history_rows": int(train_history.count()),
             "item_semantic_enabled": bool(item_semantic_df is not None),
             "item_semantic_weight": float(SEMANTIC_WEIGHT),
+            "source_weights_used": {
+                seg: {
+                    src: float(
+                        SOURCE_WEIGHTS_BY_BUCKET.get(int(min_train), {}).get(seg, {}).get(src, SOURCE_WEIGHTS[seg][src])
+                    )
+                    for src in ("als", "cluster", "popular", "profile", "context")
+                }
+                for seg in ("light", "mid", "heavy")
+            },
             "tower_seq_enabled": bool(tower_seq_meta.get("enabled", False)),
             "tower_seq_status": str(tower_seq_meta.get("status", "")),
             "tower_seq_rows": int(tower_seq_meta.get("rows", 0)),
@@ -3714,6 +5440,9 @@ def main() -> None:
             "tower_seq_updates": int(tower_seq_meta.get("updates", 0)),
             "tower_seq_seq_ready_rate": float(tower_seq_meta.get("seq_ready_rate", 0.0)),
             "tower_seq_max_cand_rows_effective": int(tower_seq_meta.get("tower_seq_max_cand_rows_effective", 0)),
+            "tower_seq_candidate_window_mode": str(tower_seq_meta.get("tower_seq_candidate_window_mode", "")),
+            "tower_seq_candidate_window_topk": int(tower_seq_meta.get("tower_seq_candidate_window_topk", 0)),
+            "tower_seq_rows_total_before_window_probe": int(tower_seq_meta.get("tower_seq_rows_total_before_window_probe", 0)),
         }
         bucket_rows.append(bucket_row)
         write_json(bucket_dir / "bucket_meta.json", bucket_row)
@@ -3778,6 +5507,54 @@ def main() -> None:
         "profile_multivector_route_top_k": int(PROFILE_MULTIVECTOR_ROUTE_TOP_K),
         "profile_multivector_route_score_min": float(PROFILE_MULTIVECTOR_ROUTE_SCORE_MIN),
         "profile_multivector_route_batch_users": int(PROFILE_MULTIVECTOR_ROUTE_BATCH_USERS),
+        "enable_profile_multivector_route_integration": bool(ENABLE_PROFILE_MULTIVECTOR_ROUTE_INTEGRATION),
+        "profile_multivector_route_integration_buckets": sorted(
+            int(x) for x in PROFILE_MULTIVECTOR_ROUTE_INTEGRATION_BUCKETS
+        ),
+        "profile_multivector_route_integration_top_k": int(PROFILE_MULTIVECTOR_ROUTE_INTEGRATION_TOP_K),
+        "profile_multivector_route_integration_score_min": float(
+            PROFILE_MULTIVECTOR_ROUTE_INTEGRATION_SCORE_MIN
+        ),
+        "profile_multivector_route_integration_batch_users": int(
+            PROFILE_MULTIVECTOR_ROUTE_INTEGRATION_BATCH_USERS
+        ),
+        "enable_profile_evidence_protected_lane": bool(ENABLE_PROFILE_EVIDENCE_PROTECTED_LANE),
+        "profile_evidence_protected_lane_buckets": sorted(
+            int(x) for x in PROFILE_EVIDENCE_PROTECTED_LANE_BUCKETS
+        ),
+        "profile_evidence_protected_lane_quota": int(PROFILE_EVIDENCE_PROTECTED_LANE_QUOTA),
+        "profile_evidence_protected_lane_max_pre_rank": int(PROFILE_EVIDENCE_PROTECTED_LANE_MAX_PRE_RANK),
+        "profile_evidence_protected_lane_max_pop_count": int(PROFILE_EVIDENCE_PROTECTED_LANE_MAX_POP_COUNT),
+        "profile_evidence_protected_lane_min_mv_routes": int(PROFILE_EVIDENCE_PROTECTED_LANE_MIN_MV_ROUTES),
+        "profile_evidence_protected_lane_min_semantic_score": float(PROFILE_EVIDENCE_PROTECTED_LANE_MIN_SEMANTIC_SCORE),
+        "profile_evidence_protected_lane_min_profile_cluster": int(PROFILE_EVIDENCE_PROTECTED_LANE_MIN_PROFILE_CLUSTER),
+        "profile_evidence_protected_lane_exclude_popular": bool(PROFILE_EVIDENCE_PROTECTED_LANE_EXCLUDE_POPULAR),
+        "enable_personalized_challenger_surface": bool(ENABLE_PERSONALIZED_CHALLENGER_SURFACE),
+        "personalized_challenger_buckets": sorted(int(x) for x in PERSONALIZED_CHALLENGER_BUCKETS),
+        "personalized_challenger_quota": int(PERSONALIZED_CHALLENGER_QUOTA),
+        "personalized_challenger_max_pre_rank": int(PERSONALIZED_CHALLENGER_MAX_PRE_RANK),
+        "personalized_challenger_head_window": int(PERSONALIZED_CHALLENGER_HEAD_WINDOW),
+        "personalized_challenger_head_bonus": float(PERSONALIZED_CHALLENGER_HEAD_BONUS),
+        "personalized_challenger_max_pop_count": int(PERSONALIZED_CHALLENGER_MAX_POP_COUNT),
+        "personalized_challenger_min_mv_routes": int(PERSONALIZED_CHALLENGER_MIN_MV_ROUTES),
+        "personalized_challenger_min_profile_cluster": int(PERSONALIZED_CHALLENGER_MIN_PROFILE_CLUSTER),
+        "personalized_challenger_min_nonpopular_sources": int(PERSONALIZED_CHALLENGER_MIN_NONPOPULAR_SOURCES),
+        "personalized_challenger_min_semantic_score": float(PERSONALIZED_CHALLENGER_MIN_SEMANTIC_SCORE),
+        "personalized_challenger_exclude_popular": bool(PERSONALIZED_CHALLENGER_EXCLUDE_POPULAR),
+        "enable_bucket_debias_rewrite": bool(ENABLE_BUCKET_DEBIAS_REWRITE),
+        "debias_buckets": sorted(int(x) for x in DEBIAS_BUCKETS),
+        "debias_quality_review_power": float(DEBIAS_QUALITY_REVIEW_POWER),
+        "debias_quality_base_floor": float(DEBIAS_QUALITY_BASE_FLOOR),
+        "debias_item_pop_cap": float(DEBIAS_ITEM_POP_CAP),
+        "debias_semantic_support_pop_alpha": float(DEBIAS_SEMANTIC_SUPPORT_POP_ALPHA),
+        "debias_semantic_support_adj_cap": float(DEBIAS_SEMANTIC_SUPPORT_ADJ_CAP),
+        "debias_semantic_support_gate_floor": float(DEBIAS_SEMANTIC_SUPPORT_GATE_FLOOR),
+        "debias_als_backbone_min_mult": float(DEBIAS_ALS_BACKBONE_MIN_MULT),
+        "debias_als_backbone_pop_penalty": float(DEBIAS_ALS_BACKBONE_POP_PENALTY),
+        "debias_als_backbone_heavy_pop_penalty": float(DEBIAS_ALS_BACKBONE_HEAVY_POP_PENALTY),
+        "debias_als_backbone_uncorroborated_penalty": float(DEBIAS_ALS_BACKBONE_UNCORROBORATED_PENALTY),
+        "debias_niche_semantic_bonus_weight": float(DEBIAS_NICHE_SEMANTIC_BONUS_WEIGHT),
+        "debias_niche_profile_cluster_bonus": float(DEBIAS_NICHE_PROFILE_CLUSTER_BONUS),
         "enable_profile_vector_route": bool(ENABLE_PROFILE_VECTOR_ROUTE),
         "enable_tag_shared_route": bool(ENABLE_TAG_SHARED_ROUTE),
         "enable_bridge_user_route": bool(ENABLE_BRIDGE_USER_ROUTE),
@@ -3810,11 +5587,13 @@ def main() -> None:
         "recall_limits_by_bucket": RECALL_LIMITS_BY_BUCKET,
         "layered_pretrim_by_bucket": LAYERED_PRETRIM_BY_BUCKET,
         "pretrim_segment_topk_by_bucket": PRETRIM_SEGMENT_TOPK_BY_BUCKET,
+        "source_weights_by_bucket": SOURCE_WEIGHTS_BY_BUCKET,
         "enable_pretrim_head_policy": bool(ENABLE_PRETRIM_HEAD_POLICY),
         "enable_pretrim_consensus_rescue": bool(ENABLE_PRETRIM_CONSENSUS_RESCUE),
         "enable_layered_pretrim_final_rank": bool(ENABLE_LAYERED_PRETRIM_FINAL_RANK),
         "pretrim_head_policy_by_bucket": PRETRIM_HEAD_POLICY_BY_BUCKET,
-        "write_generic_pretrim_alias": bool(WRITE_GENERIC_PRETRIM_ALIAS),
+                "write_generic_pretrim_alias": True,
+                "write_legacy_pretrim150_alias": bool(WRITE_LEGACY_PRETRIM150_ALIAS),
         "als_backbone_topn": ALS_BACKBONE_TOPN,
         "als_backbone_weight": ALS_BACKBONE_WEIGHT,
         "als_safety_keep_topk": ALS_SAFETY_KEEP_TOPK,
@@ -3826,6 +5605,7 @@ def main() -> None:
         "enable_tower_seq_features": bool(ENABLE_TOWER_SEQ_FEATURES),
         "tower_seq_max_cand_rows": int(TOWER_SEQ_MAX_CAND_ROWS),
         "tower_seq_max_cand_rows_by_bucket": {str(k): int(v) for k, v in TOWER_SEQ_MAX_CAND_ROWS_BY_BUCKET.items()},
+        "tower_seq_head_window_by_bucket": {str(k): int(v) for k, v in TOWER_SEQ_HEAD_WINDOW_BY_BUCKET.items()},
         "tower_seq_output_mode": str(TOWER_SEQ_OUTPUT_MODE),
         "profile_output_mode": str(PROFILE_OUTPUT_MODE),
         "profile_output_spark_df_max_rows": int(PROFILE_OUTPUT_SPARK_DF_MAX_ROWS),
@@ -3849,6 +5629,8 @@ def main() -> None:
         "spark_sql_shuffle_partitions": str(SPARK_SQL_SHUFFLE_PARTITIONS),
         "spark_default_parallelism": str(SPARK_DEFAULT_PARALLELISM),
         "spark_sql_adaptive_enabled": bool(SPARK_SQL_ADAPTIVE_ENABLED),
+        "spark_sql_parquet_enable_vectorized": bool(SPARK_SQL_PARQUET_ENABLE_VECTORIZED),
+        "spark_sql_files_max_partition_bytes": str(SPARK_SQL_FILES_MAX_PARTITION_BYTES),
         "spark_sql_max_plan_string_length": str(SPARK_SQL_MAX_PLAN_STRING_LENGTH),
         "spark_network_timeout": str(SPARK_NETWORK_TIMEOUT),
         "spark_executor_heartbeat_interval": str(SPARK_EXECUTOR_HEARTBEAT_INTERVAL),
@@ -3894,3 +5676,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

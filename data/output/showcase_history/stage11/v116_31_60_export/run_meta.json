@@ -1,0 +1,58 @@
+{
+  "run_id": "20260408_124540",
+  "run_tag": "stage11_2_dpo_export_pairs",
+  "source_stage11_dataset_run": "/root/autodl-tmp/5006_BDA_fast/bucket5_top250_semantic_compact_boundary_reason_rm_11_1/output/11_qlora_data/20260406_034859_stage11_1_qlora_build_dataset",
+  "source_mode": "pool",
+  "buckets": [
+    5
+  ],
+  "file_summary": {
+    "buckets": [
+      {
+        "bucket": 5,
+        "train_files": 0,
+        "eval_files": 0,
+        "bucket_dir": "/root/autodl-tmp/5006_BDA_fast/bucket5_top250_semantic_compact_boundary_reason_rm_11_1/output/11_qlora_data/20260406_034859_stage11_1_qlora_build_dataset/bucket_5"
+      }
+    ],
+    "train_dir_name": "pairwise_pool_train_json",
+    "eval_dir_name": "pairwise_pool_eval_json",
+    "fallback_storage": "parquet",
+    "parquet_summary": {
+      "buckets": [
+        {
+          "bucket": 5,
+          "parquet_dir": "/root/autodl-tmp/5006_BDA_fast/bucket5_top250_semantic_compact_boundary_reason_rm_11_1/output/11_qlora_data/20260406_034859_stage11_1_qlora_build_dataset/bucket_5/pairwise_pool_all_parquet",
+          "exists": true,
+          "bucket_dir": "/root/autodl-tmp/5006_BDA_fast/bucket5_top250_semantic_compact_boundary_reason_rm_11_1/output/11_qlora_data/20260406_034859_stage11_1_qlora_build_dataset/bucket_5"
+        }
+      ],
+      "parquet_dir_names": [
+        "pairwise_pool_all_parquet"
+      ]
+    }
+  },
+  "config": {
+    "max_pairs_per_user": 16,
+    "true_max_pairs_per_user": 16,
+    "valid_max_pairs_per_user": 0,
+    "hist_max_pairs_per_user": 0,
+    "allow_mid_neg": true,
+    "strip_rank_features": false,
+    "seed": 42,
+    "prompt_mode": "semantic_compact_boundary_rm",
+    "target_true_bands": [
+      "rescue_31_60"
+    ],
+    "pair_prompt_style": "local_listwise_compare"
+  },
+  "outputs": {
+    "pairwise_train": "/root/autodl-tmp/5006_BDA_fast/bucket5_top250_semantic_compact_boundary_reason_rm_export_only_v116_31_60only/output/11_qlora_pairwise/20260408_124540_stage11_2_dpo_export_pairs/pairwise_train.jsonl",
+    "pairwise_eval": "/root/autodl-tmp/5006_BDA_fast/bucket5_top250_semantic_compact_boundary_reason_rm_export_only_v116_31_60only/output/11_qlora_pairwise/20260408_124540_stage11_2_dpo_export_pairs/pairwise_eval.jsonl",
+    "audit": "/root/autodl-tmp/5006_BDA_fast/bucket5_top250_semantic_compact_boundary_reason_rm_export_only_v116_31_60only/output/11_qlora_pairwise/20260408_124540_stage11_2_dpo_export_pairs/audit.json"
+  },
+  "pair_counts": {
+    "train": 5077,
+    "eval": 1217
+  }
+}

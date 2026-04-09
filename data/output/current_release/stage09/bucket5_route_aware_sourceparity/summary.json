@@ -1,0 +1,11 @@
+{
+  "stage": "stage09",
+  "line": "bucket5 route-aware source-parity recall",
+  "source_run": "data/output/09_candidate_fusion_structural_v5_sourceparity/20260324_030511_full_stage09_candidate_fusion",
+  "source_audit": "data/output/09_recall_audit_sourceparity_v5/20260324_032725_stage09_recall_audit/stage09_recall_audit.json",
+  "current_metrics": {
+    "truth_in_pretrim150": 0.74511,
+    "hard_miss": 0.118996
+  },
+  "comparison_note": "Current mainline bucket5 recall route after route-aware candidate redesign."
+}

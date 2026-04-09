@@ -1,0 +1,4 @@
+run_id_10,source_run_09,bucket_min_train_reviews,model,recall_at_k,ndcg_at_k,user_coverage_at_k,item_coverage_at_k,tail_coverage_at_k,novelty_at_k,n_users,n_items,n_candidates
+20260324_033705,20260324_030511_full_stage09_candidate_fusion,5,ALS@10_from_candidates,0.084755,0.041169,1.000000,0.307008,0.030646,8.513460,1935,1798,935160
+20260324_033705,20260324_030511_full_stage09_candidate_fusion,5,PreScore@10,0.093540,0.043978,1.000000,0.378198,0.048114,8.375598,1935,1798,935160
+20260324_033705,20260324_030511_full_stage09_candidate_fusion,5,LearnedBlendXGBCls@10,0.116796,0.055731,1.000000,0.416018,0.057726,8.495767,1935,1798,935160

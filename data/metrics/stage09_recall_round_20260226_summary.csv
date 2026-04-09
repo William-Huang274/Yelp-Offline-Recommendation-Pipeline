@@ -1,4 +1,0 @@
-bucket,run_id_09_audit,source_run_09,truth_in_all,truth_in_pretrim,pretrim_cut_loss,hard_miss
-2,20260226_052313,20260226_044433_full_stage09_candidate_fusion,0.825452,0.720603,0.104849,0.174548
-5,20260226_192114,20260226_181438_full_stage09_candidate_fusion,0.844035,0.738658,0.105376,0.155965
-10,20260226_192114,20260226_181438_full_stage09_candidate_fusion,0.887507,0.784688,0.102819,0.112493

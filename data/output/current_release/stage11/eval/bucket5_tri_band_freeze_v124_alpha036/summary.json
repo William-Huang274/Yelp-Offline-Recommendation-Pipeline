@@ -1,0 +1,20 @@
+{
+  "stage": "stage11",
+  "line": "bucket5 tri-band freeze baseline",
+  "run": "v124",
+  "alpha": 0.36,
+  "recall_at_10": 0.18568665377176015,
+  "ndcg_at_10": 0.0838,
+  "rescued_users": 96,
+  "rescued_11_30": 56,
+  "rescued_31_60": 40,
+  "rescued_61_100": 0,
+  "policy_interpretation": {
+    "11_30": "primary top10 rescue path",
+    "31_60": "top10/top20 rescue path",
+    "61_100": "conservative rank-uplift path"
+  },
+  "source_run_meta": "data/output/current_release/stage11/eval/bucket5_tri_band_freeze_v124_alpha036/run_meta.json",
+  "source_metrics": "data/output/current_release/stage11/eval/bucket5_tri_band_freeze_v124_alpha036/metrics.csv",
+  "source_note": "The frozen alpha=0.36 line is selected from the v124 tri-band alpha grid. The copied run_meta and metrics files are the default v124 provenance files."
+}

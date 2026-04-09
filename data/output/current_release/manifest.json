@@ -1,0 +1,13 @@
+{
+  "release_id": "release_closeout_20260409",
+  "current_output_surface": "data/output/current_release",
+  "history_output_surface": "data/output/showcase_history",
+  "current_metrics_surface": "data/metrics/current_release",
+  "history_metrics_surface": "data/metrics/showcase_history",
+  "frozen_pack_source": "data/output/_prod_runs/stage11_freeze_pack_20260409/stage11_freeze_pack_20260409",
+  "notes": [
+    "current_release holds the active outward-facing baseline and best-known small results",
+    "showcase_history holds historical comparison points kept for release storytelling",
+    "_prod_runs remains the provenance surface for frozen packs and release pointers"
+  ]
+}

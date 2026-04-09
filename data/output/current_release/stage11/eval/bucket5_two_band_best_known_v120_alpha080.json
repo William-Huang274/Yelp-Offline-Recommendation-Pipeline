@@ -1,0 +1,13 @@
+{
+  "stage": "stage11",
+  "line": "bucket5 two-band best-known offline result",
+  "source_run_family": "v120 joint12",
+  "alpha": 0.8,
+  "recall_at_10": 0.197292,
+  "ndcg_at_10": 0.089827,
+  "rescued_users": 102,
+  "rescued_11_30": 51,
+  "rescued_31_60": 51,
+  "source_note": "This summary is the repository closeout view of the audited offline alpha grid derived from the v120 score table.",
+  "default_run_meta": "data/output/showcase_history/stage11/v120_joint12_default/run_meta.json"
+}

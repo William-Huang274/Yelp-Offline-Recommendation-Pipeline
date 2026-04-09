@@ -1,0 +1,33 @@
+{
+  "stage": "stage10",
+  "line": "current structured rerank mainline",
+  "bucket_snapshots": [
+    {
+      "bucket": "bucket2",
+      "definition": "cold-start-inclusive trainable set under leave-two-out",
+      "prescore_recall_at_10": 0.109843,
+      "prescore_ndcg_at_10": 0.05129,
+      "learned_recall_at_10": 0.11265,
+      "learned_ndcg_at_10": 0.052207,
+      "source_metrics": "data/output/current_release/stage10/bucket2_mainline/metrics.csv"
+    },
+    {
+      "bucket": "bucket5",
+      "definition": "mid-to-high interaction set",
+      "prescore_recall_at_10": 0.09354,
+      "prescore_ndcg_at_10": 0.043978,
+      "learned_recall_at_10": 0.126098,
+      "learned_ndcg_at_10": 0.058108,
+      "source_metrics": "data/output/current_release/stage10/bucket5_mainline/metrics.csv"
+    },
+    {
+      "bucket": "bucket10",
+      "definition": "high-interaction set",
+      "prescore_recall_at_10": 0.056911,
+      "prescore_ndcg_at_10": 0.026467,
+      "learned_recall_at_10": 0.077236,
+      "learned_ndcg_at_10": 0.034113,
+      "source_metrics": "data/output/current_release/stage10/bucket10_mainline/metrics.csv"
+    }
+  ]
+}

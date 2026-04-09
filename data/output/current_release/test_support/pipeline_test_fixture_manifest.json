@@ -1,0 +1,16 @@
+{
+  "purpose": "Local fixture surface used by current pipeline smoke tests.",
+  "fixtures": [
+    {
+      "test": "tests/test_run_validators.py::test_stage09_validator_smoke_checks_frozen_local_run",
+      "required_path": "data/output/09_candidate_fusion/20260311_005450_full_stage09_candidate_fusion",
+      "present_local": true
+    },
+    {
+      "test": "tests/test_run_validators.py::test_stage11_validator_smoke_checks_frozen_local_run",
+      "required_path": "data/output/11_qlora_data/20260311_011112_stage11_1_qlora_build_dataset",
+      "present_local": true
+    }
+  ],
+  "additional_cloud_pull_required": false
+}

@@ -1,272 +1,184 @@
-# Yelp Offline Recommendation Pipeline
+# Yelp Offline Ranking Stack
 
-[English](./README.md) | [Chinese](./README.zh-CN.md)
+[English](./README.md) | [中文](./README.zh-CN.md)
 
-Offline recommender for Louisiana restaurant discovery on the Yelp dataset. The repo covers the full `01 -> 11` offline path: data prep, relabeling, business profiling, stage09 candidate fusion, stage10 structured rerank, and stage11 QLoRA / DPO sidecar experiments.
+Route-aware offline ranking stack for Yelp restaurant recommendation.
 
-This repository is meant to show an end-to-end recommender-system build, not just a standalone model notebook. It combines bucketed offline evaluation, aligned model comparison, dataset engineering for LLM reranking, and release validation utilities.
+The current repository version is built around a unified `stage09 -> stage10 -> stage11` line:
 
-## Why This Project Stands Out
+- `stage01 -> stage08`: earlier local pipeline foundation kept for repository completeness
+- `stage09`: route-aware recall design and candidate funnel control
+- `stage10`: structured rerank on top of route-derived features
+- `stage11`: reward-model-based rescue rerank with segmented experts and bounded shortlist reranking
 
-- end-to-end offline recommendation pipeline instead of a single ranking-model demo
-- bucket-aware user slicing (`bucket_2`, `bucket_5`, `bucket_10`) rather than treating all users as one cohort
-- same-cohort comparison across heuristic ranking, XGBoost rerank, and QLoRA / DPO sidecar models
-- stage11 training is backed by explicit dataset engineering: pointwise -> rich SFT -> DPO pairs
-- includes release manifests, validators, monitoring checks, and rollback / readiness documentation
+## Current Release Position
 
-## Results Snapshot
+The current line is no longer the earlier `bucket10`-only generic sidecar proof of concept.
 
-Current public frozen release: `internal_pilot_v1_champion_20260313`
+It is now positioned as:
 
-| Model | Bucket | Recall@10 | NDCG@10 | Role |
-| --- | --- | ---: | ---: | --- |
-| `PreScore@10` | `bucket10` | `0.056911` | `0.026467` | emergency baseline |
-| `LearnedBlendXGBCls@10` | `bucket10` | `0.065041` | `0.029217` | structured fallback |
-| `QLoRASidecar@10` | `bucket10` | `0.067751` | `0.029935` | current champion |
+- a shared `stage09` recall contract
+- a stronger `stage10` rerank baseline across `bucket2`, `bucket5`, and `bucket10`
+- a `bucket5 stage11` rescue stack built on top of the upgraded `stage09 -> stage10` path
 
-Scale at a glance:
+Two Stage11 reference points are kept intentionally:
 
-- Stage10 structured rerank training: `47,271` rows, `2,251` train users, `2,251` positives
-- Stage11 pointwise dataset: `22,327` rows, `7,855` positives, `3,618` total users
-- Stage11 rich SFT dataset: `27,743` rows and `7,855` positives
-- Stage11 DPO dataset: about `5,836` train pairs and `1,452` eval pairs
-- Final aligned release cohort: `738` eval users, `candidate_topn = 250`, `top_k = 10`
+- `two-band research peak`: best offline `11-30 + 31-60` result after alpha grid
+- `tri-band freeze baseline`: conservative `11-30 + 31-60 + 61-100` freeze candidate
 
-Release cohort evidence:
+## Current Metrics Snapshot
 
-- `truth_in_all = 0.947208`
-- `truth_in_pretrim = 0.882255`
-- `hard_miss = 0.052792`
+### Stage09
 
-## Run And Verify Locally
+`bucket5` candidate funnel improvement on the mid-to-high interaction set:
 
-There are three useful ways to run this repository locally, and they do not mean the same thing.
+| metric | early gate | source-parity structural v5 |
+| --- | ---: | ---: |
+| `truth_in_pretrim150` | `0.7248` | `0.7451` |
+| `hard_miss` | `0.1616` | `0.1190` |
 
-### 1. Repo Smoke Test
+### Stage10
 
-Use this path when you want to confirm a fresh clone is wired correctly.
+| user set | PreScore@10 recall / ndcg | LearnedBlendXGBCls@10 recall / ndcg |
+| --- | --- | --- |
+| cold-start-inclusive trainable set under leave-two-out (`bucket2`) | `0.1098 / 0.0513` | `0.1127 / 0.0522` |
+| mid-to-high interaction set (`bucket5`) | `0.0935 / 0.0440` | `0.1261 / 0.0581` |
+| high-interaction set (`bucket10`) | `0.0569 / 0.0265` | `0.0772 / 0.0341` |
 
-```bash
-python -m pip install -r requirements.txt
-python -m pytest tests -q
-python tools/check_release_readiness.py
-python tools/check_release_monitoring.py
-```
+### Stage11
 
-What this verifies:
+Training-side evidence:
 
-- path helpers
-- latest / prod run pointers
-- validator behavior
-- release readiness and monitoring tooling
+- `11-30 only expert`
+  - frozen boundary-rescue expert used for front-rank rescue
+- `31-60 only expert`
+  - `31-40 true win = 0.7385`
+  - `41-60 true win = 0.7605`
+- `61-100 only expert`
+  - `61-100 true win = 0.8626`
 
-This path does not require raw Yelp source data.
+Evaluation-side reference points on `bucket5`:
 
-### 2. Frozen Artifact Validation
+| line | recall@10 | ndcg@10 | note |
+| --- | ---: | ---: | --- |
+| `v120 two-band @ alpha=0.80` | `0.1973` | `0.0898` | current two-band best-known offline result |
+| `v124 tri-band @ alpha=0.36` | `0.1857` | `0.0838` | current tri-band freeze baseline |
 
-Use this path when you already have the frozen local stage outputs and want to verify artifact lineage.
+Current tri-band policy keeps the deep expert conservative:
 
-```bash
-python tools/validate_stage_artifact.py --kind stage09_candidate --run-dir data/output/09_candidate_fusion/20260311_005450_full_stage09_candidate_fusion
-python tools/validate_stage_artifact.py --kind stage10_rank_model --run-dir data/output/10_rank_models/20260307_210530_stage10_1_rank_train
-python tools/validate_stage_artifact.py --kind stage10_infer_eval --run-dir data/output/10_2_rank_infer_eval/20260313_193213_stage10_2_rank_infer_eval
-python tools/validate_stage_artifact.py --kind stage11_dataset --run-dir data/output/11_qlora_data/20260311_011112_stage11_1_qlora_build_dataset
-```
+- `11-30`: primary top10 rescue path
+- `31-60`: top10 / top20 rescue path
+- `61-100`: rank uplift path, not a forced top10 push
 
-What this verifies:
+## Why Start With `bucket10` And Then Expand To `bucket5`
 
-- frozen stage09 candidate artifacts
-- frozen stage10 rank-train artifacts
-- frozen stage10 infer/eval artifacts
-- frozen stage11 dataset artifacts
-- release-lineage consistency with the tracked public freeze
+This sequencing was deliberate.
 
-Bucket2/5 stage10 gate helper:
+- `bucket10` is the high-interaction set. It contains the richest user semantics
+  and the cleanest behavioral evidence, so it is the best place to validate
+  whether the model design itself works.
+- We used `bucket10` first to test:
+  - whether the recall routing produced the right candidate pool
+  - whether the structured reranker could establish a stable global backbone
+  - whether the reward model could rescue underweighted truth items in local
+    competition
+- After that direction was validated, we expanded to `bucket5` to test the same
+  design on a broader and more practical coverage range.
 
-```bash
-python scripts/pipeline/bucket_stage10_gate_runner.py --bucket 5 --mode full --dry-run
-```
+In the current repository line:
 
-This helper keeps future bucket2/5 gate runs isolated under
-`data/output/stage10_gate` and `data/metrics/stage10_gate`.
-The tracked submission surface is the small metrics and manifests under
-`data/metrics/stage10_gate`; the large isolated run directories remain local-only.
-It only rebuilds `stage09 -> stage10` for `bucket_2` or `bucket_5`; any stage11
-admission decision happens later.
+- `bucket10` is best understood as the early architecture-validation set
+- `bucket5` is the main outward-facing line because it has wider coverage and is
+  closer to the intended mainline use case
+- `bucket2` is used to validate whether the `stage09 -> stage10` path remains
+  portable on a cold-start-inclusive trainable set
 
-### 3. Full Rebuild From Raw Data
+## Case Notes
 
-Use this path only if you have the raw Yelp source data and want to rerun the pipeline stages.
+The root README keeps only a short summary. Detailed Stage11 case notes cover:
 
-Important notes:
+- a real prompt-construction sample
+- a concrete `11-30` rescue example
+- a concrete `31-60` rescue example
+- why the current `61-100` policy stays conservative
 
-- raw Yelp source data is not included in this public repository
-- large stage09-stage11 run artifacts are not fully versioned here
-- the canonical public release state is represented by tracked docs, tracked metrics, and release-control files under `data/output/_prod_runs`
-- the stable downstream business-profile contract begins at the tracked stage08 merged profile output documented in [docs/contracts/data_contract.md](./docs/contracts/data_contract.md)
+- [docs/stage11/stage11_case_notes_20260409.md](./docs/stage11/stage11_case_notes_20260409.md)
 
-Optional stage11 training environment:
+## Leakage Control
 
-```bash
-python -m pip install -r requirements-stage11-qlora.txt
-```
+The Stage11 line is built to avoid inference-time label leakage.
 
-Internal-pilot helpers:
+- expert routing uses the candidate's current rank window, not the hidden truth band
+- shortlist reranking uses current scores and current ranks only
+- supervision uses true labels in training and evaluation, but those labels are not exposed at inference time
 
-```bash
-python scripts/pipeline/internal_pilot_runner.py --mode validate
-python scripts/pipeline/internal_pilot_runner.py --mode monitor
-```
+## User-Set Definitions
 
-Windows wrapper:
+The repository uses three evaluation lines defined by minimum interaction
+thresholds:
 
-```bat
-scripts/run_internal_pilot.bat --mode validate
-```
+- cold-start-inclusive trainable set under leave-two-out (`bucket2`, minimum interaction floor 4)
+- mid-to-high interaction set (`bucket5`, minimum interaction floor 7)
+- high-interaction set (`bucket10`, minimum interaction floor 12)
 
-## Bucketing Strategy
+These are not mutually exclusive tiers. They are three evaluation lines with
+different data-density thresholds, used to check whether the ranking stack is
+portable beyond one curated slice.
 
-Stage09 defines three minimum-history buckets from `MIN_TRAIN_REVIEWS_BUCKETS = [2, 5, 10]` in [scripts/09_candidate_fusion.py](./scripts/09_candidate_fusion.py):
+## Public Repository Surface
 
-- `bucket_2`
-- `bucket_5`
-- `bucket_10`
+- [scripts/stage01_to_stage08](./scripts/stage01_to_stage08): earlier local pipeline stages kept as reproducible project history
+- [scripts/launchers](./scripts/launchers): outward-facing launcher surface
+- [docs/contracts/launcher_env_conventions.md](./docs/contracts/launcher_env_conventions.md): launcher variable meanings
+- [docs/stage11/stage11_31_60_only_and_segmented_fusion_20260408.md](./docs/stage11/stage11_31_60_only_and_segmented_fusion_20260408.md): Stage11 segmented-expert design note
+- [docs/stage11/stage11_case_notes_20260409.md](./docs/stage11/stage11_case_notes_20260409.md): prompt sample and concrete rescue cases
+- [data/output/current_release](./data/output/current_release): current release result surface
+- [data/output/showcase_history](./data/output/showcase_history): selected historical reference results
+- [data/metrics/current_release](./data/metrics/current_release): current release metric snapshot
+- [data/metrics/showcase_history](./data/metrics/showcase_history): selected historical metric references
 
-For each bucket, stage09 also applies `min_user = min_train + 2` as the user-side cohort floor.
+## Entry Points
 
-Inside each bucket, users are separately tagged as:
+Use the launcher wrappers rather than the long legacy root launchers:
 
-- `light` when train interactions `<= 7`
-- `mid` when train interactions are `8-19`
-- `heavy` when train interactions `>= 20`
+- Stage09: [scripts/launchers/stage09_bucket5_mainline.sh](./scripts/launchers/stage09_bucket5_mainline.sh)
+- Stage10: [scripts/launchers/stage10_bucket5_mainline.sh](./scripts/launchers/stage10_bucket5_mainline.sh)
+- Stage11 dataset/export/train/eval:
+  - [scripts/launchers/stage11_bucket5_11_1.sh](./scripts/launchers/stage11_bucket5_11_1.sh)
+  - [scripts/launchers/stage11_bucket5_export_only.sh](./scripts/launchers/stage11_bucket5_export_only.sh)
+  - [scripts/launchers/stage11_bucket5_train.sh](./scripts/launchers/stage11_bucket5_train.sh)
+  - [scripts/launchers/stage11_bucket5_eval.sh](./scripts/launchers/stage11_bucket5_eval.sh)
 
-This segment split is different from the bucket definition and is used for per-segment candidate budgets and fusion behavior.
+Launcher variable definitions are documented here:
 
-Why the current public stage11 line starts with `bucket10`:
+- [docs/contracts/launcher_env_conventions.md](./docs/contracts/launcher_env_conventions.md)
 
-- it is the first slice where users have richer and more diverse preference signals
-- it exposes the hardest head-ordering errors, especially for heavy users
-- it is the most meaningful bucket for testing whether text-aware SFT / DPO sidecars can improve reranking beyond the structured fallback model
+## Public Technical Notes
 
-`bucket_2` and `bucket_5` now also have completed `stage09 -> stage10` gate
-artifacts, but the repo still treats `bucket10` as the frozen public release
-slice and the only bucket currently admitted to stage11.
+- launcher variable conventions:
+  [docs/contracts/launcher_env_conventions.md](./docs/contracts/launcher_env_conventions.md)
+- Stage11 segmented-expert design note:
+  [docs/stage11/stage11_31_60_only_and_segmented_fusion_20260408.md](./docs/stage11/stage11_31_60_only_and_segmented_fusion_20260408.md)
+- Stage11 case notes:
+  [docs/stage11/stage11_case_notes_20260409.md](./docs/stage11/stage11_case_notes_20260409.md)
 
-## Training Data Construction
+## Repository Boundary
 
-### Stage10 Structured Rerank
+This repository tracks code, small metrics, manifests, and public technical notes.
 
-Frozen fallback model run: `20260307_210530_stage10_1_rank_train`
+It does not version:
 
-Bucket10 training volume from the frozen model metadata:
+- raw Yelp source data
+- large cloud logs
+- large model weights
+- full prediction dumps
 
-- `train_rows = 47271`
-- `train_pos = 2251`
-- `train_users = 2251`
-- `valid_users = 369`
-- `test_users = 701`
+The outward-facing small result files used by the current closeout are kept under:
 
-This is the aligned structured fallback used before the sidecar champion.
+- [data/output/current_release](./data/output/current_release)
+- [data/output/showcase_history](./data/output/showcase_history)
+- [data/metrics/current_release](./data/metrics/current_release)
+- [data/metrics/showcase_history](./data/metrics/showcase_history)
 
-### Stage11 Pointwise Dataset
-
-Frozen dataset run: `20260311_011112_stage11_1_qlora_build_dataset`
-
-Key build settings from `run_meta.json`:
-
-- `buckets_processed = [10]`
-- `candidate_file = candidates_pretrim150.parquet`
-- `topn_per_user = 120`
-- `eval_user_frac = 0.2`
-- `prompt_mode = full_lite`
-- `include_valid_pos = true`
-- `valid_pos_weight = 0.6`
-
-Base pointwise dataset on bucket10:
-
-| Slice | Rows | Positives | Negatives |
-| --- | ---: | ---: | ---: |
-| train | `17796` | `6276` | `11520` |
-| eval | `4531` | `1579` | `2952` |
-| total | `22327` | `7855` | `14472` |
-
-Additional cohort facts:
-
-- `users_total = 3618`
-- `users_with_positive = 3386`
-- `users_no_positive = 232`
-
-### Rich SFT Dataset
-
-The current SFT mainline does not train from the base pointwise export. It trains from the richer `rich_sft` export of the same bucket10 run.
-
-Frozen `rich_sft` volume:
-
-| Slice | Rows | Positives | Negatives |
-| --- | ---: | ---: | ---: |
-| train | `22111` | `6276` | `15835` |
-| eval | `5632` | `1579` | `4053` |
-| total | `27743` | `7855` | `19888` |
-
-How `rich_sft` is constructed:
-
-- start from the frozen bucket10 `pretrim150` candidate pool
-- keep the same train / eval user split as the base stage11 dataset build
-- use `full_lite` prompts with user evidence, item evidence, and history anchors
-- keep true positives and optionally include valid positives with weight `0.6`
-- sample negatives per user as `1 explicit + 2 hard + 2 near + 1 mid + 0 tail`
-- cap hard negatives at `pre_rank <= 20`
-- cap mid negatives at `pre_rank <= 60`
-- require negative rating `<= 2.5`
-- keep `rich_sft_allow_neg_fill = false` in the frozen run
-
-### DPO Pair Dataset
-
-The current DPO line warm-starts from the SFT adapter instead of training pairwise from raw base weights.
-
-Current DPO shape and construction:
-
-- pairwise source mode: `rich_sft`
-- pair policy: `v2a`
-- top-k cutoff: `10`
-- high-rank cutoff: `20`
-- loser selection favors `hard`, `near`, and outranking confusers from the same bucket10 candidate pool
-- audited pair volume is roughly `5836` train pairs and `1452` eval pairs on bucket10
-
-## Repository Layout
-
-- [scripts](./scripts): stage scripts and pipeline utilities
-- [tests](./tests): portable tests and local artifact smoke checks
-- [tools](./tools): release-check, monitoring, and validation helpers
-- [config](./config): config assets used by later stages
-- [docs](./docs): categorized documentation index
-- [docs/contracts](./docs/contracts): contracts and config references
-- [docs/release](./docs/release): freeze, readiness, monitoring, and rollback notes
-- [docs/repo](./docs/repo): repo hygiene, path, pointer, smoke-test, and runner notes
-- [docs/stage09](./docs/stage09): candidate-fusion and bucket10 audit notes
-- [docs/stage10](./docs/stage10): structured rerank training notes
-- [docs/stage11](./docs/stage11): QLoRA, sidecar, and cloud runbooks
-- [docs/dpo](./docs/dpo): DPO guides and recommendations
-- [docs/labeling](./docs/labeling): labeling manuals
-
-## Key Documentation
-
-- docs index: [docs/README.md](./docs/README.md)
-- data contract: [docs/contracts/data_contract.md](./docs/contracts/data_contract.md)
-- release readiness: [docs/release/release_readiness_report_internal_pilot_v1_champion_20260313.md](./docs/release/release_readiness_report_internal_pilot_v1_champion_20260313.md)
-- champion closeout: [docs/release/first_champion_closeout_20260313.md](./docs/release/first_champion_closeout_20260313.md)
-- rollback and monitoring: [docs/release/rollback_and_monitoring.md](./docs/release/rollback_and_monitoring.md)
-- stage11 cloud run profile: [docs/stage11/stage11_cloud_run_profile_20260309.md](./docs/stage11/stage11_cloud_run_profile_20260309.md)
-- smoke-test note: [docs/repo/gl10_smoke_tests_20260313.md](./docs/repo/gl10_smoke_tests_20260313.md)
-
-## Current Limitations
-
-- this is still an offline batch pipeline, not an online serving system
-- the current readiness report is `WARN`, not `PASS`
-- the frozen stage11 champion still records `enforce_stage09_gate=false`
-- the release manifest still marks `production_ready=false`
-- `GL-01` credential rotation was deferred because the referenced cloud machine was temporary
-
-## License
-
-This repository is released under the [MIT License](./LICENSE).
+The original frozen provenance pack and internal closeout notes are kept locally
+for auditing, but are intentionally excluded from the public repository surface.

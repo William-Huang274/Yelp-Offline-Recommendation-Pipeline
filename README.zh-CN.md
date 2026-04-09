@@ -1,273 +1,217 @@
-# Yelp 离线推荐流水线
+# Yelp 离线排序系统
 
-[English](./README.md) | [简体中文](./README.zh-CN.md)
+[English](./README.md) | [中文](./README.zh-CN.md)
 
-这是一个基于 Yelp 数据集、面向路易斯安那州餐饮发现场景的离线推荐与重排项目。仓库覆盖 `01 -> 11` 全链路：数据准备、重标注、business profiling、stage09 候选融合、stage10 结构化重排，以及 stage11 QLoRA / DPO sidecar 实验。
+这是一个面向 Yelp 餐饮推荐场景的离线推荐与重排项目。当前版本围绕三层主线展开：
 
-这个仓库的定位不是单独展示某一个模型，而是展示一个完整的推荐系统作品集项目：既有分桶离线评估、对齐后的模型对比，也有面向 LLM 重排的数据集构造、release 验证工具和文档化的模型 lineage。
+- 召回路由（`Stage09`）
+- 结构化精排（`Stage10`）
+- 基于奖励模型的救援式重排（`Stage11`）
 
-## 项目亮点
+## 当前基线总览
 
-- 不是单点模型 demo，而是完整的离线推荐流水线
-- 不是把所有用户混在一起评估，而是按 `bucket_2`、`bucket_5`、`bucket_10` 做 user slicing
-- 在同一 cohort 上对比 heuristic ranking、XGBoost rerank 和 QLoRA / DPO sidecar
-- stage11 不是直接拿 prompt 做实验，而是有明确的数据工程链路：pointwise -> rich SFT -> DPO pairs
-- 仓库包含 release manifest、validator、monitoring 检查和 rollback / readiness 文档
+| 主线 | 当前冻结展示口径 | 当前结果 |
+| --- | --- | --- |
+| 召回路由（`Stage09`） | `bucket5` 候选漏斗 | `truth_in_pretrim150 = 0.7451`，`hard_miss = 0.1190` |
+| 结构化精排（`Stage10`） | 三条用户集评估线 | `bucket2 = 0.1127 / 0.0522`，`bucket5 = 0.1261 / 0.0581`，`bucket10 = 0.0772 / 0.0341` |
+| 救援式重排（`Stage11`） | 双模型研究峰值 | `v120 @ alpha=0.80`，`Recall@10 = 0.1973`，`NDCG@10 = 0.0898` |
+| 救援式重排（`Stage11`） | 三模型冻结基线 | `v124 @ alpha=0.36`，`Recall@10 = 0.1857`，`NDCG@10 = 0.0838` |
 
-## 结果概览
+下面再按三层分别展开。
 
-当前公开冻结版本：`internal_pilot_v1_champion_20260313`
+## 当前基线结果
 
-| Model | Bucket | Recall@10 | NDCG@10 | Role |
-| --- | --- | ---: | ---: | --- |
-| `PreScore@10` | `bucket10` | `0.056911` | `0.026467` | 应急基线 |
-| `LearnedBlendXGBCls@10` | `bucket10` | `0.065041` | `0.029217` | 结构化 fallback |
-| `QLoRASidecar@10` | `bucket10` | `0.067751` | `0.029935` | 当前 champion |
+### 召回路由（`Stage09`）
 
-规模速览：
+中高交互用户集（`bucket5`，最小交互门槛 7）上的候选漏斗结果：
 
-- Stage10 结构化重排训练：`47,271` 行，`2,251` 个 train users，`2,251` 个正样本
-- Stage11 pointwise 数据集：`22,327` 行，`7,855` 个正样本，`3,618` 个总用户
-- Stage11 rich SFT 数据集：`27,743` 行，`7,855` 个正样本
-- Stage11 DPO 数据集：约 `5,836` 条 train pairs，`1,452` 条 eval pairs
-- 最终对齐的 release cohort：`738` 个 eval users，`candidate_topn = 250`，`top_k = 10`
+| 指标 | 早期版本 | 当前主线 |
+| --- | ---: | ---: |
+| `truth_in_pretrim150` | `0.7248` | `0.7451` |
+| `hard_miss` | `0.1616` | `0.1190` |
 
-release cohort 审计证据：
+### 结构化精排（`Stage10`）
 
-- `truth_in_all = 0.947208`
-- `truth_in_pretrim = 0.882255`
-- `hard_miss = 0.052792`
+按最小交互门槛定义的三组用户集评估线上的 `PreScore@10 -> LearnedBlendXGBCls@10`：
 
-## 本地运行与验证
+| 用户集 | 基线 recall / ndcg | 精排后 recall / ndcg |
+| --- | --- | --- |
+| 含冷启动、在留二法切分下仍可训练的用户集（`bucket2`） | `0.1098 / 0.0513` | `0.1127 / 0.0522` |
+| 中高交互用户集（`bucket5`） | `0.0935 / 0.0440` | `0.1261 / 0.0581` |
+| 高交互用户集（`bucket10`） | `0.0569 / 0.0265` | `0.0772 / 0.0341` |
 
-这个仓库在本地有三种不同的运行 / 验证方式，含义并不一样。
+### 救援式重排（`Stage11`）
 
-### 1. 仓库级 Smoke Test
+训练侧结果：
 
-如果你的目标是确认一个 fresh clone 能正常工作，先走这条路径。
+- `11-30` 专家模型
+  - 当前冻结的边界救援专家，负责前排边界救援
+- `31-60` 专家模型
+  - `31-40 true win = 0.7385`
+  - `41-60 true win = 0.7605`
+- `61-100` 专家模型
+  - `61-100 true win = 0.8626`
 
-```bash
-python -m pip install -r requirements.txt
-python -m pytest tests -q
-python tools/check_release_readiness.py
-python tools/check_release_monitoring.py
-```
+评估侧结果（`bucket5`）：
 
-这条路径验证的是：
+| 结果线 | Recall@10 | NDCG@10 | 说明 |
+| --- | ---: | ---: | --- |
+| 双模型研究峰值 `v120 @ alpha=0.80` | `0.1973` | `0.0898` | `11-30 + 31-60` 当前最优离线档 |
+| 三模型冻结基线 `v124 @ alpha=0.36` | `0.1857` | `0.0838` | `11-30 + 31-60 + 61-100` 当前冻结口径 |
 
-- 路径工具是否正常
-- latest / prod run pointer 是否正常
-- validator 行为是否正常
-- release readiness 和 monitoring 工具链是否正常
+当前三模型口径里，深段模型（`61-100`）先按保守方式使用，主要体现为更深位置候选的名次提升，而不是激进地抢占前排位置。
 
-这条路径不依赖原始 Yelp 数据。
+## 这版最值得看的点
 
-### 2. 冻结产物验证
+1. 这次升级不是只换了大模型，而是把召回、精排和救援式重排三层一起重做了一遍，属于整条排序链路的升级。
+2. 大模型不做全量候选重排，只在结构化精排给出的候选窗口上工作，成本、时延和回退风险都更可控。
+3. `Stage11` 的增益不是单纯靠“把 alpha 调大”硬推出来的，`11-30`、`31-60`、`61-100` 三个专家在训练侧都已经学到了稳定信号。
+4. 三模型冻结版本里，前排收益主要由 `11-30` 和 `31-60` 承担，`61-100` 先按保守策略做深段名次提升，避免打乱主链稳定性。
 
-如果你本地已经有冻结的 stage 输出，可以走这条路径检查 artifact lineage。
+## 为什么先做 `bucket10`，再扩到 `bucket5`
 
-```bash
-python tools/validate_stage_artifact.py --kind stage09_candidate --run-dir data/output/09_candidate_fusion/20260311_005450_full_stage09_candidate_fusion
-python tools/validate_stage_artifact.py --kind stage10_rank_model --run-dir data/output/10_rank_models/20260307_210530_stage10_1_rank_train
-python tools/validate_stage_artifact.py --kind stage10_infer_eval --run-dir data/output/10_2_rank_infer_eval/20260313_193213_stage10_2_rank_infer_eval
-python tools/validate_stage_artifact.py --kind stage11_dataset --run-dir data/output/11_qlora_data/20260311_011112_stage11_1_qlora_build_dataset
-```
+这条实验路线是刻意这样安排的，不是事后挑结果。
 
+- `bucket10` 是高交互用户集，用户语义最丰富，历史行为更完整，更适合先验证模型结构本身是否成立。
+- 在这一组上先做实验，能更快判断：
+  - 召回路由有没有把候选池搭对
+  - 结构化精排能不能稳定建立全局排序骨架
+  - 奖励模型能不能在局部竞争里识别被低估的真值
+- `bucket10` 证明方向成立之后，再把同一套方法扩到 `bucket5`，目的是做更大覆盖面的验证，确认这套方法不是只对高交互用户有效。
 
-这条路径会验证：
+所以当前仓库里：
 
-- 冻结的 stage09 candidate 产物
-- 冻结的 stage10 rank-train 产物
-- 冻结的 stage10 infer/eval 产物
-- 冻结的 stage11 dataset 产物
-- 仓库中公开 freeze 与 release lineage 的一致性
+- `bucket10` 更像早期结构验证集
+- `bucket5` 更像当前主展示口径，因为覆盖面更大，也更接近实际主线使用场景
+- `bucket2` 用来验证 `Stage09 -> Stage10` 在含冷启动用户集上是否仍有可迁移性
 
-bucket2/5 stage10 gate 辅助入口：
+## 案例分析入口
 
-```bash
-python scripts/pipeline/bucket_stage10_gate_runner.py --bucket 5 --mode full --dry-run
-```
+首页这里只放三个缩略入口，详细过程放到单独文档：
 
-这个 runner 会把后续 bucket2/5 的 stage10 gate 运行隔离到
-`data/output/stage10_gate` 和 `data/metrics/stage10_gate`。
-真正适合提交进仓库的是 `data/metrics/stage10_gate` 下的小型指标与 manifest；
-大的隔离 run 目录保持本地资产即可，不进入 prod/latest。
-它只补 `bucket_2` 或 `bucket_5` 的 `stage09 -> stage10` 链条，
-stage11 是否放行要等统一 gate 结论。
+- Prompt 构造样本：展示 Stage11 训练时，用户侧证据、当前候选、局部竞争者和排名窗口是怎么拼成一个可学习的局部判断题的。
+- `11-30` 用户案例：展示一个边界真值为什么能在不泄露真值位置的前提下被救回前十。
+- `31-60` 用户案例：展示一个中段真值为什么适合用奖励模型做局部救援，而不是直接重排全榜。
 
-### 3. 基于原始数据全量重跑
+详细案例入口：
 
-只有在你持有原始 Yelp 数据、并且希望重跑各阶段流水线时，才需要走这条路径。
+- [docs/stage11/stage11_case_notes_20260409.zh-CN.md](./docs/stage11/stage11_case_notes_20260409.zh-CN.md)
 
-需要先知道：
+## 这次版本升级了什么
 
-- 这个公开仓库不包含原始 Yelp source data
-- stage09 到 stage11 的大体量运行产物没有完整地版本化进仓库
-- 当前公开 release 状态主要由 `data/output/_prod_runs` 下的控制文件、已跟踪指标和文档表示
-- 当前稳定的下游 business-profile contract 起点是 [docs/contracts/data_contract.md](./docs/contracts/data_contract.md) 里记录的 stage08 merged profile 输出
+相对上一版仓库冻结版本，这次升级不是单独调整 `Stage11`，而是三层一起升级。
 
-可选的 stage11 训练环境：
+1. 召回路由（`Stage09`）从通用候选融合升级成按路由组织的候选层，候选保真率更高，硬缺失更低。
+2. 结构化精排（`Stage10`）接入了更多来自召回层的特征，形成了可迁移到不同交互门槛用户组的精排主线。
+3. 救援式重排（`Stage11`）从通用 `SFT / DPO` 辅助重排，切换成更贴近排序任务的奖励模型方案。
 
-```bash
-python -m pip install -r requirements-stage11-qlora.txt
-```
+## 三层系统结构
 
-internal pilot 辅助命令：
+### 召回路由（`Stage09`）
 
-```bash
-python scripts/pipeline/internal_pilot_runner.py --mode validate
-python scripts/pipeline/internal_pilot_runner.py --mode monitor
-```
+这一层负责把不同来源的候选组织成统一候选池，并控制召回预算、候选通道和挑战者通道。
 
-Windows 包装脚本：
+### 结构化精排（`Stage10`）
 
-```bat
-scripts/run_internal_pilot.bat --mode validate
-```
+这一层是全局排序骨架。它消费匹配特征、文本特征、相对交叉特征和分组差距特征，输出主排序结果。
 
-## Bucket 策略
+### 救援式重排（`Stage11`）
 
-stage09 在 [scripts/09_candidate_fusion.py](./scripts/09_candidate_fusion.py) 中定义了 `MIN_TRAIN_REVIEWS_BUCKETS = [2, 5, 10]`，对应三个最小历史深度 bucket：
+这一层不接管全排序，而是在 `Stage10` 输出的受控候选窗口上做局部救援。当前方案包括：
 
-- `bucket_2`
-- `bucket_5`
-- `bucket_10`
+- 分段专家模型
+- 候选短名单重排
+- 有边界的门槛与保护规则
 
-对每个 bucket，stage09 还会额外应用 `min_user = min_train + 2` 作为 user-side cohort floor。
+## 为什么不用全量大模型重排
 
-bucket 内部还会再划分 user segment：
+这个项目没有让大模型或奖励模型对全量候选做重排。
 
-- `light`：train interactions `<= 7`
-- `mid`：train interactions `8-19`
-- `heavy`：train interactions `>= 20`
+当前方案只对 `Stage10` 输出窗口做重排，原因是：
 
-这里的 segment 和 bucket 不是一回事。bucket 用于 cohort 切片，segment 用于分段 candidate budget 和 fusion 行为。
+- 成本更低
+- 行为更可控
+- 出问题时更容易回退
+- 对前排结果的扰动更小
 
-为什么当前公开的 stage11 主线先从 `bucket10` 开始：
+因此，`Stage10` 仍然是全局排序骨架，`Stage11` 是受控的增益层，而不是替代层。
 
-- 这是第一个能提供更丰富、更杂偏好的 user slice
-- 最难修复的 head-ordering 问题，尤其 heavy user 问题，会在这个 bucket 上暴露得更明显
-- 这个 bucket 最适合验证 text-aware SFT / DPO sidecar 是否能在结构化 fallback 之上继续提升重排效果
+## 数据泄露控制
 
-`bucket_2` 和 `bucket_5` 现在也已经补齐了 `stage09 -> stage10` 的 gate 产物，
-但仓库当前仍把 `bucket10` 视作冻结公开 release slice，也是唯一已经进入
-stage11 的 bucket。
+当前 `Stage11` 主线按“不在推理时使用真值信息”设计：
 
-## 训练数据构造
+- 专家路由依据的是候选当前所在的排名窗口，而不是隐藏的真值分段
+- 候选短名单重排只使用当前分数和当前名次
+- 真值只参与训练监督和离线评估
 
-### Stage10 结构化重排
+## 用户集定义
 
-冻结 fallback 模型运行：`20260307_210530_stage10_1_rank_train`
+系统当前使用三条按最小交互门槛定义的用户集评估线：
 
-bucket10 的训练量来自冻结模型元数据：
+- 含冷启动、在留二法切分下仍可训练的用户集（`bucket2`，最小交互门槛 4）
+- 中高交互用户集（`bucket5`，最小交互门槛 7）
+- 高交互用户集（`bucket10`，最小交互门槛 12）
 
-- `train_rows = 47271`
-- `train_pos = 2251`
-- `train_users = 2251`
-- `valid_users = 369`
-- `test_users = 701`
+这三条用户集不是互斥分层，而是三种不同门槛下的评估口径。这样做的目的，是验证整条排序栈在不同数据密度下是否都成立，而不是只在单一切片上有效。
 
-这是 sidecar champion 之前对齐使用的结构化 fallback。
+## 对外公开表面
 
-### Stage11 Pointwise 数据集
+- [scripts/stage01_to_stage08](./scripts/stage01_to_stage08)：项目早期流水线，保留作主线历史补充
+- [scripts/launchers](./scripts/launchers)：当前统一启动入口
+- [docs/contracts/launcher_env_conventions.zh-CN.md](./docs/contracts/launcher_env_conventions.zh-CN.md)：启动脚本变量口径
+- [docs/stage11/stage11_31_60_only_and_segmented_fusion_20260408.zh-CN.md](./docs/stage11/stage11_31_60_only_and_segmented_fusion_20260408.zh-CN.md)：Stage11 分段专家设计说明
+- [docs/stage11/stage11_case_notes_20260409.zh-CN.md](./docs/stage11/stage11_case_notes_20260409.zh-CN.md)：Prompt 样本与真实救援案例
+- [data/output/current_release](./data/output/current_release)：当前冻结结果面
+- [data/output/showcase_history](./data/output/showcase_history)：展示用历史结果面
+- [data/metrics/current_release](./data/metrics/current_release)：当前冻结指标快照
+- [data/metrics/showcase_history](./data/metrics/showcase_history)：展示用历史指标快照
 
-冻结数据集运行：`20260311_011112_stage11_1_qlora_build_dataset`
+## 推荐入口
 
-`run_meta.json` 中的关键构造参数：
+当前推荐直接使用 `scripts/launchers` 下的统一入口，而不是根目录下的兼容脚本：
 
-- `buckets_processed = [10]`
-- `candidate_file = candidates_pretrim150.parquet`
-- `topn_per_user = 120`
-- `eval_user_frac = 0.2`
-- `prompt_mode = full_lite`
-- `include_valid_pos = true`
-- `valid_pos_weight = 0.6`
+- Stage09: [scripts/launchers/stage09_bucket5_mainline.sh](./scripts/launchers/stage09_bucket5_mainline.sh)
+- Stage10: [scripts/launchers/stage10_bucket5_mainline.sh](./scripts/launchers/stage10_bucket5_mainline.sh)
+- Stage11:
+  - [scripts/launchers/stage11_bucket5_11_1.sh](./scripts/launchers/stage11_bucket5_11_1.sh)
+  - [scripts/launchers/stage11_bucket5_export_only.sh](./scripts/launchers/stage11_bucket5_export_only.sh)
+  - [scripts/launchers/stage11_bucket5_train.sh](./scripts/launchers/stage11_bucket5_train.sh)
+  - [scripts/launchers/stage11_bucket5_eval.sh](./scripts/launchers/stage11_bucket5_eval.sh)
 
-bucket10 的基础 pointwise 数据量：
+变量定义统一写在：
 
-| Slice | Rows | Positives | Negatives |
-| --- | ---: | ---: | ---: |
-| train | `17796` | `6276` | `11520` |
-| eval | `4531` | `1579` | `2952` |
-| total | `22327` | `7855` | `14472` |
+- [docs/contracts/launcher_env_conventions.zh-CN.md](./docs/contracts/launcher_env_conventions.zh-CN.md)
 
-补充 cohort 信息：
+## 对外技术说明
 
-- `users_total = 3618`
-- `users_with_positive = 3386`
-- `users_no_positive = 232`
+- 启动脚本变量口径：
+  [docs/contracts/launcher_env_conventions.zh-CN.md](./docs/contracts/launcher_env_conventions.zh-CN.md)
+- Stage11 分段专家设计说明：
+  [docs/stage11/stage11_31_60_only_and_segmented_fusion_20260408.zh-CN.md](./docs/stage11/stage11_31_60_only_and_segmented_fusion_20260408.zh-CN.md)
+- Stage11 Prompt 与案例说明：
+  [docs/stage11/stage11_case_notes_20260409.zh-CN.md](./docs/stage11/stage11_case_notes_20260409.zh-CN.md)
 
-### Rich SFT 数据集
+## 仓库边界
 
-当前 SFT 主线并不是直接使用基础 pointwise export，而是使用同一次 bucket10 数据集构造生成的 `rich_sft` export。
+当前仓库版本化的内容包括：
 
-冻结 `rich_sft` 数据量：
+- 代码
+- 小型指标文件
+- manifest
+- 对外技术说明文档
 
-| Slice | Rows | Positives | Negatives |
-| --- | ---: | ---: | ---: |
-| train | `22111` | `6276` | `15835` |
-| eval | `5632` | `1579` | `4053` |
-| total | `27743` | `7855` | `19888` |
+以下内容不做版本化：
 
-`rich_sft` 的构造方式：
+- 原始 Yelp 数据
+- 大模型权重
+- 大体量云端日志
+- 全量预测结果
 
-- 起点仍然是 bucket10 的冻结 `pretrim150` 候选池
-- 与基础 stage11 dataset build 共享同一套 train / eval user 切分
-- 使用 `full_lite` prompt，包含 user evidence、item evidence 和 history anchors
-- 保留 true positives，并可选纳入权重为 `0.6` 的 valid positives
-- 每个用户采样负例的形状是 `1 explicit + 2 hard + 2 near + 1 mid + 0 tail`
-- hard negative 限制在 `pre_rank <= 20`
-- mid negative 限制在 `pre_rank <= 60`
-- negative rating 要求 `<= 2.5`
-- 当前冻结 run 中 `rich_sft_allow_neg_fill = false`
+当前对外展示用的小结果文件统一放在：
 
-### DPO Pair 数据集
+- [data/output/current_release](./data/output/current_release)
+- [data/output/showcase_history](./data/output/showcase_history)
+- [data/metrics/current_release](./data/metrics/current_release)
+- [data/metrics/showcase_history](./data/metrics/showcase_history)
 
-当前 DPO 线不是从 raw base weights 直接做 pairwise，而是先从 SFT adapter warm-start，再继续做 DPO。
-
-当前 DPO 的关键形状与构造逻辑：
-
-- pairwise source mode: `rich_sft`
-- pair policy: `v2a`
-- top-k cutoff: `10`
-- high-rank cutoff: `20`
-- loser 优先来自同一 bucket10 候选池中的 `hard`、`near` 和 outranking confusers
-- 审计后的规模约为 `5836` 条 train pairs 和 `1452` 条 eval pairs
-
-## 仓库结构
-
-- [scripts](./scripts)：各阶段脚本与 pipeline 工具
-- [tests](./tests)：可移植测试与本地 artifact smoke checks
-- [tools](./tools)：release 检查、monitoring 与验证工具
-- [config](./config)：后续阶段使用的配置资产
-- [docs](./docs)：分类后的文档索引
-- [docs/contracts](./docs/contracts)：contract 与配置参考
-- [docs/release](./docs/release)：freeze、readiness、monitoring、rollback 文档
-- [docs/repo](./docs/repo)：repo hygiene、path、pointer、smoke-test、runner 文档
-- [docs/stage09](./docs/stage09)：candidate fusion 与 bucket10 audit 文档
-- [docs/stage10](./docs/stage10)：结构化重排训练文档
-- [docs/stage11](./docs/stage11)：QLoRA、sidecar 与 cloud runbook 文档
-- [docs/dpo](./docs/dpo)：DPO 指南与建议
-- [docs/labeling](./docs/labeling)：标注手册
-
-## 关键文档
-
-- 文档总索引：[docs/README.md](./docs/README.md)
-- 数据契约：[docs/contracts/data_contract.md](./docs/contracts/data_contract.md)
-- release readiness：[docs/release/release_readiness_report_internal_pilot_v1_champion_20260313.md](./docs/release/release_readiness_report_internal_pilot_v1_champion_20260313.md)
-- champion closeout：[docs/release/first_champion_closeout_20260313.md](./docs/release/first_champion_closeout_20260313.md)
-- rollback 与 monitoring：[docs/release/rollback_and_monitoring.md](./docs/release/rollback_and_monitoring.md)
-- stage11 cloud run profile：[docs/stage11/stage11_cloud_run_profile_20260309.md](./docs/stage11/stage11_cloud_run_profile_20260309.md)
-- smoke-test 说明：[docs/repo/gl10_smoke_tests_20260313.md](./docs/repo/gl10_smoke_tests_20260313.md)
-
-## 当前限制
-
-- 这仍然是离线 batch pipeline，不是在线 serving 系统
-- 当前 readiness report 仍然是 `WARN`，不是 `PASS`
-- 冻结 stage11 champion 仍记录 `enforce_stage09_gate=false`
-- release manifest 仍标记 `production_ready=false`
-- `GL-01` 凭证轮换当时因为引用的云机器是临时环境而被推迟
-
-## License
-
-本仓库采用 [MIT License](./LICENSE)。
+原始冻结 pack 和内部收口文档继续保留在本地，用于审计与追溯，不纳入当前对外公开表面。

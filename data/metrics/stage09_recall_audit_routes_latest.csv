@@ -1,5 +1,0 @@
-﻿run_id,source_run_09,bucket,route,route_any_hit_rate,route_unique_hit_rate
-20260313_191007,20260311_005450_full_stage09_candidate_fusion,10,als,0.85738,0.123273
-20260313_191007,20260311_005450_full_stage09_candidate_fusion,10,cluster,0.413765,0.015478
-20260313_191007,20260311_005450_full_stage09_candidate_fusion,10,profile,0.713378,0.03372
-20260313_191007,20260311_005450_full_stage09_candidate_fusion,10,popular,0.385572,0.00304

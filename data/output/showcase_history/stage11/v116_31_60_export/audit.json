@@ -1,0 +1,1762 @@
+{
+  "source_stage11_dataset_run": "/root/autodl-tmp/5006_BDA_fast/bucket5_top250_semantic_compact_boundary_reason_rm_11_1/output/11_qlora_data/20260406_034859_stage11_1_qlora_build_dataset",
+  "source_mode": "pool",
+  "buckets": [
+    5
+  ],
+  "target_true_band_filter": {
+    "train": {
+      "enabled": true,
+      "target_true_bands": [
+        "rescue_31_60"
+      ],
+      "input_rows": 235100,
+      "output_rows": 89100,
+      "input_positive_rows": 2351,
+      "input_negative_rows": 232749,
+      "output_positive_rows": 891,
+      "output_negative_rows": 88209,
+      "dropped_positive_rows": 1460,
+      "dropped_negative_rows": 144540,
+      "eligible_users": 891,
+      "output_users": 891,
+      "positive_band_counts_before": {
+        "boundary_11_30": 781,
+        "rescue_31_60": 891,
+        "rescue_61_100": 679
+      },
+      "positive_band_counts_after": {
+        "rescue_31_60": 891
+      }
+    },
+    "eval": {
+      "enabled": true,
+      "target_true_bands": [
+        "rescue_31_60"
+      ],
+      "input_rows": 55200,
+      "output_rows": 21500,
+      "input_positive_rows": 552,
+      "input_negative_rows": 54648,
+      "output_positive_rows": 215,
+      "output_negative_rows": 21285,
+      "dropped_positive_rows": 337,
+      "dropped_negative_rows": 33363,
+      "eligible_users": 215,
+      "output_users": 215,
+      "positive_band_counts_before": {
+        "boundary_11_30": 159,
+        "rescue_31_60": 215,
+        "rescue_61_100": 178
+      },
+      "positive_band_counts_after": {
+        "rescue_31_60": 215
+      }
+    }
+  },
+  "pointwise_audit": {
+    "train": {
+      "rows_total": 89100,
+      "split_label_counts": [
+        {
+          "split": "train",
+          "label": 0,
+          "count": 88209
+        },
+        {
+          "split": "train",
+          "label": 1,
+          "count": 891
+        }
+      ],
+      "users_total": 891,
+      "users_with_positive": 891,
+      "users_with_negative": 891,
+      "users_with_both": 891,
+      "users_positive_only": 0,
+      "users_negative_only": 0,
+      "positive_per_user": {
+        "count": 891,
+        "min": 1.0,
+        "p50": 1.0,
+        "mean": 1.0,
+        "p95": 1.0,
+        "max": 1.0
+      },
+      "negative_per_user": {
+        "count": 891,
+        "min": 99.0,
+        "p50": 99.0,
+        "mean": 99.0,
+        "p95": 99.0,
+        "max": 99.0
+      },
+      "label_source_counts": {
+        "pair_pool": 88209,
+        "true": 891
+      },
+      "neg_tier_counts": {
+        "easy": 3211,
+        "hard": 1102,
+        "mid": 9258,
+        "near": 74638
+      },
+      "pre_rank_band_counts": [
+        {
+          "pre_rank_band": "001_010",
+          "label": 0,
+          "count": 8806
+        },
+        {
+          "pre_rank_band": "001_010",
+          "label": 1,
+          "count": 22
+        },
+        {
+          "pre_rank_band": "011_030",
+          "label": 0,
+          "count": 17760
+        },
+        {
+          "pre_rank_band": "011_030",
+          "label": 1,
+          "count": 1
+        },
+        {
+          "pre_rank_band": "031_080",
+          "label": 0,
+          "count": 28889
+        },
+        {
+          "pre_rank_band": "031_080",
+          "label": 1,
+          "count": 603
+        },
+        {
+          "pre_rank_band": "081_150",
+          "label": 0,
+          "count": 26283
+        },
+        {
+          "pre_rank_band": "081_150",
+          "label": 1,
+          "count": 256
+        },
+        {
+          "pre_rank_band": "151_plus",
+          "label": 0,
+          "count": 6471
+        },
+        {
+          "pre_rank_band": "151_plus",
+          "label": 1,
+          "count": 9
+        }
+      ],
+      "evidence_coverage": {
+        "user_evidence_by_label": {
+          "label_0": 88209,
+          "label_1": 891
+        },
+        "item_evidence_by_label": {
+          "label_0": 83930,
+          "label_1": 891
+        },
+        "pair_evidence_by_label": {
+          "label_0": 78611,
+          "label_1": 856
+        }
+      }
+    },
+    "eval": {
+      "rows_total": 21500,
+      "split_label_counts": [
+        {
+          "split": "eval",
+          "label": 0,
+          "count": 21285
+        },
+        {
+          "split": "eval",
+          "label": 1,
+          "count": 215
+        }
+      ],
+      "users_total": 215,
+      "users_with_positive": 215,
+      "users_with_negative": 215,
+      "users_with_both": 215,
+      "users_positive_only": 0,
+      "users_negative_only": 0,
+      "positive_per_user": {
+        "count": 215,
+        "min": 1.0,
+        "p50": 1.0,
+        "mean": 1.0,
+        "p95": 1.0,
+        "max": 1.0
+      },
+      "negative_per_user": {
+        "count": 215,
+        "min": 99.0,
+        "p50": 99.0,
+        "mean": 99.0,
+        "p95": 99.0,
+        "max": 99.0
+      },
+      "label_source_counts": {
+        "pair_pool": 21285,
+        "true": 215
+      },
+      "neg_tier_counts": {
+        "easy": 765,
+        "hard": 284,
+        "mid": 2277,
+        "near": 17959
+      },
+      "pre_rank_band_counts": [
+        {
+          "pre_rank_band": "001_010",
+          "label": 0,
+          "count": 2123
+        },
+        {
+          "pre_rank_band": "001_010",
+          "label": 1,
+          "count": 5
+        },
+        {
+          "pre_rank_band": "011_030",
+          "label": 0,
+          "count": 4285
+        },
+        {
+          "pre_rank_band": "011_030",
+          "label": 1,
+          "count": 1
+        },
+        {
+          "pre_rank_band": "031_080",
+          "label": 0,
+          "count": 7053
+        },
+        {
+          "pre_rank_band": "031_080",
+          "label": 1,
+          "count": 137
+        },
+        {
+          "pre_rank_band": "081_150",
+          "label": 0,
+          "count": 6296
+        },
+        {
+          "pre_rank_band": "081_150",
+          "label": 1,
+          "count": 69
+        },
+        {
+          "pre_rank_band": "151_plus",
+          "label": 0,
+          "count": 1528
+        },
+        {
+          "pre_rank_band": "151_plus",
+          "label": 1,
+          "count": 3
+        }
+      ],
+      "evidence_coverage": {
+        "user_evidence_by_label": {
+          "label_0": 21285,
+          "label_1": 215
+        },
+        "item_evidence_by_label": {
+          "label_0": 20316,
+          "label_1": 215
+        },
+        "pair_evidence_by_label": {
+          "label_0": 19034,
+          "label_1": 203
+        }
+      }
+    },
+    "all": {
+      "rows_total": 110600,
+      "split_label_counts": [
+        {
+          "split": "eval",
+          "label": 0,
+          "count": 21285
+        },
+        {
+          "split": "eval",
+          "label": 1,
+          "count": 215
+        },
+        {
+          "split": "train",
+          "label": 0,
+          "count": 88209
+        },
+        {
+          "split": "train",
+          "label": 1,
+          "count": 891
+        }
+      ],
+      "users_total": 1106,
+      "users_with_positive": 1106,
+      "users_with_negative": 1106,
+      "users_with_both": 1106,
+      "users_positive_only": 0,
+      "users_negative_only": 0,
+      "positive_per_user": {
+        "count": 1106,
+        "min": 1.0,
+        "p50": 1.0,
+        "mean": 1.0,
+        "p95": 1.0,
+        "max": 1.0
+      },
+      "negative_per_user": {
+        "count": 1106,
+        "min": 99.0,
+        "p50": 99.0,
+        "mean": 99.0,
+        "p95": 99.0,
+        "max": 99.0
+      },
+      "label_source_counts": {
+        "pair_pool": 109494,
+        "true": 1106
+      },
+      "neg_tier_counts": {
+        "easy": 3976,
+        "hard": 1386,
+        "mid": 11535,
+        "near": 92597
+      },
+      "pre_rank_band_counts": [
+        {
+          "pre_rank_band": "001_010",
+          "label": 0,
+          "count": 10929
+        },
+        {
+          "pre_rank_band": "001_010",
+          "label": 1,
+          "count": 27
+        },
+        {
+          "pre_rank_band": "011_030",
+          "label": 0,
+          "count": 22045
+        },
+        {
+          "pre_rank_band": "011_030",
+          "label": 1,
+          "count": 2
+        },
+        {
+          "pre_rank_band": "031_080",
+          "label": 0,
+          "count": 35942
+        },
+        {
+          "pre_rank_band": "031_080",
+          "label": 1,
+          "count": 740
+        },
+        {
+          "pre_rank_band": "081_150",
+          "label": 0,
+          "count": 32579
+        },
+        {
+          "pre_rank_band": "081_150",
+          "label": 1,
+          "count": 325
+        },
+        {
+          "pre_rank_band": "151_plus",
+          "label": 0,
+          "count": 7999
+        },
+        {
+          "pre_rank_band": "151_plus",
+          "label": 1,
+          "count": 12
+        }
+      ],
+      "evidence_coverage": {
+        "user_evidence_by_label": {
+          "label_0": 109494,
+          "label_1": 1106
+        },
+        "item_evidence_by_label": {
+          "label_0": 104246,
+          "label_1": 1106
+        },
+        "pair_evidence_by_label": {
+          "label_0": 97645,
+          "label_1": 1059
+        }
+      }
+    }
+  },
+  "pairwise_audit": {
+    "train": {
+      "users_with_pairs": 856,
+      "users_skipped_no_neg": 0,
+      "rows_skipped_missing_prompt_inputs": 0,
+      "pairs_skipped_low_signal_prompt": 211,
+      "total_pairs": 5077,
+      "max_pairs_per_user": 16,
+      "true_max_pairs_per_user": 16,
+      "valid_max_pairs_per_user": 0,
+      "hist_max_pairs_per_user": 0,
+      "allow_mid_neg": true,
+      "pair_policy": "v2d",
+      "topk_cutoff": 10,
+      "high_rank_cutoff": 20,
+      "pairs_per_user": {
+        "count": 856,
+        "min": 4.0,
+        "p50": 6.0,
+        "mean": 5.93107476635514,
+        "p95": 7.0,
+        "max": 8.0
+      },
+      "prompt_style_counts": {
+        "local_listwise_compare": 5077
+      },
+      "chosen_label_source_counts": {
+        "true": 5077
+      },
+      "selected_neg_tier_counts": {
+        "hard": 271,
+        "mid": 268,
+        "near": 4538
+      },
+      "selection_bucket_counts": {
+        "true_gt_clear_multi_route_rescue_confuser": 23,
+        "true_gt_competition_confuser": 13,
+        "true_gt_hard": 254,
+        "true_gt_mid": 4,
+        "true_gt_near": 2945,
+        "true_gt_rescue_31_60_confuser": 437,
+        "true_gt_same_band_rescue_31_60_competitor": 1401
+      },
+      "score_gap": {
+        "count": 5077,
+        "min": -1.1758025687395541,
+        "p50": -0.109373973906327,
+        "mean": -0.22857585918149018,
+        "p95": 0.01373507545712327,
+        "max": 0.12964353903361062
+      },
+      "rank_gap": {
+        "count": 5077,
+        "min": -260.0,
+        "p50": -49.0,
+        "mean": -47.4699625763246,
+        "p95": 26.0,
+        "max": 103.0
+      },
+      "coverage": {
+        "chosen_item_evidence_rate": 1.0,
+        "rejected_item_evidence_rate": 0.9765609611975576,
+        "chosen_pair_evidence_rate": 1.0,
+        "rejected_pair_evidence_rate": 0.9824699625763246,
+        "chosen_tower_nonzero_rate": 0.9986212330116211,
+        "rejected_tower_nonzero_rate": 1.0,
+        "chosen_seq_nonzero_rate": 0.9986212330116211,
+        "rejected_seq_nonzero_rate": 1.0,
+        "chosen_true_rate": 1.0,
+        "rejected_topk_incumbent_rate": 0.020287571400433326,
+        "rejected_high_rank_rate": 0.08311995272798897,
+        "rejected_outranks_chosen_rate": 0.36655505219617884,
+        "rejected_same_city_rate": 0.3094347055347646,
+        "rejected_same_primary_category_rate": 0.029741973606460508,
+        "rejected_category_overlap_rate": 0.35237344888713806,
+        "rejected_model_confuser_rate": 0.0,
+        "rejected_competition_confuser_rate": 0.28008666535355525,
+        "rejected_fit_risk_confuser_rate": 0.0,
+        "rejected_boundary_kickout_rate": 0.001378766988378964,
+        "rejected_head_preserve_rate": 0.004530234390388024,
+        "rejected_multi_route_preserve_rate": 0.14378570021666337,
+        "rejected_low_support_preserve_rate": 0.0,
+        "rejected_structured_lift_rate": 0.00019696671262556627,
+        "rejected_deep_semantic_rate": 0.25960212724049636,
+        "local_listwise_compare_rate": 1.0,
+        "blocker_compare_rate": 0.0,
+        "chosen_structured_residue_rate": 0.0,
+        "rejected_structured_residue_rate": 0.0
+      },
+      "prompt_quality": {
+        "chosen_prompt_chars": {
+          "count": 5077,
+          "min": 5233.0,
+          "p50": 5727.0,
+          "mean": 5725.160724837502,
+          "p95": 5933.0,
+          "max": 6056.0
+        },
+        "rejected_prompt_chars": {
+          "count": 5077,
+          "min": 5013.0,
+          "p50": 5581.0,
+          "mean": 5585.410281662399,
+          "p95": 5885.0,
+          "max": 6056.0
+        },
+        "prompt_char_gap_chosen_minus_rejected": {
+          "count": 5077,
+          "min": -62.0,
+          "p50": 217.0,
+          "mean": 139.7504431751034,
+          "p95": 259.0,
+          "max": 325.0
+        },
+        "chosen_field_present_rate": {
+          "user_focus": 1.0,
+          "user_avoid": 0.7000196966712625,
+          "history_pattern": 1.0,
+          "user_evidence": 0.9326373842820563,
+          "user_match_points": 1.0,
+          "user_conflict_points": 0.990939531219224
+        },
+        "chosen_field_informative_rate": {
+          "user_focus": 1.0,
+          "user_avoid": 0.7000196966712625,
+          "history_pattern": 1.0,
+          "user_evidence": 0.9326373842820563,
+          "user_match_points": 1.0,
+          "user_conflict_points": 0.990939531219224
+        },
+        "rejected_field_present_rate": {
+          "user_focus": 1.0,
+          "user_avoid": 0.7000196966712625,
+          "history_pattern": 1.0,
+          "user_evidence": 0.9326373842820563,
+          "user_match_points": 0.9956667323222376,
+          "user_conflict_points": 0.9870001969667126
+        },
+        "rejected_field_informative_rate": {
+          "user_focus": 1.0,
+          "user_avoid": 0.7000196966712625,
+          "history_pattern": 1.0,
+          "user_evidence": 0.9326373842820563,
+          "user_match_points": 0.9956667323222376,
+          "user_conflict_points": 0.9870001969667126
+        },
+        "chosen_scaffold_phrase_count": {
+          "likely_friction_comes_from": 323
+        },
+        "rejected_scaffold_phrase_count": {
+          "likely_friction_comes_from": 323
+        },
+        "chosen_scaffold_phrase_rate": {
+          "likely_friction_comes_from": 0.0636202481780579,
+          "likely_friction_points_include": 0.0,
+          "longer_term_habits_favor": 0.0,
+          "other_recurring_preferences_include": 0.0,
+          "past_evidence_friction": 0.0,
+          "past_evidence_interest": 0.0,
+          "recent_activity_points_to": 0.0,
+          "recent_choices_lean_toward": 0.0,
+          "recurring_preferences_include": 0.0,
+          "user_consistently_goes_for": 0.0
+        },
+        "rejected_scaffold_phrase_rate": {
+          "likely_friction_comes_from": 0.0636202481780579,
+          "likely_friction_points_include": 0.0,
+          "longer_term_habits_favor": 0.0,
+          "other_recurring_preferences_include": 0.0,
+          "past_evidence_friction": 0.0,
+          "past_evidence_interest": 0.0,
+          "recent_activity_points_to": 0.0,
+          "recent_choices_lean_toward": 0.0,
+          "recurring_preferences_include": 0.0,
+          "user_consistently_goes_for": 0.0
+        }
+      },
+      "chosen_pack_by_band": {
+        "rescue_31_60": {
+          "chosen_total": 891,
+          "chosen_with_pairs": 856,
+          "coverage_rate": 0.9607182940516273,
+          "pairs_per_chosen": {
+            "count": 856,
+            "min": 4.0,
+            "p50": 6.0,
+            "mean": 5.93107476635514,
+            "p95": 7.0,
+            "max": 8.0
+          }
+        }
+      },
+      "chosen_pack_by_reason": {
+        "multi_route_underweighted": {
+          "chosen_with_pairs": 64,
+          "pairs_per_chosen": {
+            "count": 64,
+            "min": 4.0,
+            "p50": 6.0,
+            "mean": 6.234375,
+            "p95": 7.0,
+            "max": 8.0
+          }
+        },
+        "semantic_edge_underweighted": {
+          "chosen_with_pairs": 150,
+          "pairs_per_chosen": {
+            "count": 150,
+            "min": 4.0,
+            "p50": 6.0,
+            "mean": 6.153333333333333,
+            "p95": 7.0,
+            "max": 8.0
+          }
+        },
+        "semantic_edge_xgb_ambiguous": {
+          "chosen_with_pairs": 256,
+          "pairs_per_chosen": {
+            "count": 256,
+            "min": 4.0,
+            "p50": 6.0,
+            "mean": 6.21484375,
+            "p95": 7.0,
+            "max": 8.0
+          }
+        },
+        "unclear_or_non_actionable": {
+          "chosen_with_pairs": 386,
+          "pairs_per_chosen": {
+            "count": 386,
+            "min": 5.0,
+            "p50": 6.0,
+            "mean": 5.606217616580311,
+            "p95": 6.0,
+            "max": 7.0
+          }
+        }
+      },
+      "chosen_slates_by_band": {
+        "rescue_31_60": {
+          "chosen_with_pairs": 856,
+          "slates_per_chosen": {
+            "count": 856,
+            "min": 1.0,
+            "p50": 2.0,
+            "mean": 2.2663551401869158,
+            "p95": 3.0,
+            "max": 3.0
+          }
+        }
+      },
+      "prompt_density_audit": {
+        "chosen_char_len": {
+          "count": 5077,
+          "min": 5233.0,
+          "p50": 5727.0,
+          "mean": 5725.160724837502,
+          "p95": 5933.0,
+          "max": 6056.0
+        },
+        "rejected_char_len": {
+          "count": 5077,
+          "min": 5013.0,
+          "p50": 5581.0,
+          "mean": 5585.410281662399,
+          "p95": 5885.0,
+          "max": 6056.0
+        },
+        "chosen_minus_rejected_char_gap": {
+          "count": 5077,
+          "min": -62.0,
+          "p50": 217.0,
+          "mean": 139.7504431751034,
+          "p95": 259.0,
+          "max": 325.0
+        },
+        "chosen_density_score": {
+          "count": 5077,
+          "min": 21.0,
+          "p50": 30.0,
+          "mean": 29.751132558597597,
+          "p95": 34.5,
+          "max": 40.0
+        },
+        "rejected_density_score": {
+          "count": 5077,
+          "min": 20.5,
+          "p50": 30.0,
+          "mean": 29.86310813472523,
+          "p95": 34.5,
+          "max": 41.5
+        },
+        "chosen_minus_rejected_density_gap": {
+          "count": 5077,
+          "min": -8.5,
+          "p50": 0.0,
+          "mean": -0.11197557612763442,
+          "p95": 3.0,
+          "max": 8.5
+        },
+        "prompt_instance_symmetry": {
+          "focus_char_len": {
+            "count": 10154,
+            "min": 518.0,
+            "p50": 716.0,
+            "mean": 707.2337994878866,
+            "p95": 754.0,
+            "max": 760.0
+          },
+          "mean_rival_char_len": {
+            "count": 10154,
+            "min": 615.25,
+            "p50": 710.25,
+            "mean": 708.1187709277132,
+            "p95": 739.0,
+            "max": 753.25
+          },
+          "focus_minus_rival_char_gap": {
+            "count": 10154,
+            "min": -218.75,
+            "p50": 4.75,
+            "mean": -0.8849714398266693,
+            "p95": 59.75,
+            "max": 122.75
+          },
+          "focus_has_match_rate": 0.9978333661611187,
+          "focus_has_conflict_rate": 0.9889698640929683,
+          "mean_rival_match_rate": 0.9958636990348632,
+          "mean_rival_conflict_rate": 0.9861138467598975
+        },
+        "by_chosen_band": {
+          "rescue_31_60": {
+            "chosen_minus_rejected_char_gap": {
+              "count": 5077,
+              "min": -62.0,
+              "p50": 217.0,
+              "mean": 139.7504431751034,
+              "p95": 259.0,
+              "max": 325.0
+            },
+            "chosen_minus_rejected_density_gap": {
+              "count": 5077,
+              "min": -8.5,
+              "p50": 0.0,
+              "mean": -0.11197557612763442,
+              "p95": 3.0,
+              "max": 8.5
+            },
+            "chosen_density_score": {
+              "count": 5077,
+              "min": 21.0,
+              "p50": 30.0,
+              "mean": 29.751132558597597,
+              "p95": 34.5,
+              "max": 40.0
+            },
+            "rejected_density_score": {
+              "count": 5077,
+              "min": 20.5,
+              "p50": 30.0,
+              "mean": 29.86310813472523,
+              "p95": 34.5,
+              "max": 41.5
+            },
+            "focus_minus_rival_char_gap": {
+              "count": 10154,
+              "min": -218.75,
+              "p50": 4.75,
+              "mean": -0.8849714398266693,
+              "p95": 59.75,
+              "max": 122.75
+            }
+          }
+        },
+        "manual_review_examples": {
+          "highest_information_density": [
+            {
+              "user_idx": 290,
+              "selection_bucket": "true_gt_near",
+              "prompt_style": "local_listwise_compare",
+              "chosen_band": "rescue_31_60",
+              "rejected_band": "head_guard",
+              "chosen_char_len": 5946.0,
+              "rejected_char_len": 5710.0,
+              "char_gap": 236.0,
+              "chosen_density": 40.0,
+              "rejected_density": 40.0,
+              "density_gap": 0.0,
+              "pair_density_floor": 40.0,
+              "chosen_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like dessert, sandwich, and coffee.; recent_intent: Recent visits are leaning toward vegan and vegetarian dishes. Recent review evidence also leans toward dessert, burgers, and drinks and service. Recent outings keep clustering around family friendly settings and late night. Those visits; user_avoid: This user is most likely to pull back when a place involves long waits, weak value for money, parking trouble, and slow service. Negative source evidence repeatedly points to parking trou...",
+              "rejected_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like dessert, sandwich, and coffee.; recent_intent: Recent visits are leaning toward vegan and vegetarian dishes. Recent review evidence also leans toward dessert, burgers, and drinks and service. Recent outings keep clustering around family friendly settings and late night. Those visits; user_avoid: This user is most likely to pull back when a place involves long waits, weak value for money, parking trouble, and slow service. Negative source evidence repeatedly points to parking trou..."
+            },
+            {
+              "user_idx": 290,
+              "selection_bucket": "true_gt_near",
+              "prompt_style": "local_listwise_compare",
+              "chosen_band": "rescue_31_60",
+              "rejected_band": "head_guard",
+              "chosen_char_len": 5946.0,
+              "rejected_char_len": 5718.0,
+              "char_gap": 228.0,
+              "chosen_density": 40.0,
+              "rejected_density": 40.0,
+              "density_gap": 0.0,
+              "pair_density_floor": 40.0,
+              "chosen_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like dessert, sandwich, and coffee.; recent_intent: Recent visits are leaning toward vegan and vegetarian dishes. Recent review evidence also leans toward dessert, burgers, and drinks and service. Recent outings keep clustering around family friendly settings and late night. Those visits; user_avoid: This user is most likely to pull back when a place involves long waits, weak value for money, parking trouble, and slow service. Negative source evidence repeatedly points to parking trou...",
+              "rejected_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like dessert, sandwich, and coffee.; recent_intent: Recent visits are leaning toward vegan and vegetarian dishes. Recent review evidence also leans toward dessert, burgers, and drinks and service. Recent outings keep clustering around family friendly settings and late night. Those visits; user_avoid: This user is most likely to pull back when a place involves long waits, weak value for money, parking trouble, and slow service. Negative source evidence repeatedly points to parking trou..."
+            },
+            {
+              "user_idx": 290,
+              "selection_bucket": "true_gt_near",
+              "prompt_style": "local_listwise_compare",
+              "chosen_band": "rescue_31_60",
+              "rejected_band": "rescue_31_60",
+              "chosen_char_len": 5946.0,
+              "rejected_char_len": 5955.0,
+              "char_gap": -9.0,
+              "chosen_density": 40.0,
+              "rejected_density": 41.5,
+              "density_gap": -1.5,
+              "pair_density_floor": 40.0,
+              "chosen_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like dessert, sandwich, and coffee.; recent_intent: Recent visits are leaning toward vegan and vegetarian dishes. Recent review evidence also leans toward dessert, burgers, and drinks and service. Recent outings keep clustering around family friendly settings and late night. Those visits; user_avoid: This user is most likely to pull back when a place involves long waits, weak value for money, parking trouble, and slow service. Negative source evidence repeatedly points to parking trou...",
+              "rejected_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like dessert, sandwich, and coffee.; recent_intent: Recent visits are leaning toward vegan and vegetarian dishes. Recent review evidence also leans toward dessert, burgers, and drinks and service. Recent outings keep clustering around family friendly settings and late night. Those visits; user_avoid: This user is most likely to pull back when a place involves long waits, weak value for money, parking trouble, and slow service. Negative source evidence repeatedly points to parking trou..."
+            },
+            {
+              "user_idx": 3555,
+              "selection_bucket": "true_gt_same_band_rescue_31_60_competitor",
+              "prompt_style": "local_listwise_compare",
+              "chosen_band": "rescue_31_60",
+              "rejected_band": "rescue_31_60",
+              "chosen_char_len": 5686.0,
+              "rejected_char_len": 5686.0,
+              "char_gap": 0.0,
+              "chosen_density": 39.0,
+              "rejected_density": 39.0,
+              "density_gap": 0.0,
+              "pair_density_floor": 39.0,
+              "chosen_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like sandwich, fried chicken, and burger.; recent_intent: Recent outings keep clustering around late night meals, nightlife, and family friendly settings. Those visits also lean toward places with takeout and delivery.; user_avoid: This user is most likely to pull back when a place involves long waits, rude or inattentive service, slow service, and weak value for money.; history_pattern: Older favorites most often centered on sandwich, fried chicken, burger, and cocktail bar.; user_ev...",
+              "rejected_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like sandwich, fried chicken, and burger.; recent_intent: Recent outings keep clustering around late night meals, nightlife, and family friendly settings. Those visits also lean toward places with takeout and delivery.; user_avoid: This user is most likely to pull back when a place involves long waits, rude or inattentive service, slow service, and weak value for money.; history_pattern: Older favorites most often centered on sandwich, fried chicken, burger, and cocktail bar.; user_ev..."
+            },
+            {
+              "user_idx": 290,
+              "selection_bucket": "true_gt_near",
+              "prompt_style": "local_listwise_compare",
+              "chosen_band": "rescue_31_60",
+              "rejected_band": "rescue_31_60",
+              "chosen_char_len": 5946.0,
+              "rejected_char_len": 5958.0,
+              "char_gap": -12.0,
+              "chosen_density": 40.0,
+              "rejected_density": 38.5,
+              "density_gap": 1.5,
+              "pair_density_floor": 38.5,
+              "chosen_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like dessert, sandwich, and coffee.; recent_intent: Recent visits are leaning toward vegan and vegetarian dishes. Recent review evidence also leans toward dessert, burgers, and drinks and service. Recent outings keep clustering around family friendly settings and late night. Those visits; user_avoid: This user is most likely to pull back when a place involves long waits, weak value for money, parking trouble, and slow service. Negative source evidence repeatedly points to parking trou...",
+              "rejected_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like dessert, sandwich, and coffee.; recent_intent: Recent visits are leaning toward vegan and vegetarian dishes. Recent review evidence also leans toward dessert, burgers, and drinks and service. Recent outings keep clustering around family friendly settings and late night. Those visits; user_avoid: This user is most likely to pull back when a place involves long waits, weak value for money, parking trouble, and slow service. Negative source evidence repeatedly points to parking trou..."
+            }
+          ],
+          "lowest_information_density": [
+            {
+              "user_idx": 6281,
+              "selection_bucket": "true_gt_same_band_rescue_31_60_competitor",
+              "prompt_style": "local_listwise_compare",
+              "chosen_band": "rescue_31_60",
+              "rejected_band": "rescue_31_60",
+              "chosen_char_len": 5564.0,
+              "rejected_char_len": 5575.0,
+              "char_gap": -11.0,
+              "chosen_density": 22.0,
+              "rejected_density": 20.5,
+              "density_gap": 1.5,
+              "pair_density_floor": 20.5,
+              "chosen_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like coffee, shrimp, and dessert.; recent_intent: Recent visits are leaning toward burgers and sandwiches. Recent outings keep clustering around family friendly settings and late night. Those visits also lean toward places with takeout, reservations, and late hours.; user_avoid: This user is most likely to pull back when a place involves long waits.; history_pattern: Older favorites most often centered on coffee, shrimp, dessert, and burger sandwich.; user_evidence: Past reviews menti...",
+              "rejected_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like coffee, shrimp, and dessert.; recent_intent: Recent visits are leaning toward burgers and sandwiches. Recent outings keep clustering around family friendly settings and late night. Those visits also lean toward places with takeout, reservations, and late hours.; user_avoid: This user is most likely to pull back when a place involves long waits.; history_pattern: Older favorites most often centered on coffee, shrimp, dessert, and burger sandwich.; user_evidence: Past reviews menti..."
+            },
+            {
+              "user_idx": 1313,
+              "selection_bucket": "true_gt_rescue_31_60_confuser",
+              "prompt_style": "local_listwise_compare",
+              "chosen_band": "rescue_31_60",
+              "rejected_band": "head_guard",
+              "chosen_char_len": 5570.0,
+              "rejected_char_len": 5323.0,
+              "char_gap": 247.0,
+              "chosen_density": 21.0,
+              "rejected_density": 25.0,
+              "density_gap": -4.0,
+              "pair_density_floor": 21.0,
+              "chosen_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like shrimp, dessert, and gumbo.; recent_intent: Recent outings keep clustering around late night meals and late night. Those visits also lean toward places with takeout and reservations.; user_avoid: This user is most likely to pull back when a place involves weak value for money. Negative source evidence repeatedly points to weak value for money. Negative source evidence also flags Way too expensive for low quality; history_pattern: Past favorites repeatedly point back to wine and c...",
+              "rejected_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like shrimp, dessert, and gumbo.; recent_intent: Recent outings keep clustering around late night meals and late night. Those visits also lean toward places with takeout and reservations.; user_avoid: This user is most likely to pull back when a place involves weak value for money. Negative source evidence repeatedly points to weak value for money. Negative source evidence also flags Way too expensive for low quality; history_pattern: Past favorites repeatedly point back to wine and c..."
+            },
+            {
+              "user_idx": 1313,
+              "selection_bucket": "true_gt_clear_multi_route_rescue_confuser",
+              "prompt_style": "local_listwise_compare",
+              "chosen_band": "rescue_31_60",
+              "rejected_band": "boundary_11_30",
+              "chosen_char_len": 5624.0,
+              "rejected_char_len": 5396.0,
+              "char_gap": 228.0,
+              "chosen_density": 21.0,
+              "rejected_density": 24.0,
+              "density_gap": -3.0,
+              "pair_density_floor": 21.0,
+              "chosen_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like shrimp, dessert, and gumbo.; recent_intent: Recent outings keep clustering around late night meals and late night. Those visits also lean toward places with takeout and reservations.; user_avoid: This user is most likely to pull back when a place involves weak value for money. Negative source evidence repeatedly points to weak value for money. Negative source evidence also flags Way too expensive for low quality; history_pattern: Past favorites repeatedly point back to wine and c...",
+              "rejected_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like shrimp, dessert, and gumbo.; recent_intent: Recent outings keep clustering around late night meals and late night. Those visits also lean toward places with takeout and reservations.; user_avoid: This user is most likely to pull back when a place involves weak value for money. Negative source evidence repeatedly points to weak value for money. Negative source evidence also flags Way too expensive for low quality; history_pattern: Past favorites repeatedly point back to wine and c..."
+            },
+            {
+              "user_idx": 1313,
+              "selection_bucket": "true_gt_near",
+              "prompt_style": "local_listwise_compare",
+              "chosen_band": "rescue_31_60",
+              "rejected_band": "rescue_31_60",
+              "chosen_char_len": 5570.0,
+              "rejected_char_len": 5571.0,
+              "char_gap": -1.0,
+              "chosen_density": 21.0,
+              "rejected_density": 24.0,
+              "density_gap": -3.0,
+              "pair_density_floor": 21.0,
+              "chosen_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like shrimp, dessert, and gumbo.; recent_intent: Recent outings keep clustering around late night meals and late night. Those visits also lean toward places with takeout and reservations.; user_avoid: This user is most likely to pull back when a place involves weak value for money. Negative source evidence repeatedly points to weak value for money. Negative source evidence also flags Way too expensive for low quality; history_pattern: Past favorites repeatedly point back to wine and c...",
+              "rejected_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like shrimp, dessert, and gumbo.; recent_intent: Recent outings keep clustering around late night meals and late night. Those visits also lean toward places with takeout and reservations.; user_avoid: This user is most likely to pull back when a place involves weak value for money. Negative source evidence repeatedly points to weak value for money. Negative source evidence also flags Way too expensive for low quality; history_pattern: Past favorites repeatedly point back to wine and c..."
+            },
+            {
+              "user_idx": 1313,
+              "selection_bucket": "true_gt_rescue_31_60_confuser",
+              "prompt_style": "local_listwise_compare",
+              "chosen_band": "rescue_31_60",
+              "rejected_band": "boundary_11_30",
+              "chosen_char_len": 5570.0,
+              "rejected_char_len": 5338.0,
+              "char_gap": 232.0,
+              "chosen_density": 21.0,
+              "rejected_density": 24.0,
+              "density_gap": -3.0,
+              "pair_density_floor": 21.0,
+              "chosen_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like shrimp, dessert, and gumbo.; recent_intent: Recent outings keep clustering around late night meals and late night. Those visits also lean toward places with takeout and reservations.; user_avoid: This user is most likely to pull back when a place involves weak value for money. Negative source evidence repeatedly points to weak value for money. Negative source evidence also flags Way too expensive for low quality; history_pattern: Past favorites repeatedly point back to wine and c...",
+              "rejected_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like shrimp, dessert, and gumbo.; recent_intent: Recent outings keep clustering around late night meals and late night. Those visits also lean toward places with takeout and reservations.; user_avoid: This user is most likely to pull back when a place involves weak value for money. Negative source evidence repeatedly points to weak value for money. Negative source evidence also flags Way too expensive for low quality; history_pattern: Past favorites repeatedly point back to wine and c..."
+            }
+          ]
+        }
+      }
+    },
+    "eval": {
+      "users_with_pairs": 203,
+      "users_skipped_no_neg": 0,
+      "rows_skipped_missing_prompt_inputs": 0,
+      "pairs_skipped_low_signal_prompt": 71,
+      "total_pairs": 1217,
+      "max_pairs_per_user": 16,
+      "true_max_pairs_per_user": 16,
+      "valid_max_pairs_per_user": 0,
+      "hist_max_pairs_per_user": 0,
+      "allow_mid_neg": true,
+      "pair_policy": "v2d",
+      "topk_cutoff": 10,
+      "high_rank_cutoff": 20,
+      "pairs_per_user": {
+        "count": 203,
+        "min": 4.0,
+        "p50": 6.0,
+        "mean": 5.995073891625616,
+        "p95": 7.0,
+        "max": 8.0
+      },
+      "prompt_style_counts": {
+        "local_listwise_compare": 1217
+      },
+      "chosen_label_source_counts": {
+        "true": 1217
+      },
+      "selected_neg_tier_counts": {
+        "hard": 72,
+        "mid": 85,
+        "near": 1060
+      },
+      "selection_bucket_counts": {
+        "true_gt_clear_multi_route_rescue_confuser": 5,
+        "true_gt_competition_confuser": 5,
+        "true_gt_hard": 69,
+        "true_gt_mid": 3,
+        "true_gt_near": 702,
+        "true_gt_rescue_31_60_confuser": 103,
+        "true_gt_same_band_rescue_31_60_competitor": 330
+      },
+      "score_gap": {
+        "count": 1217,
+        "min": -1.2027471955180116,
+        "p50": -0.11419816441943387,
+        "mean": -0.23402998972057854,
+        "p95": 0.012767504740344965,
+        "max": 0.10515172882574803
+      },
+      "rank_gap": {
+        "count": 1217,
+        "min": -254.0,
+        "p50": -49.0,
+        "mean": -48.219391947411665,
+        "p95": 24.0,
+        "max": 74.0
+      },
+      "coverage": {
+        "chosen_item_evidence_rate": 1.0,
+        "rejected_item_evidence_rate": 0.9802793755135579,
+        "chosen_pair_evidence_rate": 1.0,
+        "rejected_pair_evidence_rate": 0.9876746096959738,
+        "chosen_tower_nonzero_rate": 0.9950698438783895,
+        "rejected_tower_nonzero_rate": 1.0,
+        "chosen_seq_nonzero_rate": 0.9950698438783895,
+        "rejected_seq_nonzero_rate": 1.0,
+        "chosen_true_rate": 1.0,
+        "rejected_topk_incumbent_rate": 0.016433853738701727,
+        "rejected_high_rank_rate": 0.08299096138044372,
+        "rejected_outranks_chosen_rate": 0.3607230895645029,
+        "rejected_same_city_rate": 0.28594905505341,
+        "rejected_same_primary_category_rate": 0.03451109285127362,
+        "rejected_category_overlap_rate": 0.3442892358258012,
+        "rejected_model_confuser_rate": 0.0,
+        "rejected_competition_confuser_rate": 0.2629416598192276,
+        "rejected_fit_risk_confuser_rate": 0.0,
+        "rejected_boundary_kickout_rate": 0.0008216926869350862,
+        "rejected_head_preserve_rate": 0.005751848808545604,
+        "rejected_multi_route_preserve_rate": 0.1257189811010682,
+        "rejected_low_support_preserve_rate": 0.0,
+        "rejected_structured_lift_rate": 0.0,
+        "rejected_deep_semantic_rate": 0.23664749383730485,
+        "local_listwise_compare_rate": 1.0,
+        "blocker_compare_rate": 0.0,
+        "chosen_structured_residue_rate": 0.0,
+        "rejected_structured_residue_rate": 0.0
+      },
+      "prompt_quality": {
+        "chosen_prompt_chars": {
+          "count": 1217,
+          "min": 5347.0,
+          "p50": 5739.0,
+          "mean": 5738.123253903041,
+          "p95": 5964.0,
+          "max": 6068.0
+        },
+        "rejected_prompt_chars": {
+          "count": 1217,
+          "min": 5127.0,
+          "p50": 5591.0,
+          "mean": 5597.138044371405,
+          "p95": 5922.0,
+          "max": 6050.0
+        },
+        "prompt_char_gap_chosen_minus_rejected": {
+          "count": 1217,
+          "min": -39.0,
+          "p50": 216.0,
+          "mean": 140.98520953163518,
+          "p95": 264.0,
+          "max": 310.0
+        },
+        "chosen_field_present_rate": {
+          "user_focus": 1.0,
+          "user_avoid": 0.7206244864420707,
+          "history_pattern": 1.0,
+          "user_evidence": 0.9260476581758422,
+          "user_match_points": 1.0,
+          "user_conflict_points": 0.990139687756779
+        },
+        "chosen_field_informative_rate": {
+          "user_focus": 1.0,
+          "user_avoid": 0.7206244864420707,
+          "history_pattern": 1.0,
+          "user_evidence": 0.9260476581758422,
+          "user_match_points": 1.0,
+          "user_conflict_points": 0.990139687756779
+        },
+        "rejected_field_present_rate": {
+          "user_focus": 1.0,
+          "user_avoid": 0.7206244864420707,
+          "history_pattern": 1.0,
+          "user_evidence": 0.9260476581758422,
+          "user_match_points": 0.9975349219391948,
+          "user_conflict_points": 0.9868529170090387
+        },
+        "rejected_field_informative_rate": {
+          "user_focus": 1.0,
+          "user_avoid": 0.7206244864420707,
+          "history_pattern": 1.0,
+          "user_evidence": 0.9260476581758422,
+          "user_match_points": 0.9975349219391948,
+          "user_conflict_points": 0.9868529170090387
+        },
+        "chosen_scaffold_phrase_count": {
+          "likely_friction_comes_from": 65
+        },
+        "rejected_scaffold_phrase_count": {
+          "likely_friction_comes_from": 65
+        },
+        "chosen_scaffold_phrase_rate": {
+          "likely_friction_comes_from": 0.05341002465078061,
+          "likely_friction_points_include": 0.0,
+          "longer_term_habits_favor": 0.0,
+          "other_recurring_preferences_include": 0.0,
+          "past_evidence_friction": 0.0,
+          "past_evidence_interest": 0.0,
+          "recent_activity_points_to": 0.0,
+          "recent_choices_lean_toward": 0.0,
+          "recurring_preferences_include": 0.0,
+          "user_consistently_goes_for": 0.0
+        },
+        "rejected_scaffold_phrase_rate": {
+          "likely_friction_comes_from": 0.05341002465078061,
+          "likely_friction_points_include": 0.0,
+          "longer_term_habits_favor": 0.0,
+          "other_recurring_preferences_include": 0.0,
+          "past_evidence_friction": 0.0,
+          "past_evidence_interest": 0.0,
+          "recent_activity_points_to": 0.0,
+          "recent_choices_lean_toward": 0.0,
+          "recurring_preferences_include": 0.0,
+          "user_consistently_goes_for": 0.0
+        }
+      },
+      "chosen_pack_by_band": {
+        "rescue_31_60": {
+          "chosen_total": 215,
+          "chosen_with_pairs": 203,
+          "coverage_rate": 0.9441860465116279,
+          "pairs_per_chosen": {
+            "count": 203,
+            "min": 4.0,
+            "p50": 6.0,
+            "mean": 5.995073891625616,
+            "p95": 7.0,
+            "max": 8.0
+          }
+        }
+      },
+      "chosen_pack_by_reason": {
+        "multi_route_underweighted": {
+          "chosen_with_pairs": 18,
+          "pairs_per_chosen": {
+            "count": 18,
+            "min": 6.0,
+            "p50": 6.0,
+            "mean": 6.5,
+            "p95": 7.0,
+            "max": 7.0
+          }
+        },
+        "semantic_edge_underweighted": {
+          "chosen_with_pairs": 40,
+          "pairs_per_chosen": {
+            "count": 40,
+            "min": 4.0,
+            "p50": 7.0,
+            "mean": 6.125,
+            "p95": 7.0,
+            "max": 7.0
+          }
+        },
+        "semantic_edge_xgb_ambiguous": {
+          "chosen_with_pairs": 50,
+          "pairs_per_chosen": {
+            "count": 50,
+            "min": 5.0,
+            "p50": 6.0,
+            "mean": 6.26,
+            "p95": 7.0,
+            "max": 8.0
+          }
+        },
+        "unclear_or_non_actionable": {
+          "chosen_with_pairs": 95,
+          "pairs_per_chosen": {
+            "count": 95,
+            "min": 5.0,
+            "p50": 6.0,
+            "mean": 5.705263157894737,
+            "p95": 6.0,
+            "max": 7.0
+          }
+        }
+      },
+      "chosen_slates_by_band": {
+        "rescue_31_60": {
+          "chosen_with_pairs": 203,
+          "slates_per_chosen": {
+            "count": 203,
+            "min": 1.0,
+            "p50": 2.0,
+            "mean": 2.3004926108374386,
+            "p95": 3.0,
+            "max": 3.0
+          }
+        }
+      },
+      "prompt_density_audit": {
+        "chosen_char_len": {
+          "count": 1217,
+          "min": 5347.0,
+          "p50": 5739.0,
+          "mean": 5738.123253903041,
+          "p95": 5964.0,
+          "max": 6068.0
+        },
+        "rejected_char_len": {
+          "count": 1217,
+          "min": 5127.0,
+          "p50": 5591.0,
+          "mean": 5597.138044371405,
+          "p95": 5922.0,
+          "max": 6050.0
+        },
+        "chosen_minus_rejected_char_gap": {
+          "count": 1217,
+          "min": -39.0,
+          "p50": 216.0,
+          "mean": 140.98520953163518,
+          "p95": 264.0,
+          "max": 310.0
+        },
+        "chosen_density_score": {
+          "count": 1217,
+          "min": 23.5,
+          "p50": 29.5,
+          "mean": 29.918652423993425,
+          "p95": 35.5,
+          "max": 39.5
+        },
+        "rejected_density_score": {
+          "count": 1217,
+          "min": 21.5,
+          "p50": 30.0,
+          "mean": 29.979457682826624,
+          "p95": 35.0,
+          "max": 41.0
+        },
+        "chosen_minus_rejected_density_gap": {
+          "count": 1217,
+          "min": -7.5,
+          "p50": 0.0,
+          "mean": -0.06080525883319639,
+          "p95": 3.0,
+          "max": 6.0
+        },
+        "prompt_instance_symmetry": {
+          "focus_char_len": {
+            "count": 2434,
+            "min": 564.0,
+            "p50": 717.0,
+            "mean": 709.0369761709121,
+            "p95": 754.0,
+            "max": 760.0
+          },
+          "mean_rival_char_len": {
+            "count": 2434,
+            "min": 644.25,
+            "p50": 710.25,
+            "mean": 707.9276910435497,
+            "p95": 739.25,
+            "max": 754.75
+          },
+          "focus_minus_rival_char_gap": {
+            "count": 2434,
+            "min": -181.75,
+            "p50": 6.5,
+            "mean": 1.1092851273623665,
+            "p95": 60.0,
+            "max": 108.5
+          },
+          "focus_has_match_rate": 0.9987674609695973,
+          "focus_has_conflict_rate": 0.9884963023829088,
+          "mean_rival_match_rate": 0.9984593262119967,
+          "mean_rival_conflict_rate": 0.9868529170090387
+        },
+        "by_chosen_band": {
+          "rescue_31_60": {
+            "chosen_minus_rejected_char_gap": {
+              "count": 1217,
+              "min": -39.0,
+              "p50": 216.0,
+              "mean": 140.98520953163518,
+              "p95": 264.0,
+              "max": 310.0
+            },
+            "chosen_minus_rejected_density_gap": {
+              "count": 1217,
+              "min": -7.5,
+              "p50": 0.0,
+              "mean": -0.06080525883319639,
+              "p95": 3.0,
+              "max": 6.0
+            },
+            "chosen_density_score": {
+              "count": 1217,
+              "min": 23.5,
+              "p50": 29.5,
+              "mean": 29.918652423993425,
+              "p95": 35.5,
+              "max": 39.5
+            },
+            "rejected_density_score": {
+              "count": 1217,
+              "min": 21.5,
+              "p50": 30.0,
+              "mean": 29.979457682826624,
+              "p95": 35.0,
+              "max": 41.0
+            },
+            "focus_minus_rival_char_gap": {
+              "count": 2434,
+              "min": -181.75,
+              "p50": 6.5,
+              "mean": 1.1092851273623665,
+              "p95": 60.0,
+              "max": 108.5
+            }
+          }
+        },
+        "manual_review_examples": {
+          "highest_information_density": [
+            {
+              "user_idx": 2017,
+              "selection_bucket": "true_gt_near",
+              "prompt_style": "local_listwise_compare",
+              "chosen_band": "rescue_31_60",
+              "rejected_band": "head_guard",
+              "chosen_char_len": 5800.0,
+              "rejected_char_len": 5558.0,
+              "char_gap": 242.0,
+              "chosen_density": 39.5,
+              "rejected_density": 41.0,
+              "density_gap": -1.5,
+              "pair_density_floor": 39.5,
+              "chosen_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like shrimp, dessert, and oyster. The user also responds well to flavors that lean spicy and sweet.; recent_intent: Recent outings keep clustering around late night meals, family friendly settings, and nightlife. Those visits also lean toward places with takeout and reservations.; user_avoid: This user is most likely to pull back when a place involves long waits, parking trouble, and weak value for money. Negative source evidence repeatedly points to parking trouble and weak value for...",
+              "rejected_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like shrimp, dessert, and oyster. The user also responds well to flavors that lean spicy and sweet.; recent_intent: Recent outings keep clustering around late night meals, family friendly settings, and nightlife. Those visits also lean toward places with takeout and reservations.; user_avoid: This user is most likely to pull back when a place involves long waits, parking trouble, and weak value for money. Negative source evidence repeatedly points to parking trouble and weak value for..."
+            },
+            {
+              "user_idx": 1376,
+              "selection_bucket": "true_gt_rescue_31_60_confuser",
+              "prompt_style": "local_listwise_compare",
+              "chosen_band": "rescue_31_60",
+              "rejected_band": "boundary_11_30",
+              "chosen_char_len": 5652.0,
+              "rejected_char_len": 5418.0,
+              "char_gap": 234.0,
+              "chosen_density": 39.0,
+              "rejected_density": 39.5,
+              "density_gap": -0.5,
+              "pair_density_floor": 39.0,
+              "chosen_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like dessert, coffee, and sandwich. The user also responds well to flavors that lean sweet, savory, and spicy.; recent_intent: Recent visits are leaning toward Mexican tacos. Recent outings keep clustering around late night meals, nightlife, and late night. Those visits also lean toward places with takeout and reservations.; user_avoid: This user is most likely to pull back when a place involves cleanliness issues, inconsistent food quality, weak value for money, and cajun meets overp...",
+              "rejected_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like dessert, coffee, and sandwich. The user also responds well to flavors that lean sweet, savory, and spicy.; recent_intent: Recent visits are leaning toward Mexican tacos. Recent outings keep clustering around late night meals, nightlife, and late night. Those visits also lean toward places with takeout and reservations.; user_avoid: This user is most likely to pull back when a place involves cleanliness issues, inconsistent food quality, weak value for money, and cajun meets overp..."
+            },
+            {
+              "user_idx": 900,
+              "selection_bucket": "true_gt_same_band_rescue_31_60_competitor",
+              "prompt_style": "local_listwise_compare",
+              "chosen_band": "rescue_31_60",
+              "rejected_band": "rescue_31_60",
+              "chosen_char_len": 5737.0,
+              "rejected_char_len": 5755.0,
+              "char_gap": -18.0,
+              "chosen_density": 38.0,
+              "rejected_density": 37.5,
+              "density_gap": 0.5,
+              "pair_density_floor": 37.5,
+              "chosen_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like dessert, pho, and shrimp.; recent_intent: Recent visits are leaning toward Asian dishes. Recent review evidence also leans toward very clean place, nice neighborhood coffee house, and fast and friendly service. Recent outings keep clustering around late night meals, family; user_avoid: This user is most likely to pull back when a place involves parking trouble, long waits, slow service, and very slow service. Negative source evidence repeatedly points to parking trouble, long wai...",
+              "rejected_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like dessert, pho, and shrimp.; recent_intent: Recent visits are leaning toward Asian dishes. Recent review evidence also leans toward very clean place, nice neighborhood coffee house, and fast and friendly service. Recent outings keep clustering around late night meals, family; user_avoid: This user is most likely to pull back when a place involves parking trouble, long waits, slow service, and very slow service. Negative source evidence repeatedly points to parking trouble, long wai..."
+            },
+            {
+              "user_idx": 4128,
+              "selection_bucket": "true_gt_same_band_rescue_31_60_competitor",
+              "prompt_style": "local_listwise_compare",
+              "chosen_band": "rescue_31_60",
+              "rejected_band": "rescue_31_60",
+              "chosen_char_len": 5665.0,
+              "rejected_char_len": 5659.0,
+              "char_gap": 6.0,
+              "chosen_density": 37.5,
+              "rejected_density": 37.5,
+              "density_gap": 0.0,
+              "pair_density_floor": 37.5,
+              "chosen_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like crawfish, dessert, and fried chicken.; recent_intent: Recent visits are leaning toward japanese sushi. Recent review evidence also leans toward thai tea or drink and tomyum seafood noodle soup. Recent outings keep clustering around late night meals, group dining, and nightlife. Those visits; history_pattern: Past favorites repeatedly point back to the best sushi restaurant. Older positive visits also keep pointing back to the best sushi restaurant.; user_evidence: Past reviews me...",
+              "rejected_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like crawfish, dessert, and fried chicken.; recent_intent: Recent visits are leaning toward japanese sushi. Recent review evidence also leans toward thai tea or drink and tomyum seafood noodle soup. Recent outings keep clustering around late night meals, group dining, and nightlife. Those visits; history_pattern: Past favorites repeatedly point back to the best sushi restaurant. Older positive visits also keep pointing back to the best sushi restaurant.; user_evidence: Past reviews me..."
+            },
+            {
+              "user_idx": 4128,
+              "selection_bucket": "true_gt_same_band_rescue_31_60_competitor",
+              "prompt_style": "local_listwise_compare",
+              "chosen_band": "rescue_31_60",
+              "rejected_band": "rescue_31_60",
+              "chosen_char_len": 5665.0,
+              "rejected_char_len": 5647.0,
+              "char_gap": 18.0,
+              "chosen_density": 37.5,
+              "rejected_density": 37.5,
+              "density_gap": 0.0,
+              "pair_density_floor": 37.5,
+              "chosen_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like crawfish, dessert, and fried chicken.; recent_intent: Recent visits are leaning toward japanese sushi. Recent review evidence also leans toward thai tea or drink and tomyum seafood noodle soup. Recent outings keep clustering around late night meals, group dining, and nightlife. Those visits; history_pattern: Past favorites repeatedly point back to the best sushi restaurant. Older positive visits also keep pointing back to the best sushi restaurant.; user_evidence: Past reviews me...",
+              "rejected_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like crawfish, dessert, and fried chicken.; recent_intent: Recent visits are leaning toward japanese sushi. Recent review evidence also leans toward thai tea or drink and tomyum seafood noodle soup. Recent outings keep clustering around late night meals, group dining, and nightlife. Those visits; history_pattern: Past favorites repeatedly point back to the best sushi restaurant. Older positive visits also keep pointing back to the best sushi restaurant.; user_evidence: Past reviews me..."
+            }
+          ],
+          "lowest_information_density": [
+            {
+              "user_idx": 8375,
+              "selection_bucket": "true_gt_same_band_rescue_31_60_competitor",
+              "prompt_style": "local_listwise_compare",
+              "chosen_band": "rescue_31_60",
+              "rejected_band": "rescue_31_60",
+              "chosen_char_len": 5473.0,
+              "rejected_char_len": 5473.0,
+              "char_gap": 0.0,
+              "chosen_density": 25.0,
+              "rejected_density": 21.5,
+              "density_gap": 3.5,
+              "pair_density_floor": 21.5,
+              "chosen_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like shrimp, gumbo, and po boy.; recent_intent: Recent outings keep clustering around family friendly settings, late night meals, and late night. Those visits also lean toward places with takeout and reservations.; history_pattern: Older favorites most often centered on shrimp, gumbo, po boy, and deli sandwich.; user_evidence: Past reviews mention I was happy to leave a nice tip as there were many behind the scenes that made the lesson and community meal so enjoyable The school/store....",
+              "rejected_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like shrimp, gumbo, and po boy.; recent_intent: Recent outings keep clustering around family friendly settings, late night meals, and late night. Those visits also lean toward places with takeout and reservations.; history_pattern: Older favorites most often centered on shrimp, gumbo, po boy, and deli sandwich.; user_evidence: Past reviews mention I was happy to leave a nice tip as there were many behind the scenes that made the lesson and community meal so enjoyable The school/store...."
+            },
+            {
+              "user_idx": 1608,
+              "selection_bucket": "true_gt_rescue_31_60_confuser",
+              "prompt_style": "local_listwise_compare",
+              "chosen_band": "rescue_31_60",
+              "rejected_band": "boundary_11_30",
+              "chosen_char_len": 5557.0,
+              "rejected_char_len": 5304.0,
+              "char_gap": 253.0,
+              "chosen_density": 23.5,
+              "rejected_density": 22.0,
+              "density_gap": 1.5,
+              "pair_density_floor": 22.0,
+              "chosen_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like shrimp, coffee, and dessert.; recent_intent: Recent outings keep clustering around family friendly settings. Those visits also lean toward places with takeout and delivery.; user_avoid: Likely friction comes from cocktail bar.; history_pattern: Older favorites most often centered on shrimp, coffee, dessert, and deli sandwich.; user_evidence: Past reviews mention One of my favorite parts of coming in here every time is seeing the absolutely beautiful coffee machine, very old bronz...",
+              "rejected_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like shrimp, coffee, and dessert.; recent_intent: Recent outings keep clustering around family friendly settings. Those visits also lean toward places with takeout and delivery.; user_avoid: Likely friction comes from cocktail bar.; history_pattern: Older favorites most often centered on shrimp, coffee, dessert, and deli sandwich.; user_evidence: Past reviews mention One of my favorite parts of coming in here every time is seeing the absolutely beautiful coffee machine, very old bronz..."
+            },
+            {
+              "user_idx": 2346,
+              "selection_bucket": "true_gt_same_band_rescue_31_60_competitor",
+              "prompt_style": "local_listwise_compare",
+              "chosen_band": "rescue_31_60",
+              "rejected_band": "rescue_31_60",
+              "chosen_char_len": 5615.0,
+              "rejected_char_len": 5617.0,
+              "char_gap": -2.0,
+              "chosen_density": 25.0,
+              "rejected_density": 22.0,
+              "density_gap": 3.0,
+              "pair_density_floor": 22.0,
+              "chosen_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like shrimp, coffee, and sandwich.; recent_intent: Recent visits are leaning toward Mexican tacos. Recent outings keep clustering around family friendly settings and late night. Those visits also lean toward places with takeout, delivery, and late hours.; user_avoid: This user is most likely to pull back when a place involves long waits.; history_pattern: Older favorites most often centered on shrimp, coffee, sandwich, and pizza.; user_evidence: Past reviews mention and the price is r...",
+              "rejected_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like shrimp, coffee, and sandwich.; recent_intent: Recent visits are leaning toward Mexican tacos. Recent outings keep clustering around family friendly settings and late night. Those visits also lean toward places with takeout, delivery, and late hours.; user_avoid: This user is most likely to pull back when a place involves long waits.; history_pattern: Older favorites most often centered on shrimp, coffee, sandwich, and pizza.; user_evidence: Past reviews mention and the price is r..."
+            },
+            {
+              "user_idx": 1608,
+              "selection_bucket": "true_gt_rescue_31_60_confuser",
+              "prompt_style": "local_listwise_compare",
+              "chosen_band": "rescue_31_60",
+              "rejected_band": "head_guard",
+              "chosen_char_len": 5593.0,
+              "rejected_char_len": 5344.0,
+              "char_gap": 249.0,
+              "chosen_density": 24.0,
+              "rejected_density": 22.5,
+              "density_gap": 1.5,
+              "pair_density_floor": 22.5,
+              "chosen_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like shrimp, coffee, and dessert.; recent_intent: Recent outings keep clustering around family friendly settings. Those visits also lean toward places with takeout and delivery.; user_avoid: Likely friction comes from cocktail bar.; history_pattern: Older favorites most often centered on shrimp, coffee, dessert, and deli sandwich.; user_evidence: Past reviews mention One of my favorite parts of coming in here every time is seeing the absolutely beautiful coffee machine, very old bronz...",
+              "rejected_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like shrimp, coffee, and dessert.; recent_intent: Recent outings keep clustering around family friendly settings. Those visits also lean toward places with takeout and delivery.; user_avoid: Likely friction comes from cocktail bar.; history_pattern: Older favorites most often centered on shrimp, coffee, dessert, and deli sandwich.; user_evidence: Past reviews mention One of my favorite parts of coming in here every time is seeing the absolutely beautiful coffee machine, very old bronz..."
+            },
+            {
+              "user_idx": 1608,
+              "selection_bucket": "true_gt_same_band_rescue_31_60_competitor",
+              "prompt_style": "local_listwise_compare",
+              "chosen_band": "rescue_31_60",
+              "rejected_band": "rescue_31_60",
+              "chosen_char_len": 5557.0,
+              "rejected_char_len": 5559.0,
+              "char_gap": -2.0,
+              "chosen_density": 23.5,
+              "rejected_density": 27.5,
+              "density_gap": -4.0,
+              "pair_density_floor": 23.5,
+              "chosen_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like shrimp, coffee, and dessert.; recent_intent: Recent outings keep clustering around family friendly settings. Those visits also lean toward places with takeout and delivery.; user_avoid: Likely friction comes from cocktail bar.; history_pattern: Older favorites most often centered on shrimp, coffee, dessert, and deli sandwich.; user_evidence: Past reviews mention One of my favorite parts of coming in here every time is seeing the absolutely beautiful coffee machine, very old bronz...",
+              "rejected_preview": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like shrimp, coffee, and dessert.; recent_intent: Recent outings keep clustering around family friendly settings. Those visits also lean toward places with takeout and delivery.; user_avoid: Likely friction comes from cocktail bar.; history_pattern: Older favorites most often centered on shrimp, coffee, dessert, and deli sandwich.; user_evidence: Past reviews mention One of my favorite parts of coming in here every time is seeing the absolutely beautiful coffee machine, very old bronz..."
+            }
+          ]
+        }
+      }
+    }
+  },
+  "pairwise_examples": {
+    "train": [
+      {
+        "user_idx": 2065,
+        "split": "train",
+        "pair_mode": "rich_sft",
+        "selection_bucket": "true_gt_near",
+        "selection_slot": 1,
+        "slate_variant_id": 1,
+        "prompt": "",
+        "chosen": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like shrimp, dessert, and gumbo. The user also responds well to flavors that lean spicy and sweet.; recent_intent: Recent review evidence also leans toward had dinner here tonight. Recent outings keep clustering around late night meals, sit down meals, and late night. Those visits also lean toward places with takeout, reservations, and delivery.; user_avoid: This user is most likely to pull back when a place involves long waits and parking trouble. Negative source evidence repeatedly points to parking trouble.; history_pattern: Older favorites most often centered on shrimp, dessert, gumbo, and cocktail bar.; user_evidence: Past reviews mention We made a reservation but came early and so they offered us a seat at the bar Food is prepared fresh in this town, so be prepared for a.\nLocal ranking context: Focus candidate is in the mid rescue band (31-60). Judge whether it should move above nearby mid-rank blockers and boundary blockers in this local rescue slate. Entering the global top10 is not required by itself. Local slate contains 4 rivals; same_band=1, boundary=2, head_anchor=1, deep=0.\nLocal slate summary: cutoff_context: inside the mid rescue range; rescue_slice: 41_60; blocker_types: same_band=1, boundary=2, head_anchor=1, deep=0; semantic_pressure: same_band_semantic=1, boundary_semantic=2, same_city=4, same_primary_category=0\nFocus candidate (current rank band 31-60): business_profile: Reviews most often mention breakfast and brunch, burgers and sandwiches, sandwich, and po boy. It also overlaps with burgers and sandwiches.; user_match_points: The user's recent outings keep clustering around late night, and this business supports that same pattern. The setting also fits how this user's recent outings are structured, especially around late night. The user's; user_conflict_points: This business may clash with the user's avoidances because reviews repeatedly mention inconsistent quality, cleanliness issues, and rude or inattentive service.\nWhy the focus may beat nearby rivals: route and ranking cues suggest the focus should sit above some local blockers; the focus sits in the 41-60 slice, so the first goal is to climb toward top20 and top30; semantic fit more often leans toward the nearby rivals; evidence support more often leans\nRival 1 (same-slice semantic blocker): business_profile: Reviews most often mention cajun and creole food, seafood, gumbo, and crawfish. It also overlaps with seafood.; user_match_points: The user's recent outings keep clustering around late night and group dining, and this business supports that same pattern. The setting also fits how this user's recent outings are structured, especially around late; user_conflict_points: This business shows the same kinds of friction the user has reacted badly to before, especially long waits.; business_scene: It is most naturally suited to nightlife, outdoor patio, and family friendly settings. Visits lean more toward weekend brunch. Useful visit details include outdoor seating and\nRival 2 (boundary semantic blocker): business_profile: Reviews most often mention cajun and creole food, breakfast and brunch, po boy, and gumbo. It also overlaps with breakfast and brunch.; user_match_points: The user's recent outings keep clustering around group dining, and this business supports that same pattern. The setting also fits how this user's recent outings are structured, especially around group dining. The; user_conflict_points: This business shows the same kinds of friction the user has reacted badly to before, especially long waits.; business_scene: It is most naturally suited to fast casual meals, brunch spot, and family friendly settings. Useful visit details include upscale vibe and parking available. Check-in activity\nRival 3 (boundary semantic blocker): business_profile: Reviews most often mention breakfast and brunch, cajun and creole food, po boy, and shrimp. It also overlaps with cajun and creole food.; user_match_points: The user's recent outings keep clustering around late night and group dining, and this business supports that same pattern. The setting also fits how this user's recent outings are structured, especially around late; user_conflict_points: This business shows the same kinds of friction the user has reacted badly to before, especially long waits.; business_scene: It is most naturally suited to brunch spot, family friendly settings, and nightlife. Useful visit details include upscale vibe and beer and wine. Check-in activity concentrates\nRival 4 (head anchor): business_profile: Reviews most often mention breakfast and brunch, cajun and creole food, brunch, and gumbo. It also overlaps with cajun and creole food.; user_match_points: The user's recent outings keep clustering around late night and group dining, and this business supports that same pattern. The setting also fits how this user's recent outings are structured, especially around late; user_conflict_points: This business shows the same kinds of friction the user has reacted badly to before, especially long waits.; business_scene: It is most naturally suited to brunch spot, nightlife, and family friendly settings. Useful visit details include full bar and outdoor seating. Check-in activity concentrates\nQuestion: Should the focus candidate rank above these local blockers for this user?\nAnswer:",
+        "rejected": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like shrimp, dessert, and gumbo. The user also responds well to flavors that lean spicy and sweet.; recent_intent: Recent review evidence also leans toward had dinner here tonight. Recent outings keep clustering around late night meals, sit down meals, and late night. Those visits also lean toward places with takeout, reservations, and delivery.; user_avoid: This user is most likely to pull back when a place involves long waits and parking trouble. Negative source evidence repeatedly points to parking trouble.; history_pattern: Older favorites most often centered on shrimp, dessert, gumbo, and cocktail bar.; user_evidence: Past reviews mention We made a reservation but came early and so they offered us a seat at the bar Food is prepared fresh in this town, so be prepared for a.\nLocal ranking context: Focus candidate is in the current rank band 11-30. Local slate contains 4 rivals; head=1, boundary=1, mid=2, deep=0.\nLocal slate summary: cutoff_context: inside the near-boundary rescue range; rival_mix: head=1, boundary=1, mid=2, deep=0; semantic_neighborhood: same_city=4, same_primary_category=1, similar_theme_rivals=4\nFocus candidate (current rank band 11-30): business_profile: Reviews most often mention cajun and creole food, breakfast and brunch, po boy, and gumbo. It also overlaps with breakfast and brunch.; user_match_points: The user's recent outings keep clustering around group dining, and this business supports that same pattern. The setting also fits how this user's recent outings are structured, especially around group dining. The; user_conflict_points: This business shows the same kinds of friction the user has reacted badly to before, especially long waits.; business_scene: It is most naturally suited to fast casual meals, brunch spot, and family friendly settings. Useful visit details include upscale vibe and parking available. Check-in activity\nWhy the focus may beat nearby rivals: semantic fit gives the nearby rivals a slight edge; evidence support more often leans toward the focus candidate; route and ranking cues more often leans toward the focus candidate; one head rival remains ahead in this slate; inside the near-boundary rescue\nRival 1 (current rank band 11-30): business_profile: Reviews most often mention breakfast and brunch, cajun and creole food, po boy, and shrimp. It also overlaps with cajun and creole food.; user_match_points: The user's recent outings keep clustering around late night and group dining, and this business supports that same pattern. The setting also fits how this user's recent outings are structured, especially around late; user_conflict_points: This business shows the same kinds of friction the user has reacted badly to before, especially long waits.; business_scene: It is most naturally suited to brunch spot, family friendly settings, and nightlife. Useful visit details include upscale vibe and beer and wine. Check-in activity concentrates\nRival 2 (current rank band 1-10): business_profile: Reviews most often mention breakfast and brunch, cajun and creole food, brunch, and gumbo. It also overlaps with cajun and creole food.; user_match_points: The user's recent outings keep clustering around late night and group dining, and this business supports that same pattern. The setting also fits how this user's recent outings are structured, especially around late; user_conflict_points: This business shows the same kinds of friction the user has reacted badly to before, especially long waits.; business_scene: It is most naturally suited to brunch spot, nightlife, and family friendly settings. Useful visit details include full bar and outdoor seating. Check-in activity concentrates\nRival 3 (current rank band 31-60): business_profile: Reviews most often mention cajun and creole food, seafood, gumbo, and crawfish. It also overlaps with seafood.; user_match_points: The user's recent outings keep clustering around late night and group dining, and this business supports that same pattern. The setting also fits how this user's recent outings are structured, especially around late; user_conflict_points: This business shows the same kinds of friction the user has reacted badly to before, especially long waits.; business_scene: It is most naturally suited to nightlife, outdoor patio, and family friendly settings. Visits lean more toward weekend brunch. Useful visit details include outdoor seating and\nRival 4 (current rank band 31-60): business_profile: Reviews most often mention breakfast and brunch, burgers and sandwiches, sandwich, and po boy. It also overlaps with burgers and sandwiches.; user_match_points: The user's recent outings keep clustering around late night, and this business supports that same pattern. The setting also fits how this user's recent outings are structured, especially around late night. The user's; user_conflict_points: This business may clash with the user's avoidances because reviews repeatedly mention inconsistent quality, cleanliness issues, and rude or inattentive service.\nQuestion: Should the focus candidate rank above these local blockers for this user?\nAnswer:",
+        "chosen_business_id": "FaY_9x8ZtsuHe5wS2iJM1Q",
+        "rejected_business_id": "iSRTaT9WngzB8JJ2YKJUig",
+        "chosen_item_idx": 44,
+        "rejected_item_idx": 5,
+        "chosen_label_source": "true",
+        "rejected_label_source": "pair_pool",
+        "rejected_neg_tier": "near",
+        "chosen_pre_rank": 66,
+        "rejected_pre_rank": 7,
+        "chosen_learned_rank": 50,
+        "rejected_learned_rank": 24,
+        "chosen_learned_rank_band": "rescue_31_60",
+        "rejected_learned_rank_band": "boundary_11_30",
+        "chosen_primary_reason": "unclear_or_non_actionable",
+        "chosen_easy_but_useful": false,
+        "chosen_hard_but_learnable": false,
+        "chosen_non_actionable": true,
+        "chosen_pre_score": 0.20127348652512073,
+        "rejected_pre_score": 0.3814853032243638,
+        "chosen_learned_blend_score": 0.25501255780498056,
+        "rejected_learned_blend_score": 0.3118281549145131,
+        "score_gap": -0.18021181669924308,
+        "rank_gap": -59,
+        "learned_score_gap": -0.056815597109532545,
+        "learned_rank_gap": -26,
+        "chosen_has_user_evidence": true,
+        "chosen_has_item_evidence": true,
+        "chosen_has_pair_evidence": true,
+        "rejected_has_user_evidence": true,
+        "rejected_has_item_evidence": true,
+        "rejected_has_pair_evidence": true,
+        "prompt_style": "local_listwise_compare",
+        "local_listwise_rival_count": 4
+      },
+      {
+        "user_idx": 6610,
+        "split": "train",
+        "pair_mode": "rich_sft",
+        "selection_bucket": "true_gt_near",
+        "selection_slot": 1,
+        "slate_variant_id": 0,
+        "prompt": "",
+        "chosen": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like oyster, shrimp, and dessert.; recent_intent: Recent review evidence also leans toward a delightful bakery that and a clean. Recent outings keep clustering around late night meals, nightlife, and late night. Those visits also lean toward places with reservations, takeout, and late; user_avoid: This user is most likely to pull back when a place involves parking trouble and uneven parking surfaces. Negative source evidence repeatedly points to parking trouble and uneven parking surfaces.; history_pattern: Past favorites repeatedly point back to a delightful bakery that. Older positive visits also keep pointing back to a delightful bakery that.; user_evidence: Past reviews mention During my visit to New Orleans, a got a recommendation from a bartender to try the Turtle Soup @ Desire Oyster Bar on Bourbon Never tried.\nLocal ranking context: Focus candidate is in the mid rescue band (31-60). Judge whether it should move above nearby mid-rank blockers and boundary blockers in this local rescue slate. Entering the global top10 is not required by itself. Local slate contains 4 rivals; same_band=1, boundary=0, head_anchor=3, deep=0.\nLocal slate summary: cutoff_context: inside the mid rescue range; rescue_slice: 41_60; blocker_types: same_band=1, boundary=0, head_anchor=3, deep=0; semantic_pressure: same_band_semantic=1, boundary_semantic=0, same_city=4, same_primary_category=2\nFocus candidate (current rank band 31-60): business_profile: Reviews most often mention breakfast and brunch, burgers and sandwiches, sandwich, and po boy. It also overlaps with burgers and sandwiches.; user_match_points: The user's recent outings keep clustering around nightlife and late night, and this business supports that same pattern. The setting also fits how this user's recent outings are structured, especially around nightlife; user_conflict_points: This business may clash with the user's avoidances because reviews repeatedly mention inconsistent quality, cleanliness issues, and rude or inattentive service.\nWhy the focus may beat nearby rivals: the focus sits in the 41-60 slice, so the first goal is to climb toward top20 and top30; semantic fit more often leans toward the nearby rivals; evidence support more often leans toward the nearby rivals; route and ranking cues more often leans toward the\nRival 1 (adjacent mid semantic blocker): business_profile: Reviews most often mention cajun and creole food, seafood, oysters, and shrimp. It also overlaps with seafood.; user_match_points: The user's recent outings keep clustering around nightlife and late night, and this business supports that same pattern. The setting also fits how this user's recent outings are structured, especially around nightlife; user_conflict_points: This business may clash with the user's avoidances because reviews repeatedly mention rude or inattentive service, long waits, and cleanliness issues.; business_scene: It is most naturally suited to nightlife, family friendly settings, and sit down dinner. Visits lean more toward happy hour. Useful visit details include beer and wine, full bar,\nRival 2 (head anchor): business_profile: Reviews most often mention seafood, cajun and creole food, oysters, and shrimp. It also overlaps with cajun and creole food.; user_match_points: The user's recent outings keep clustering around nightlife and late night, and this business supports that same pattern. The setting also fits how this user's recent outings are structured, especially around nightlife; user_conflict_points: This business may clash with the user's avoidances because reviews repeatedly mention slow service, long waits, and cleanliness issues.; business_scene: It is most naturally suited to nightlife, date night outings, and family friendly settings. Visits lean more toward happy hour. Useful visit details include beer and wine and full\nRival 3 (head anchor): business_profile: Reviews most often mention cajun and creole food, breakfast and brunch, po boy, and gumbo. It also overlaps with breakfast and brunch.; user_match_points: This business lines up with the user's recurring interests around seafood, breakfast and brunch, and cajun and creole food.; business_scene: It is most naturally suited to fast casual meals, brunch spot, and family friendly settings. Useful visit details include upscale vibe and parking available. Check-in activity; item_strengths: Additional source evidence also highlights the debris po boy and worth the wait.; item_weaknesses: Potential friction points include long waits, weak value for money, cleanliness issues, and rude or inattentive service.\nRival 4 (head anchor): business_profile: Reviews most often mention cajun and creole food, seafood, oysters, and dessert. It also overlaps with seafood.; user_match_points: The user's recent outings keep clustering around nightlife, late night, and late night meals, and this business supports that same pattern. The setting also fits how this user's recent outings are structured, especially; user_conflict_points: This business may clash with the user's avoidances because reviews repeatedly mention rude or inattentive service, long waits, and weak value for money.; business_scene: It is most naturally suited to late night visits, nightlife, and date night outings. Useful visit details include full bar and beer and wine. Check-in activity concentrates around\nQuestion: Should the focus candidate rank above these local blockers for this user?\nAnswer:",
+        "rejected": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like oyster, shrimp, and dessert.; recent_intent: Recent review evidence also leans toward a delightful bakery that and a clean. Recent outings keep clustering around late night meals, nightlife, and late night. Those visits also lean toward places with reservations, takeout, and late; user_avoid: This user is most likely to pull back when a place involves parking trouble and uneven parking surfaces. Negative source evidence repeatedly points to parking trouble and uneven parking surfaces.; history_pattern: Past favorites repeatedly point back to a delightful bakery that. Older positive visits also keep pointing back to a delightful bakery that.; user_evidence: Past reviews mention During my visit to New Orleans, a got a recommendation from a bartender to try the Turtle Soup @ Desire Oyster Bar on Bourbon Never tried.\nLocal ranking context: Focus candidate is in the current rank band 1-10. Local slate contains 4 rivals; head=2, boundary=0, mid=2, deep=0.\nLocal slate summary: cutoff_context: inside current top10; rival_mix: head=2, boundary=0, mid=2, deep=0; semantic_neighborhood: same_city=4, same_primary_category=1, similar_theme_rivals=4\nFocus candidate (current rank band 1-10): business_profile: Reviews most often mention cajun and creole food, breakfast and brunch, po boy, and gumbo. It also overlaps with breakfast and brunch.; user_match_points: This business lines up with the user's recurring interests around seafood, breakfast and brunch, and cajun and creole food.; business_scene: It is most naturally suited to fast casual meals, brunch spot, and family friendly settings. Useful visit details include upscale vibe and parking available. Check-in activity; item_strengths: Additional source evidence also highlights the debris po boy and worth the wait.; item_weaknesses: Potential friction points include long waits, weak value for money, cleanliness issues, and rude or inattentive service.\nWhy the focus may beat nearby rivals: semantic fit gives the focus candidate a slight edge; evidence support more often leans toward the focus candidate; route and ranking cues more often leans toward the nearby rivals; focus is already inside the current head set; inside current top10\nRival 1 (current rank band 31-60): business_profile: Reviews most often mention cajun and creole food, seafood, oysters, and shrimp. It also overlaps with seafood.; user_match_points: The user's recent outings keep clustering around nightlife and late night, and this business supports that same pattern. The setting also fits how this user's recent outings are structured, especially around nightlife; user_conflict_points: This business may clash with the user's avoidances because reviews repeatedly mention rude or inattentive service, long waits, and cleanliness issues.; business_scene: It is most naturally suited to nightlife, family friendly settings, and sit down dinner. Visits lean more toward happy hour. Useful visit details include beer and wine, full bar,\nRival 2 (current rank band 31-60): business_profile: Reviews most often mention breakfast and brunch, burgers and sandwiches, sandwich, and po boy. It also overlaps with burgers and sandwiches.; user_match_points: The user's recent outings keep clustering around nightlife and late night, and this business supports that same pattern. The setting also fits how this user's recent outings are structured, especially around nightlife; user_conflict_points: This business may clash with the user's avoidances because reviews repeatedly mention inconsistent quality, cleanliness issues, and rude or inattentive service.\nRival 3 (current rank band 1-10): business_profile: Reviews most often mention cajun and creole food, seafood, oysters, and dessert. It also overlaps with seafood.; user_match_points: The user's recent outings keep clustering around nightlife, late night, and late night meals, and this business supports that same pattern. The setting also fits how this user's recent outings are structured, especially; user_conflict_points: This business may clash with the user's avoidances because reviews repeatedly mention rude or inattentive service, long waits, and weak value for money.; business_scene: It is most naturally suited to late night visits, nightlife, and date night outings. Useful visit details include full bar and beer and wine. Check-in activity concentrates around\nRival 4 (current rank band 1-10): business_profile: Reviews most often mention seafood, cajun and creole food, oysters, and shrimp. It also overlaps with cajun and creole food.; user_match_points: The user's recent outings keep clustering around nightlife and late night, and this business supports that same pattern. The setting also fits how this user's recent outings are structured, especially around nightlife; user_conflict_points: This business may clash with the user's avoidances because reviews repeatedly mention slow service, long waits, and cleanliness issues.; business_scene: It is most naturally suited to nightlife, date night outings, and family friendly settings. Visits lean more toward happy hour. Useful visit details include beer and wine and full\nQuestion: Should the focus candidate rank above these local blockers for this user?\nAnswer:",
+        "chosen_business_id": "FaY_9x8ZtsuHe5wS2iJM1Q",
+        "rejected_business_id": "iSRTaT9WngzB8JJ2YKJUig",
+        "chosen_item_idx": 44,
+        "rejected_item_idx": 5,
+        "chosen_label_source": "true",
+        "rejected_label_source": "pair_pool",
+        "rejected_neg_tier": "near",
+        "chosen_pre_rank": 32,
+        "rejected_pre_rank": 1,
+        "chosen_learned_rank": 47,
+        "rejected_learned_rank": 1,
+        "chosen_learned_rank_band": "rescue_31_60",
+        "rejected_learned_rank_band": "head_guard",
+        "chosen_primary_reason": "unclear_or_non_actionable",
+        "chosen_easy_but_useful": false,
+        "chosen_hard_but_learnable": false,
+        "chosen_non_actionable": true,
+        "chosen_pre_score": 0.20237495471226857,
+        "rejected_pre_score": 0.9291350650412591,
+        "chosen_learned_blend_score": 0.2647932091432073,
+        "rejected_learned_blend_score": 0.8685436158882377,
+        "score_gap": -0.7267601103289905,
+        "rank_gap": -31,
+        "learned_score_gap": -0.6037504067450303,
+        "learned_rank_gap": -46,
+        "chosen_has_user_evidence": true,
+        "chosen_has_item_evidence": true,
+        "chosen_has_pair_evidence": true,
+        "rejected_has_user_evidence": true,
+        "rejected_has_item_evidence": true,
+        "rejected_has_pair_evidence": false,
+        "prompt_style": "local_listwise_compare",
+        "local_listwise_rival_count": 4
+      },
+      {
+        "user_idx": 5041,
+        "split": "train",
+        "pair_mode": "rich_sft",
+        "selection_bucket": "true_gt_same_band_rescue_31_60_competitor",
+        "selection_slot": 3,
+        "slate_variant_id": 0,
+        "prompt": "",
+        "chosen": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like dessert, shrimp, and gumbo.; recent_intent: Recent outings keep clustering around late night meals, sit down meals, and late night. Those visits also lean toward places with takeout, reservations, and delivery.; history_pattern: Older favorites most often centered on dessert, shrimp, gumbo, and steakhouse.; user_evidence: Past reviews mention Even if you do not want or like steak, you can be plenty satisfied just eating a round of apps You come here because this is a classic New Orleans staple and\nLocal ranking context: Focus candidate is in the mid rescue band (31-60). Judge whether it should move above nearby mid-rank blockers and boundary blockers in this local rescue slate. Entering the global top10 is not required by itself. Local slate contains 4 rivals; same_band=4, boundary=0, head_anchor=0, deep=0.\nLocal slate summary: cutoff_context: inside the mid rescue range; rescue_slice: 41_60; blocker_types: same_band=4, boundary=0, head_anchor=0, deep=0; semantic_pressure: same_band_semantic=4, boundary_semantic=0, same_city=4, same_primary_category=0\nFocus candidate (current rank band 31-60): business_profile: Reviews most often mention breakfast and brunch, american, shrimp, and gumbo. It also overlaps with american.; user_match_points: The user's recent outings keep clustering around late night and late night meals, and this business supports that same pattern. The setting also fits how this user's recent outings are structured, especially around late; user_conflict_points: Potential friction is still worth watching because reviews repeatedly flag reservation trouble, long waits, and rude or inattentive service here.; business_scene: It is most naturally suited to late night visits, nightlife, and brunch spot. Useful visit details include outdoor seating and full bar. Check-in activity concentrates around\nWhy the focus may beat nearby rivals: semantic evidence is stronger than the current mid-rank placement; the focus sits in the 41-60 slice, so the first goal is to climb toward top20 and top30; semantic fit more often leans toward the focus candidate; evidence support more often leans toward the\nRival 1 (same-slice semantic blocker): business_profile: Reviews most often mention cajun and creole food, breakfast and brunch, oysters, and shrimp. It also overlaps with breakfast and brunch.; user_match_points: The user's recent outings keep clustering around sit down meals, late night, and late night meals, and this business supports that same pattern. The setting also fits how this user's recent outings are structured,; user_conflict_points: Potential friction is still worth watching because reviews repeatedly flag inconsistent quality, rude or inattentive service, and noise and overly loud rooms here.\nRival 2 (adjacent mid semantic blocker): business_profile: Reviews most often mention cajun and creole food, french, oysters, and gumbo. It also overlaps with french.; user_match_points: The user's recent outings keep clustering around late night and group dining, and this business supports that same pattern. The setting also fits how this user's recent outings are structured, especially around late; user_conflict_points: Potential friction is still worth watching because reviews repeatedly flag inconsistent quality, rude or inattentive service, and weak value for money here.; business_scene: It is most naturally suited to date night outings, nightlife, and celebration. Useful visit details include beer and wine, full bar, and upscale vibe. Check-in activity\nRival 3 (same-slice semantic blocker): business_profile: Reviews most often mention american, desserts and bakeries, dessert, and shrimp. It also overlaps with desserts and bakeries.; user_match_points: The user's recent outings keep clustering around late night and late night meals, and this business supports that same pattern. The setting also fits how this user's recent outings are structured, especially around late; user_conflict_points: Potential friction is still worth watching because reviews repeatedly flag slow service, long waits, and rude or inattentive service here.; business_scene: It is most naturally suited to date night outings, late night visits, and nightlife. Visits lean more toward happy hour. Useful visit details include beer and wine, full bar, and\nRival 4 (same-slice semantic blocker): business_profile: Reviews most often mention steakhouse, coffee and tea, dessert, and crawfish. It also overlaps with coffee and tea.; user_match_points: The user's recent outings keep clustering around late night, late night meals, and group dining, and this business supports that same pattern. The setting also fits how this user's recent outings are structured,; user_conflict_points: Potential friction is still worth watching because reviews repeatedly flag rude or inattentive service, parking trouble, and weak value for money here.; business_scene: It is most naturally suited to late night visits, nightlife, and family friendly settings. Useful visit details include parking available, beer and wine, and full bar. Check-in\nQuestion: Should the focus candidate rank above these local blockers for this user?\nAnswer:",
+        "rejected": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like dessert, shrimp, and gumbo.; recent_intent: Recent outings keep clustering around late night meals, sit down meals, and late night. Those visits also lean toward places with takeout, reservations, and delivery.; history_pattern: Older favorites most often centered on dessert, shrimp, gumbo, and steakhouse.; user_evidence: Past reviews mention Even if you do not want or like steak, you can be plenty satisfied just eating a round of apps You come here because this is a classic New Orleans staple and\nLocal ranking context: Focus candidate is in the mid rescue band (31-60). Judge whether it should move above nearby mid-rank blockers and boundary blockers in this local rescue slate. Entering the global top10 is not required by itself. Local slate contains 4 rivals; same_band=4, boundary=0, head_anchor=0, deep=0.\nLocal slate summary: cutoff_context: inside the near-boundary rescue range; rescue_slice: 31_40; blocker_types: same_band=4, boundary=0, head_anchor=0, deep=0; semantic_pressure: same_band_semantic=4, boundary_semantic=0, same_city=4, same_primary_category=0\nFocus candidate (current rank band 31-60): business_profile: Reviews most often mention cajun and creole food, french, oysters, and gumbo. It also overlaps with french.; user_match_points: The user's recent outings keep clustering around late night and group dining, and this business supports that same pattern. The setting also fits how this user's recent outings are structured, especially around late; user_conflict_points: Potential friction is still worth watching because reviews repeatedly flag inconsistent quality, rude or inattentive service, and weak value for money here.; business_scene: It is most naturally suited to date night outings, nightlife, and celebration. Useful visit details include beer and wine, full bar, and upscale vibe. Check-in activity\nWhy the focus may beat nearby rivals: the focus sits in the 31-40 slice, so clearing boundary blockers can move it toward top10; semantic fit looks roughly balanced across this slate; evidence support looks roughly balanced across this slate; route and ranking cues looks roughly balanced across\nRival 1 (adjacent mid semantic blocker): business_profile: Reviews most often mention cajun and creole food, breakfast and brunch, oysters, and shrimp. It also overlaps with breakfast and brunch.; user_match_points: The user's recent outings keep clustering around sit down meals, late night, and late night meals, and this business supports that same pattern. The setting also fits how this user's recent outings are structured,; user_conflict_points: Potential friction is still worth watching because reviews repeatedly flag inconsistent quality, rude or inattentive service, and noise and overly loud rooms here.\nRival 2 (adjacent mid semantic blocker): business_profile: Reviews most often mention breakfast and brunch, american, shrimp, and gumbo. It also overlaps with american.; user_match_points: The user's recent outings keep clustering around late night and late night meals, and this business supports that same pattern. The setting also fits how this user's recent outings are structured, especially around late; user_conflict_points: Potential friction is still worth watching because reviews repeatedly flag reservation trouble, long waits, and rude or inattentive service here.; business_scene: It is most naturally suited to late night visits, nightlife, and brunch spot. Useful visit details include outdoor seating and full bar. Check-in activity concentrates around\nRival 3 (adjacent mid semantic blocker): business_profile: Reviews most often mention steakhouse, coffee and tea, dessert, and crawfish. It also overlaps with coffee and tea.; user_match_points: The user's recent outings keep clustering around late night, late night meals, and group dining, and this business supports that same pattern. The setting also fits how this user's recent outings are structured,; user_conflict_points: Potential friction is still worth watching because reviews repeatedly flag rude or inattentive service, parking trouble, and weak value for money here.; business_scene: It is most naturally suited to late night visits, nightlife, and family friendly settings. Useful visit details include parking available, beer and wine, and full bar. Check-in\nRival 4 (adjacent mid semantic blocker): business_profile: Reviews most often mention american, desserts and bakeries, dessert, and shrimp. It also overlaps with desserts and bakeries.; user_match_points: The user's recent outings keep clustering around late night and late night meals, and this business supports that same pattern. The setting also fits how this user's recent outings are structured, especially around late; user_conflict_points: Potential friction is still worth watching because reviews repeatedly flag slow service, long waits, and rude or inattentive service here.; business_scene: It is most naturally suited to date night outings, late night visits, and nightlife. Visits lean more toward happy hour. Useful visit details include beer and wine, full bar, and\nQuestion: Should the focus candidate rank above these local blockers for this user?\nAnswer:",
+        "chosen_business_id": "ww3YJXu5c18aGZXWmm00qg",
+        "rejected_business_id": "QA8QLpwf_YT9C2ST5YJ0vw",
+        "chosen_item_idx": 31,
+        "rejected_item_idx": 92,
+        "chosen_label_source": "true",
+        "rejected_label_source": "pair_pool",
+        "rejected_neg_tier": "near",
+        "chosen_pre_rank": 122,
+        "rejected_pre_rank": 80,
+        "chosen_learned_rank": 48,
+        "rejected_learned_rank": 40,
+        "chosen_learned_rank_band": "rescue_31_60",
+        "rejected_learned_rank_band": "rescue_31_60",
+        "chosen_primary_reason": "semantic_edge_xgb_ambiguous",
+        "chosen_easy_but_useful": false,
+        "chosen_hard_but_learnable": true,
+        "chosen_non_actionable": false,
+        "chosen_pre_score": 0.16271079511801165,
+        "rejected_pre_score": 0.15712518919800275,
+        "chosen_learned_blend_score": 0.2604116690563346,
+        "rejected_learned_blend_score": 0.2679827815509928,
+        "score_gap": 0.005585605920008896,
+        "rank_gap": -42,
+        "learned_score_gap": -0.007571112494658194,
+        "learned_rank_gap": -8,
+        "chosen_has_user_evidence": true,
+        "chosen_has_item_evidence": true,
+        "chosen_has_pair_evidence": true,
+        "rejected_has_user_evidence": true,
+        "rejected_has_item_evidence": true,
+        "rejected_has_pair_evidence": true,
+        "prompt_style": "local_listwise_compare",
+        "local_listwise_rival_count": 4
+      }
+    ],
+    "eval": [
+      {
+        "user_idx": 3568,
+        "split": "eval",
+        "pair_mode": "rich_sft",
+        "selection_bucket": "true_gt_near",
+        "selection_slot": 1,
+        "slate_variant_id": 0,
+        "prompt": "",
+        "chosen": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like shrimp, coffee, and dessert.; recent_intent: Recent visits are leaning toward Mexican tacos. Recent review evidence also leans toward clean with great service. Recent outings keep clustering around late night meals, family friendly settings, and group dining. Those visits also lean; user_avoid: This user is most likely to pull back when a place involves weak value for money, rude or inattentive service, and parking trouble. Negative source evidence repeatedly points to parking trouble, weak value for money,; history_pattern: Past favorites repeatedly point back to clean with great service. Older positive visits also keep pointing back to clean with great service.\nLocal ranking context: Focus candidate is in the mid rescue band (31-60). Judge whether it should move above nearby mid-rank blockers and boundary blockers in this local rescue slate. Entering the global top10 is not required by itself. Local slate contains 4 rivals; same_band=2, boundary=0, head_anchor=2, deep=0.\nLocal slate summary: cutoff_context: inside the mid rescue range; rescue_slice: 41_60; blocker_types: same_band=2, boundary=0, head_anchor=2, deep=0; semantic_pressure: same_band_semantic=2, boundary_semantic=0, same_city=2, same_primary_category=0\nFocus candidate (current rank band 31-60): business_profile: Reviews most often mention Asian dishes, chinese, pho, and shrimp. It also overlaps with chinese.; user_match_points: The user's recent outings keep clustering around family friendly settings, late night, and group dining, and this business supports that same pattern. The setting also fits how this user's recent outings are structured,; user_conflict_points: This business shows the same kinds of friction the user has reacted badly to before, especially rude or inattentive service, parking trouble, and weak value for money.; business_scene: It is most naturally suited to family friendly settings, nightlife, and date night outings. Useful visit details include parking available and full bar. Check-in activity\nWhy the focus may beat nearby rivals: the focus sits in the 41-60 slice, so the first goal is to climb toward top20 and top30; semantic fit looks roughly balanced across this slate; evidence support more often leans toward the nearby rivals; route and ranking cues gives the nearby rivals a slight\nRival 1 (same-slice semantic blocker): business_profile: Reviews most often mention seafood, burgers and sandwiches, shrimp, and wings. It also overlaps with burgers and sandwiches.; user_match_points: The user's recent outings keep clustering around late night, and this business supports that same pattern. The setting also fits how this user's recent outings are structured, especially around late night. The user's; user_conflict_points: This business shows the same kinds of friction the user has reacted badly to before, especially weak value for money.; business_scene: It is most naturally suited to fast casual meals, nightlife, and sit down dinner. Useful visit details include upscale vibe and outdoor seating. Check-in activity concentrates\nRival 2 (same-slice semantic blocker): business_profile: Reviews most often mention cajun and creole food, american, fried chicken, and wings. It also overlaps with american.; user_match_points: The user's recent outings keep clustering around family friendly settings, late night, and group dining, and this business supports that same pattern.; user_conflict_points: This business may clash with the user's avoidances because reviews repeatedly mention long waits.; business_scene: It is most naturally suited to family friendly settings, date night outings, and sit down dinner. Useful visit details include parking available. Check-in activity concentrates\nRival 3 (head anchor): business_profile: Reviews most often mention japanese sushi, desserts and bakeries, sushi, and oysters. It also overlaps with desserts and bakeries.; user_match_points: The user's recent outings keep clustering around family friendly settings, late night, and group dining, and this business supports that same pattern. The business stays close to the user's stronger long-run preferences; user_conflict_points: This business shows the same kinds of friction the user has reacted badly to before, especially parking trouble and weak value for money.; business_scene: It is most naturally suited to family friendly settings, nightlife, and sit down dinner. Useful visit details include full bar and parking available. Check-in activity\nRival 4 (head anchor): business_profile: Reviews most often mention japanese sushi, seafood, sushi, and shrimp. It also overlaps with seafood.; user_match_points: The user's recent outings keep clustering around family friendly settings, late night, and group dining, and this business supports that same pattern. The setting also fits how this user's recent outings are structured,; user_conflict_points: This business shows the same kinds of friction the user has reacted badly to before, especially rude or inattentive service and parking trouble.; business_scene: It is most naturally suited to nightlife, family friendly settings, and date night outings. Useful visit details include parking available and full bar. Check-in activity\nQuestion: Should the focus candidate rank above these local blockers for this user?\nAnswer:",
+        "rejected": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like shrimp, coffee, and dessert.; recent_intent: Recent visits are leaning toward Mexican tacos. Recent review evidence also leans toward clean with great service. Recent outings keep clustering around late night meals, family friendly settings, and group dining. Those visits also lean; user_avoid: This user is most likely to pull back when a place involves weak value for money, rude or inattentive service, and parking trouble. Negative source evidence repeatedly points to parking trouble, weak value for money,; history_pattern: Past favorites repeatedly point back to clean with great service. Older positive visits also keep pointing back to clean with great service.\nLocal ranking context: Focus candidate is in the mid rescue band (31-60). Judge whether it should move above nearby mid-rank blockers and boundary blockers in this local rescue slate. Entering the global top10 is not required by itself. Local slate contains 4 rivals; same_band=2, boundary=0, head_anchor=2, deep=0.\nLocal slate summary: cutoff_context: inside the mid rescue range; rescue_slice: 41_60; blocker_types: same_band=2, boundary=0, head_anchor=2, deep=0; semantic_pressure: same_band_semantic=2, boundary_semantic=0, same_city=2, same_primary_category=0\nFocus candidate (current rank band 31-60): business_profile: Reviews most often mention cajun and creole food, american, fried chicken, and wings. It also overlaps with american.; user_match_points: The user's recent outings keep clustering around family friendly settings, late night, and group dining, and this business supports that same pattern.; user_conflict_points: This business may clash with the user's avoidances because reviews repeatedly mention long waits.; business_scene: It is most naturally suited to family friendly settings, date night outings, and sit down dinner. Useful visit details include parking available. Check-in activity concentrates\nWhy the focus may beat nearby rivals: the focus sits in the 41-60 slice, so the first goal is to climb toward top20 and top30; semantic fit looks roughly balanced across this slate; evidence support looks roughly balanced across this slate; route and ranking cues gives the nearby rivals a slight\nRival 1 (same-slice semantic blocker): business_profile: Reviews most often mention seafood, burgers and sandwiches, shrimp, and wings. It also overlaps with burgers and sandwiches.; user_match_points: The user's recent outings keep clustering around late night, and this business supports that same pattern. The setting also fits how this user's recent outings are structured, especially around late night. The user's; user_conflict_points: This business shows the same kinds of friction the user has reacted badly to before, especially weak value for money.; business_scene: It is most naturally suited to fast casual meals, nightlife, and sit down dinner. Useful visit details include upscale vibe and outdoor seating. Check-in activity concentrates\nRival 2 (same-slice semantic blocker): business_profile: Reviews most often mention Asian dishes, chinese, pho, and shrimp. It also overlaps with chinese.; user_match_points: The user's recent outings keep clustering around family friendly settings, late night, and group dining, and this business supports that same pattern. The setting also fits how this user's recent outings are structured,; user_conflict_points: This business shows the same kinds of friction the user has reacted badly to before, especially rude or inattentive service, parking trouble, and weak value for money.; business_scene: It is most naturally suited to family friendly settings, nightlife, and date night outings. Useful visit details include parking available and full bar. Check-in activity\nRival 3 (head anchor): business_profile: Reviews most often mention japanese sushi, seafood, sushi, and shrimp. It also overlaps with seafood.; user_match_points: The user's recent outings keep clustering around family friendly settings, late night, and group dining, and this business supports that same pattern. The setting also fits how this user's recent outings are structured,; user_conflict_points: This business shows the same kinds of friction the user has reacted badly to before, especially rude or inattentive service and parking trouble.; business_scene: It is most naturally suited to nightlife, family friendly settings, and date night outings. Useful visit details include parking available and full bar. Check-in activity\nRival 4 (head anchor): business_profile: Reviews most often mention japanese sushi, desserts and bakeries, sushi, and oysters. It also overlaps with desserts and bakeries.; user_match_points: The user's recent outings keep clustering around family friendly settings, late night, and group dining, and this business supports that same pattern. The business stays close to the user's stronger long-run preferences; user_conflict_points: This business shows the same kinds of friction the user has reacted badly to before, especially parking trouble and weak value for money.; business_scene: It is most naturally suited to family friendly settings, nightlife, and sit down dinner. Useful visit details include full bar and parking available. Check-in activity\nQuestion: Should the focus candidate rank above these local blockers for this user?\nAnswer:",
+        "chosen_business_id": "4DGJbaaFuCPJ8L4YJCR29w",
+        "rejected_business_id": "uujAlHvgCzo8oinElyWFcw",
+        "chosen_item_idx": 535,
+        "rejected_item_idx": 1002,
+        "chosen_label_source": "true",
+        "rejected_label_source": "pair_pool",
+        "rejected_neg_tier": "near",
+        "chosen_pre_rank": 40,
+        "rejected_pre_rank": 64,
+        "chosen_learned_rank": 52,
+        "rejected_learned_rank": 45,
+        "chosen_learned_rank_band": "rescue_31_60",
+        "rejected_learned_rank_band": "rescue_31_60",
+        "chosen_primary_reason": "unclear_or_non_actionable",
+        "chosen_easy_but_useful": false,
+        "chosen_hard_but_learnable": false,
+        "chosen_non_actionable": true,
+        "chosen_pre_score": 0.19266478388392522,
+        "rejected_pre_score": 0.18409025330285106,
+        "chosen_learned_blend_score": 0.25855147255763494,
+        "rejected_learned_blend_score": 0.26613902500331144,
+        "score_gap": 0.008574530581074158,
+        "rank_gap": 24,
+        "learned_score_gap": -0.007587552445676493,
+        "learned_rank_gap": -7,
+        "chosen_has_user_evidence": true,
+        "chosen_has_item_evidence": true,
+        "chosen_has_pair_evidence": true,
+        "rejected_has_user_evidence": true,
+        "rejected_has_item_evidence": true,
+        "rejected_has_pair_evidence": true,
+        "prompt_style": "local_listwise_compare",
+        "local_listwise_rival_count": 4
+      },
+      {
+        "user_idx": 4029,
+        "split": "eval",
+        "pair_mode": "rich_sft",
+        "selection_bucket": "true_gt_hard",
+        "selection_slot": 0,
+        "slate_variant_id": 2,
+        "prompt": "",
+        "chosen": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like dessert, gumbo, and shrimp.; recent_intent: Recent outings keep clustering around family friendly settings, late night meals, and late night. Those visits also lean toward places with takeout, delivery, and late hours.; history_pattern: Older favorites most often centered on dessert, gumbo, shrimp, and cocktail bar.; user_evidence: Past reviews mention that They have wine to pair with cheeses too.; Past reviews mention that They have wine to pair with cheeses too.\nLocal ranking context: Focus candidate is in the mid rescue band (31-60). Judge whether it should move above nearby mid-rank blockers and boundary blockers in this local rescue slate. Entering the global top10 is not required by itself. Local slate contains 4 rivals; same_band=2, boundary=1, head_anchor=1, deep=0.\nLocal slate summary: cutoff_context: inside the mid rescue range; rescue_slice: 41_60; blocker_types: same_band=2, boundary=1, head_anchor=1, deep=0; semantic_pressure: same_band_semantic=2, boundary_semantic=1, same_city=2, same_primary_category=0\nFocus candidate (current rank band 31-60): business_profile: Reviews most often mention breakfast and brunch, desserts and bakeries, pastry, and pho. It also overlaps with desserts and bakeries.; user_match_points: The user's recent outings keep clustering around family friendly settings, late night, and group dining, and this business supports that same pattern. The setting also fits how this user's recent outings are structured,; user_conflict_points: Potential friction is still worth watching because reviews repeatedly flag parking trouble, rude or inattentive service, and long waits here.; business_scene: It is most naturally suited to family friendly settings, nightlife, and celebration. Useful visit details include parking available and outdoor seating. Check-in activity\nWhy the focus may beat nearby rivals: semantic evidence is stronger than the current mid-rank placement; the focus sits in the 41-60 slice, so the first goal is to climb toward top20 and top30; semantic fit gives the focus candidate a slight edge; evidence support more often leans toward the\nRival 1 (same-slice semantic blocker): business_profile: Reviews most often mention american, gumbo, brunch, and shrimp.; user_match_points: The user's recent outings keep clustering around late night and group dining, and this business supports that same pattern. The setting also fits how this user's recent outings are structured, especially around late; user_conflict_points: Potential friction is still worth watching because reviews repeatedly flag rude or inattentive service, cleanliness issues, and weak value for money here.; business_scene: It is most naturally suited to nightlife, outdoor patio, and celebration. Useful visit details include outdoor seating and full bar. Check-in activity concentrates around\nRival 2 (same-slice semantic blocker): business_profile: Reviews most often mention desserts and bakeries, burgers and sandwiches, burger, and dessert. It also overlaps with burgers and sandwiches.; user_match_points: The user's recent outings keep clustering around family friendly settings and group dining, and this business supports that same pattern. The setting also fits how this user's recent outings are structured, especially; user_conflict_points: Potential friction is still worth watching because reviews repeatedly flag long waits and rude or inattentive service here.; business_scene: It is most naturally suited to fast casual meals, family friendly settings, and outdoor patio. Useful visit details include outdoor seating. Check-in activity concentrates around\nRival 3 (boundary semantic blocker): business_profile: Reviews most often mention american, cajun and creole food, oysters, and crawfish. It also overlaps with cajun and creole food.; user_match_points: The user's recent outings keep clustering around family friendly settings, late night, and group dining, and this business supports that same pattern. The business stays close to the user's stronger long-run preferences; user_conflict_points: Potential friction is still worth watching because reviews repeatedly flag rude or inattentive service, long waits, and weak value for money here.; business_scene: It is most naturally suited to nightlife, brunch spot, and family friendly settings. Visits lean more toward happy hour. Useful visit details include beer and wine and upscale\nRival 4 (head anchor): business_profile: Reviews most often mention cajun and creole food, seafood, gumbo, and crawfish. It also overlaps with seafood.; user_match_points: The user's recent outings keep clustering around family friendly settings, late night, and group dining, and this business supports that same pattern. The setting also fits how this user's recent outings are structured,; user_conflict_points: Potential friction is still worth watching because reviews repeatedly flag rude or inattentive service, long waits, and weak value for money here.; business_scene: It is most naturally suited to nightlife, family friendly settings, and celebration. Visits lean more toward happy hour and weekday lunch. Useful visit details include beer and\nQuestion: Should the focus candidate rank above these local blockers for this user?\nAnswer:",
+        "rejected": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like dessert, gumbo, and shrimp.; recent_intent: Recent outings keep clustering around family friendly settings, late night meals, and late night. Those visits also lean toward places with takeout, delivery, and late hours.; history_pattern: Older favorites most often centered on dessert, gumbo, shrimp, and cocktail bar.; user_evidence: Past reviews mention that They have wine to pair with cheeses too.; Past reviews mention that They have wine to pair with cheeses too.\nLocal ranking context: Focus candidate is in the current rank band 1-10. Local slate contains 4 rivals; head=0, boundary=1, mid=3, deep=0.\nLocal slate summary: cutoff_context: inside current top10; rival_mix: head=0, boundary=1, mid=3, deep=0; semantic_neighborhood: same_city=1, same_primary_category=0, similar_theme_rivals=2\nFocus candidate (current rank band 1-10): business_profile: Reviews most often mention cajun and creole food, seafood, gumbo, and crawfish. It also overlaps with seafood.; user_match_points: The user's recent outings keep clustering around family friendly settings, late night, and group dining, and this business supports that same pattern. The setting also fits how this user's recent outings are structured,; user_conflict_points: Potential friction is still worth watching because reviews repeatedly flag rude or inattentive service, long waits, and weak value for money here.; business_scene: It is most naturally suited to nightlife, family friendly settings, and celebration. Visits lean more toward happy hour and weekday lunch. Useful visit details include beer and\nWhy the focus may beat nearby rivals: semantic fit gives the focus candidate a slight edge; evidence support looks roughly balanced across this slate; route and ranking cues more often leans toward the focus candidate; focus is already inside the current head set; inside current top10\nRival 1 (current rank band 11-30): business_profile: Reviews most often mention american, cajun and creole food, oysters, and crawfish. It also overlaps with cajun and creole food.; user_match_points: The user's recent outings keep clustering around family friendly settings, late night, and group dining, and this business supports that same pattern. The business stays close to the user's stronger long-run preferences; user_conflict_points: Potential friction is still worth watching because reviews repeatedly flag rude or inattentive service, long waits, and weak value for money here.; business_scene: It is most naturally suited to nightlife, brunch spot, and family friendly settings. Visits lean more toward happy hour. Useful visit details include beer and wine and upscale\nRival 2 (current rank band 31-60): business_profile: Reviews most often mention desserts and bakeries, burgers and sandwiches, burger, and dessert. It also overlaps with burgers and sandwiches.; user_match_points: The user's recent outings keep clustering around family friendly settings and group dining, and this business supports that same pattern. The setting also fits how this user's recent outings are structured, especially; user_conflict_points: Potential friction is still worth watching because reviews repeatedly flag long waits and rude or inattentive service here.; business_scene: It is most naturally suited to fast casual meals, family friendly settings, and outdoor patio. Useful visit details include outdoor seating. Check-in activity concentrates around\nRival 3 (current rank band 31-60): business_profile: Reviews most often mention american, gumbo, brunch, and shrimp.; user_match_points: The user's recent outings keep clustering around late night and group dining, and this business supports that same pattern. The setting also fits how this user's recent outings are structured, especially around late; user_conflict_points: Potential friction is still worth watching because reviews repeatedly flag rude or inattentive service, cleanliness issues, and weak value for money here.; business_scene: It is most naturally suited to nightlife, outdoor patio, and celebration. Useful visit details include outdoor seating and full bar. Check-in activity concentrates around\nRival 4 (current rank band 31-60): business_profile: Reviews most often mention breakfast and brunch, desserts and bakeries, pastry, and pho. It also overlaps with desserts and bakeries.; user_match_points: The user's recent outings keep clustering around family friendly settings, late night, and group dining, and this business supports that same pattern. The setting also fits how this user's recent outings are structured,; user_conflict_points: Potential friction is still worth watching because reviews repeatedly flag parking trouble, rude or inattentive service, and long waits here.; business_scene: It is most naturally suited to family friendly settings, nightlife, and celebration. Useful visit details include parking available and outdoor seating. Check-in activity\nQuestion: Should the focus candidate rank above these local blockers for this user?\nAnswer:",
+        "chosen_business_id": "IGna30iAQJa6RMbsv-9tWg",
+        "rejected_business_id": "FkmUQqJCjgAYSlckQL0umw",
+        "chosen_item_idx": 118,
+        "rejected_item_idx": 117,
+        "chosen_label_source": "true",
+        "rejected_label_source": "pair_pool",
+        "rejected_neg_tier": "hard",
+        "chosen_pre_rank": 93,
+        "rejected_pre_rank": 11,
+        "chosen_learned_rank": 58,
+        "rejected_learned_rank": 9,
+        "chosen_learned_rank_band": "rescue_31_60",
+        "rejected_learned_rank_band": "head_guard",
+        "chosen_primary_reason": "semantic_edge_xgb_ambiguous",
+        "chosen_easy_but_useful": false,
+        "chosen_hard_but_learnable": true,
+        "chosen_non_actionable": false,
+        "chosen_pre_score": 0.1794705983574166,
+        "rejected_pre_score": 0.2784621093820744,
+        "chosen_learned_blend_score": 0.2621720289239491,
+        "rejected_learned_blend_score": 0.355535140156123,
+        "score_gap": -0.09899151102465778,
+        "rank_gap": -82,
+        "learned_score_gap": -0.09336311123217389,
+        "learned_rank_gap": -49,
+        "chosen_has_user_evidence": true,
+        "chosen_has_item_evidence": true,
+        "chosen_has_pair_evidence": true,
+        "rejected_has_user_evidence": true,
+        "rejected_has_item_evidence": true,
+        "rejected_has_pair_evidence": true,
+        "prompt_style": "local_listwise_compare",
+        "local_listwise_rival_count": 4
+      },
+      {
+        "user_idx": 6339,
+        "split": "eval",
+        "pair_mode": "rich_sft",
+        "selection_bucket": "true_gt_near",
+        "selection_slot": 0,
+        "slate_variant_id": 2,
+        "prompt": "",
+        "chosen": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like coffee, dessert, and gumbo. The user also responds well to flavors that lean spicy and sweet.; recent_intent: Recent outings keep clustering around group dining, date night meals, and late night. Those visits also lean toward places with reservations, takeout, and late hours.; history_pattern: Older favorites most often centered on coffee, dessert, gumbo, and cocktail bar.; user_evidence: Past reviews mention that They also have an incredible little coffee bar in the lobby and Vincent is not only a great guy but a wonderful barista SWEET!!) Davenport lounge is a\nLocal ranking context: Focus candidate is in the mid rescue band (31-60). Judge whether it should move above nearby mid-rank blockers and boundary blockers in this local rescue slate. Entering the global top10 is not required by itself. Local slate contains 4 rivals; same_band=2, boundary=1, head_anchor=1, deep=0.\nLocal slate summary: cutoff_context: inside the mid rescue range; rescue_slice: 41_60; blocker_types: same_band=2, boundary=1, head_anchor=1, deep=0; semantic_pressure: same_band_semantic=2, boundary_semantic=1, same_city=3, same_primary_category=0\nFocus candidate (current rank band 31-60): business_profile: Reviews most often mention desserts and bakeries, breakfast and brunch, brunch, and pastry. It also overlaps with breakfast and brunch.; user_match_points: The user's recent outings keep clustering around late night, and this business supports that same pattern.; user_conflict_points: Potential friction is still worth watching because reviews repeatedly flag rude or inattentive service, long waits, and weak value for money here.; business_scene: It is most naturally suited to brunch spot, nightlife, and sit down dinner. Useful visit details include full bar and beer and wine. Check-in activity concentrates around weekend,\nWhy the focus may beat nearby rivals: semantic evidence is stronger than the current mid-rank placement; the focus sits in the 41-60 slice, so the first goal is to climb toward top20 and top30; semantic fit more often leans toward the focus candidate; evidence support more often leans toward the\nRival 1 (same-slice semantic blocker): business_profile: Reviews most often mention vegan and vegetarian dishes, Mexican tacos, taco, and burrito. It also overlaps with Mexican tacos.; user_match_points: The user's recent outings keep clustering around late night and group dining, and this business supports that same pattern.; user_conflict_points: Potential friction is still worth watching because reviews repeatedly flag slow service, rude or inattentive service, and noise and overly loud rooms here.; business_scene: It is most naturally suited to fast casual meals, nightlife, and family friendly settings. Visits lean more toward happy hour. Useful visit details include full bar and parking\nRival 2 (same-slice semantic blocker): business_profile: Reviews most often mention seafood, cajun and creole food, oysters, and shrimp. It also overlaps with cajun and creole food.; user_match_points: The user's recent outings keep clustering around late night and group dining, and this business supports that same pattern.; user_conflict_points: Potential friction is still worth watching because reviews repeatedly flag rude or inattentive service, parking trouble, and weak value for money here.; business_scene: It is most naturally suited to celebration, nightlife, and family friendly settings. Useful visit details include parking available and outdoor seating. Check-in activity; item_strengths: Additional source evidence also highlights oyster sucking.\nRival 3 (boundary semantic blocker): business_profile: Reviews most often mention pizza, dessert, coffee, and oysters.; user_match_points: The user's recent outings keep clustering around late night and group dining, and this business supports that same pattern. The setting also fits how this user's recent outings are structured, especially around late; user_conflict_points: Potential friction is still worth watching because reviews repeatedly flag rude or inattentive service, long waits, and weak value for money here.; business_scene: It is most naturally suited to late night visits, sit down meals, and nightlife. Visits lean more toward happy hour. Useful visit details include beer and wine, full bar, and; item_strengths: Additional source evidence also highlights wine and beer.\nRival 4 (head anchor): business_profile: Reviews most often mention breakfast and brunch, cajun and creole food, brunch, and gumbo. It also overlaps with cajun and creole food.; user_match_points: The user's recent outings keep clustering around late night and group dining, and this business supports that same pattern. The setting also fits how this user's recent outings are structured, especially around late; user_conflict_points: Potential friction is still worth watching because reviews repeatedly flag rude or inattentive service, long waits, and weak value for money here.; business_scene: It is most naturally suited to brunch spot, nightlife, and family friendly settings. Useful visit details include full bar and outdoor seating. Check-in activity concentrates\nQuestion: Should the focus candidate rank above these local blockers for this user?\nAnswer:",
+        "rejected": "You are a recommendation ranking judge.\nEvaluate one focus candidate inside a small local rescue slate for the same user.\nBase the judgment on the user's focus and avoidance patterns, the user's history, and each business's semantic match, conflict, category, and review evidence.\nCurrent rank is context only and is not by itself the answer.\nUser: user_focus: Repeated visits most often come back to dishes like coffee, dessert, and gumbo. The user also responds well to flavors that lean spicy and sweet.; recent_intent: Recent outings keep clustering around group dining, date night meals, and late night. Those visits also lean toward places with reservations, takeout, and late hours.; history_pattern: Older favorites most often centered on coffee, dessert, gumbo, and cocktail bar.; user_evidence: Past reviews mention that They also have an incredible little coffee bar in the lobby and Vincent is not only a great guy but a wonderful barista SWEET!!) Davenport lounge is a\nLocal ranking context: Focus candidate is in the current rank band 1-10. Local slate contains 4 rivals; head=0, boundary=1, mid=3, deep=0.\nLocal slate summary: cutoff_context: inside current top10; rival_mix: head=0, boundary=1, mid=3, deep=0; semantic_neighborhood: same_city=3, same_primary_category=0, similar_theme_rivals=4\nFocus candidate (current rank band 1-10): business_profile: Reviews most often mention breakfast and brunch, cajun and creole food, brunch, and gumbo. It also overlaps with cajun and creole food.; user_match_points: The user's recent outings keep clustering around late night and group dining, and this business supports that same pattern. The setting also fits how this user's recent outings are structured, especially around late; user_conflict_points: Potential friction is still worth watching because reviews repeatedly flag rude or inattentive service, long waits, and weak value for money here.; business_scene: It is most naturally suited to brunch spot, nightlife, and family friendly settings. Useful visit details include full bar and outdoor seating. Check-in activity concentrates\nWhy the focus may beat nearby rivals: semantic fit more often leans toward the focus candidate; evidence support more often leans toward the focus candidate; route and ranking cues looks roughly balanced across this slate; focus is already inside the current head set; inside current top10\nRival 1 (current rank band 11-30): business_profile: Reviews most often mention pizza, dessert, coffee, and oysters.; user_match_points: The user's recent outings keep clustering around late night and group dining, and this business supports that same pattern. The setting also fits how this user's recent outings are structured, especially around late; user_conflict_points: Potential friction is still worth watching because reviews repeatedly flag rude or inattentive service, long waits, and weak value for money here.; business_scene: It is most naturally suited to late night visits, sit down meals, and nightlife. Visits lean more toward happy hour. Useful visit details include beer and wine, full bar, and; item_strengths: Additional source evidence also highlights wine and beer.\nRival 2 (current rank band 31-60): business_profile: Reviews most often mention desserts and bakeries, breakfast and brunch, brunch, and pastry. It also overlaps with breakfast and brunch.; user_match_points: The user's recent outings keep clustering around late night, and this business supports that same pattern.; user_conflict_points: Potential friction is still worth watching because reviews repeatedly flag rude or inattentive service, long waits, and weak value for money here.; business_scene: It is most naturally suited to brunch spot, nightlife, and sit down dinner. Useful visit details include full bar and beer and wine. Check-in activity concentrates around weekend,\nRival 3 (current rank band 31-60): business_profile: Reviews most often mention vegan and vegetarian dishes, Mexican tacos, taco, and burrito. It also overlaps with Mexican tacos.; user_match_points: The user's recent outings keep clustering around late night and group dining, and this business supports that same pattern.; user_conflict_points: Potential friction is still worth watching because reviews repeatedly flag slow service, rude or inattentive service, and noise and overly loud rooms here.; business_scene: It is most naturally suited to fast casual meals, nightlife, and family friendly settings. Visits lean more toward happy hour. Useful visit details include full bar and parking\nRival 4 (current rank band 31-60): business_profile: Reviews most often mention seafood, cajun and creole food, oysters, and shrimp. It also overlaps with cajun and creole food.; user_match_points: The user's recent outings keep clustering around late night and group dining, and this business supports that same pattern.; user_conflict_points: Potential friction is still worth watching because reviews repeatedly flag rude or inattentive service, parking trouble, and weak value for money here.; business_scene: It is most naturally suited to celebration, nightlife, and family friendly settings. Useful visit details include parking available and outdoor seating. Check-in activity; item_strengths: Additional source evidence also highlights oyster sucking.\nQuestion: Should the focus candidate rank above these local blockers for this user?\nAnswer:",
+        "chosen_business_id": "hfbZ97Te3T4jeWN6GgsGrQ",
+        "rejected_business_id": "EagkHaaC-kUozD3MPzbRIw",
+        "chosen_item_idx": 21,
+        "rejected_item_idx": 26,
+        "chosen_label_source": "true",
+        "rejected_label_source": "pair_pool",
+        "rejected_neg_tier": "near",
+        "chosen_pre_rank": 115,
+        "rejected_pre_rank": 1,
+        "chosen_learned_rank": 47,
+        "rejected_learned_rank": 1,
+        "chosen_learned_rank_band": "rescue_31_60",
+        "rejected_learned_rank_band": "head_guard",
+        "chosen_primary_reason": "semantic_edge_underweighted",
+        "chosen_easy_but_useful": false,
+        "chosen_hard_but_learnable": true,
+        "chosen_non_actionable": false,
+        "chosen_pre_score": 0.14703979879089926,
+        "rejected_pre_score": 0.9170892512133317,
+        "chosen_learned_blend_score": 0.26496675790292656,
+        "rejected_learned_blend_score": 0.8697361446595272,
+        "score_gap": -0.7700494524224325,
+        "rank_gap": -114,
+        "learned_score_gap": -0.6047693867566006,
+        "learned_rank_gap": -46,
+        "chosen_has_user_evidence": true,
+        "chosen_has_item_evidence": true,
+        "chosen_has_pair_evidence": true,
+        "rejected_has_user_evidence": true,
+        "rejected_has_item_evidence": true,
+        "rejected_has_pair_evidence": true,
+        "prompt_style": "local_listwise_compare",
+        "local_listwise_rival_count": 4
+      }
+    ]
+  }
+}

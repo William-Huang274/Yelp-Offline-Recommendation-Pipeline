@@ -29,6 +29,9 @@ _recovered_winfr/
 =1.6.0,
 C*Usershht13/
 *.log
+/tmp_*
+/scripts.rar
+*.remote_bak_tmp
 
 # Python build artifacts
 build/
@@ -51,3 +54,14 @@ data/output/_first_champion_freeze_20260313/*
 !data/output/_first_champion_freeze_20260313/first_champion_manifest.json
 !data/output/_prod_runs/
 !data/output/_prod_runs/*.json
+data/output/_prod_runs/stage11_freeze_pack_20260409/
+!data/output/current_release/
+!data/output/current_release/**
+!data/output/showcase_history/
+!data/output/showcase_history/**
+data/output/archive/
+data/metrics/archive/
+docs/archive/
+docs/release/
+docs/labeling/
+scripts/archive/

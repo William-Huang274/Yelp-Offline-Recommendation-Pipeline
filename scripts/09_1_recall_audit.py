@@ -37,17 +37,20 @@ SPARK_TMP_RETENTION_HOURS = int(os.getenv("SPARK_TMP_RETENTION_HOURS", "8").stri
 SPARK_TMP_CLEAN_MAX_ENTRIES = int(os.getenv("SPARK_TMP_CLEAN_MAX_ENTRIES", "3000").strip() or 3000)
 PY_TEMP_DIR = os.getenv("PY_TEMP_DIR", "").strip()
 BUCKETS_OVERRIDE = os.getenv("MIN_TRAIN_BUCKETS_OVERRIDE", "").strip()
+AUDIT_USER_COHORT_CSV = os.getenv("AUDIT_USER_COHORT_CSV", "").strip()
+AUDIT_WRITE_USER_DETAIL_CSV = os.getenv("AUDIT_WRITE_USER_DETAIL_CSV", "true").strip().lower() == "true"
+PRE_RANK_THRESHOLDS_RAW = os.getenv("AUDIT_PRE_RANK_THRESHOLDS", "10,20,50,100,150").strip()
 
 LIGHT_MAX_TRAIN = int(os.getenv("AUDIT_LIGHT_MAX_TRAIN", "7").strip() or 7)
 MID_MAX_TRAIN = int(os.getenv("AUDIT_MID_MAX_TRAIN", "19").strip() or 19)
 
 PRETRIM_CANDIDATE_FILES = [
+    "candidates_pretrim.parquet",
     "candidates_pretrim150.parquet",
     "candidates_pretrim250.parquet",
     "candidates_pretrim300.parquet",
     "candidates_pretrim360.parquet",
     "candidates_pretrim500.parquet",
-    "candidates_pretrim.parquet",
 ]
 ROUTES = ["als", "cluster", "profile", "popular"]
 
@@ -102,6 +105,22 @@ def parse_bucket_override(raw: str) -> set[int]:
         except Exception:
             continue
     return out
+
+
+def parse_rank_thresholds(raw: str) -> list[int]:
+    out: list[int] = []
+    for part in str(raw or "").split(","):
+        token = part.strip()
+        if not token:
+            continue
+        try:
+            value = int(token)
+        except Exception:
+            continue
+        if value > 0:
+            out.append(value)
+    out = sorted(set(out))
+    return out or [10, 20, 50, 100, 150]
 
 
 def pick_latest_run(root: Path, suffix: str) -> Path:
@@ -162,6 +181,26 @@ def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=True, indent=2), encoding="utf-8")
 
 
+def load_cohort_users(path_raw: str) -> pd.DataFrame:
+    path = Path(path_raw)
+    if not path.exists():
+        raise FileNotFoundError(f"AUDIT_USER_COHORT_CSV not found: {path}")
+    pdf = pd.read_csv(path)
+    cols: list[str] = []
+    if "user_id" in pdf.columns:
+        pdf["user_id"] = pdf["user_id"].astype(str).str.strip()
+        pdf = pdf[pdf["user_id"] != ""].copy()
+        cols.append("user_id")
+    if "user_idx" in pdf.columns:
+        pdf["user_idx"] = pd.to_numeric(pdf["user_idx"], errors="coerce")
+        pdf = pdf[pdf["user_idx"].notna()].copy()
+        pdf["user_idx"] = pdf["user_idx"].astype("int64")
+        cols.append("user_idx")
+    if not cols:
+        raise RuntimeError(f"AUDIT_USER_COHORT_CSV missing user_id/user_idx column: {path}")
+    return pdf[cols].drop_duplicates()
+
+
 def main() -> None:
     spark = build_spark()
     spark.sparkContext.setLogLevel("WARN")
@@ -181,6 +220,16 @@ def main() -> None:
 
     summary_rows: list[dict[str, Any]] = []
     route_rows: list[dict[str, Any]] = []
+    rank_thresholds = parse_rank_thresholds(PRE_RANK_THRESHOLDS_RAW)
+    cohort_sp = None
+    cohort_users_count = 0
+    cohort_join_key = "user_idx"
+    if AUDIT_USER_COHORT_CSV:
+        cohort_pdf = load_cohort_users(AUDIT_USER_COHORT_CSV)
+        cohort_users_count = int(cohort_pdf.shape[0])
+        cohort_sp = spark.createDataFrame(cohort_pdf)
+        cohort_join_key = "user_id" if "user_id" in cohort_pdf.columns else "user_idx"
+        print(f"[COHORT] using AUDIT_USER_COHORT_CSV={AUDIT_USER_COHORT_CSV} users={cohort_users_count}")
 
     for bdir in bucket_dirs:
         bucket = int(bdir.name.split("_")[-1])
@@ -188,24 +237,40 @@ def main() -> None:
         meta = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.exists() else {}
         pretrim_path = pick_pretrim_file(bdir)
 
-        truth = (
-            spark.read.parquet((bdir / "truth.parquet").as_posix())
-            .select("user_idx", "true_item_idx")
-            .dropDuplicates(["user_idx"])
-            .persist(StorageLevel.DISK_ONLY)
-        )
+        truth_base = spark.read.parquet((bdir / "truth.parquet").as_posix())
+        truth_cols = [c for c in ("user_idx", "user_id", "true_item_idx") if c in truth_base.columns]
+        truth = truth_base.select(*truth_cols).dropDuplicates(["user_idx"])
+        if cohort_sp is not None:
+            if cohort_join_key == "user_id" and "user_id" in truth.columns:
+                truth = truth.join(
+                    F.broadcast(cohort_sp.select("user_id").dropDuplicates(["user_id"])),
+                    on="user_id",
+                    how="inner",
+                )
+            else:
+                truth = truth.join(
+                    F.broadcast(cohort_sp.select("user_idx").dropDuplicates(["user_idx"])),
+                    on="user_idx",
+                    how="inner",
+                )
+        truth = truth.persist(StorageLevel.DISK_ONLY)
+        truth_user_filter = truth.select("user_idx").dropDuplicates(["user_idx"]).persist(StorageLevel.DISK_ONLY)
         cand_all = (
             spark.read.parquet((bdir / "candidates_all.parquet").as_posix())
             .select("user_idx", "item_idx", "source")
-            .persist(StorageLevel.DISK_ONLY)
         )
+        if cohort_sp is not None:
+            cand_all = cand_all.join(F.broadcast(truth_user_filter), on="user_idx", how="inner")
+        cand_all = cand_all.persist(StorageLevel.DISK_ONLY)
         cand_all_u = cand_all.select("user_idx", "item_idx").dropDuplicates(["user_idx", "item_idx"]).persist(StorageLevel.DISK_ONLY)
         cand_pre_u = (
             spark.read.parquet(pretrim_path.as_posix())
-            .select("user_idx", "item_idx")
+            .select("user_idx", "item_idx", "pre_rank", "pre_score")
             .dropDuplicates(["user_idx", "item_idx"])
-            .persist(StorageLevel.DISK_ONLY)
         )
+        if cohort_sp is not None:
+            cand_pre_u = cand_pre_u.join(F.broadcast(truth_user_filter), on="user_idx", how="inner")
+        cand_pre_u = cand_pre_u.persist(StorageLevel.DISK_ONLY)
 
         n_users = int(truth.count())
         truth_hit = (
@@ -225,6 +290,8 @@ def main() -> None:
                 F.col("t.true_item_idx").alias("true_item_idx"),
                 F.when(F.col("a.item_idx").isNotNull(), F.lit(1)).otherwise(F.lit(0)).alias("hit_all"),
                 F.when(F.col("p.item_idx").isNotNull(), F.lit(1)).otherwise(F.lit(0)).alias("hit_pretrim"),
+                F.col("p.pre_rank").cast("int").alias("true_pre_rank"),
+                F.col("p.pre_score").cast("double").alias("true_pre_score"),
             )
             .persist(StorageLevel.DISK_ONLY)
         )
@@ -241,6 +308,50 @@ def main() -> None:
         truth_in_pretrim = float(hit_pretrim_users / max(1, n_users))
         pretrim_cut_loss = float(max(0.0, truth_in_all - truth_in_pretrim))
         hard_miss = float(max(0.0, 1.0 - truth_in_all))
+
+        top1_scores = (
+            cand_pre_u.filter(F.col("pre_rank") == F.lit(1))
+            .select("user_idx", F.col("pre_score").cast("double").alias("top1_pre_score"))
+        )
+        top10_scores = (
+            cand_pre_u.filter(F.col("pre_rank") <= F.lit(10))
+            .groupBy("user_idx")
+            .agg(F.min(F.col("pre_score").cast("double")).alias("top10_floor_pre_score"))
+        )
+        truth_pre_metrics = (
+            truth_hit.filter(F.col("hit_pretrim") == F.lit(1))
+            .join(top1_scores, on="user_idx", how="left")
+            .join(top10_scores, on="user_idx", how="left")
+            .withColumn(
+                "top1_minus_truth_pre_score",
+                F.when(
+                    F.col("true_pre_score").isNotNull() & F.col("top1_pre_score").isNotNull(),
+                    F.col("top1_pre_score") - F.col("true_pre_score"),
+                ),
+            )
+            .withColumn(
+                "top10_floor_minus_truth_pre_score",
+                F.when(
+                    F.col("true_pre_score").isNotNull() & F.col("top10_floor_pre_score").isNotNull(),
+                    F.col("top10_floor_pre_score") - F.col("true_pre_score"),
+                ),
+            )
+        ).persist(StorageLevel.DISK_ONLY)
+        rank_metric_exprs = []
+        for k in rank_thresholds:
+            rank_metric_exprs.append(
+                F.avg(F.when(F.col("true_pre_rank") <= F.lit(int(k)), F.lit(1.0)).otherwise(F.lit(0.0))).alias(
+                    f"truth_pre_rank_le_{int(k)}"
+                )
+            )
+        truth_pre_summary = collect_single(
+            truth_pre_metrics.agg(
+                F.expr("percentile_approx(true_pre_rank, 0.5)").alias("true_pre_rank_hit_median"),
+                F.avg("top1_minus_truth_pre_score").alias("top1_minus_truth_pre_score_mean"),
+                F.avg("top10_floor_minus_truth_pre_score").alias("top10_floor_minus_truth_pre_score_mean"),
+                *rank_metric_exprs,
+            )
+        )
 
         user_pool_stats = (
             truth.select("user_idx")
@@ -356,12 +467,21 @@ def main() -> None:
             "source_run_09": run_dir.name,
             "bucket": int(bucket),
             "n_users": int(n_users),
+            "cohort_users": int(cohort_users_count) if cohort_sp is not None else None,
+            "cohort_csv": AUDIT_USER_COHORT_CSV or None,
             "truth_in_all": round(truth_in_all, 6),
             "truth_in_pretrim": round(truth_in_pretrim, 6),
             "pretrim_cut_loss": round(pretrim_cut_loss, 6),
             "hard_miss": round(hard_miss, 6),
             "hit_all_users": int(hit_all_users),
             "hit_pretrim_users": int(hit_pretrim_users),
+            "truth_pre_rank_hit_median": int(to_int(truth_pre_summary.get("true_pre_rank_hit_median"))),
+            "top1_minus_truth_pre_score_mean": round(
+                to_float(truth_pre_summary.get("top1_minus_truth_pre_score_mean")), 6
+            ),
+            "top10_floor_minus_truth_pre_score_mean": round(
+                to_float(truth_pre_summary.get("top10_floor_minus_truth_pre_score_mean")), 6
+            ),
             "pretrim_file": pretrim_path.name,
             "pretrim_top_k_used": int(meta.get("pretrim_top_k_used", 0)),
             "cand_all_avg": round(to_float(pool_stats.get("cand_all_avg")), 3),
@@ -390,21 +510,52 @@ def main() -> None:
                     "route_unique_hit_rate": row[f"route_unique_{r}"],
                 }
             )
+        for k in rank_thresholds:
+            row[f"truth_pre_rank_le_{int(k)}"] = round(
+                to_float(truth_pre_summary.get(f"truth_pre_rank_le_{int(k)}")), 6
+            )
         summary_rows.append(row)
 
         print(
             f"[METRIC] bucket={bucket} truth@all={truth_in_all:.4f} "
             f"truth@pretrim={truth_in_pretrim:.4f} cut_loss={pretrim_cut_loss:.4f} "
-            f"hard_miss={hard_miss:.4f}"
+            f"hard_miss={hard_miss:.4f} pre_rank<=10={to_float(truth_pre_summary.get('truth_pre_rank_le_10')):.4f}"
         )
+
+        if AUDIT_WRITE_USER_DETAIL_CSV:
+            detail_dir = out_dir / f"bucket_{bucket}_truth_user_detail_csv"
+            (
+                truth_hit.join(top1_scores, on="user_idx", how="left")
+                .join(top10_scores, on="user_idx", how="left")
+                .withColumn(
+                    "top1_minus_truth_pre_score",
+                    F.when(
+                        F.col("true_pre_score").isNotNull() & F.col("top1_pre_score").isNotNull(),
+                        F.col("top1_pre_score") - F.col("true_pre_score"),
+                    ),
+                )
+                .withColumn(
+                    "top10_floor_minus_truth_pre_score",
+                    F.when(
+                        F.col("true_pre_score").isNotNull() & F.col("top10_floor_pre_score").isNotNull(),
+                        F.col("top10_floor_pre_score") - F.col("true_pre_score"),
+                    ),
+                )
+                .coalesce(1)
+                .write.mode("overwrite")
+                .option("header", True)
+                .csv(detail_dir.as_posix())
+            )
 
         route_sets.unpersist()
         user_seg.unpersist()
         train_history.unpersist()
+        truth_pre_metrics.unpersist()
         truth_hit.unpersist()
         cand_pre_u.unpersist()
         cand_all_u.unpersist()
         cand_all.unpersist()
+        truth_user_filter.unpersist()
         truth.unpersist()
 
     summary_pdf = pd.DataFrame(summary_rows) if summary_rows else None

@@ -1,0 +1,4 @@
+bucket,definition,prescore_recall_at_10,prescore_ndcg_at_10,learned_recall_at_10,learned_ndcg_at_10,source_metrics
+bucket2,cold-start-inclusive trainable set under leave-two-out,0.109843,0.051290,0.112650,0.052207,data/output/current_release/stage10/bucket2_mainline/metrics.csv
+bucket5,mid-to-high interaction set,0.093540,0.043978,0.126098,0.058108,data/output/current_release/stage10/bucket5_mainline/metrics.csv
+bucket10,high-interaction set,0.056911,0.026467,0.077236,0.034113,data/output/current_release/stage10/bucket10_mainline/metrics.csv

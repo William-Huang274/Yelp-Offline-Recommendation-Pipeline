@@ -16,6 +16,13 @@ from pyspark.sql import DataFrame, SparkSession, functions as F
 from pyspark.sql.window import Window
 from pipeline.project_paths import env_or_project_path, normalize_legacy_project_path, project_path
 from pipeline.spark_tmp_manager import SparkTmpContext, build_spark_tmp_context
+from pipeline.stage10_wide_deep_v2 import (
+    SPARSE_CONTEXT_COLUMNS as WIDE_DEEP_V2_CONTEXT_COLUMNS,
+    build_wide_deep_v2_sparse_matrix,
+    build_wide_deep_v2_sparse_state,
+    build_wide_deep_v2_wide_matrix,
+    train_wide_deep_v2_model,
+)
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import log_loss, roc_auc_score
 try:
@@ -24,13 +31,70 @@ try:
 except Exception:
     XGBClassifier = None
     XGBRanker = None
+try:
+    import torch
+    from torch import nn
+    from torch.utils.data import DataLoader, TensorDataset
+except Exception:
+    torch = None
+    nn = None
+    DataLoader = None
+    TensorDataset = None
 
 
 RUN_TAG = "stage10_1_rank_train"
+STAGE10_CLOUD_FAST_MODE = os.getenv("STAGE10_CLOUD_FAST_MODE", "false").strip().lower() == "true"
 INPUT_09_RUN_DIR = os.getenv("INPUT_09_RUN_DIR", "").strip()
 INPUT_09_ROOT = env_or_project_path("INPUT_09_ROOT_DIR", "data/output/09_candidate_fusion")
 INPUT_09_SUFFIX = "_stage09_candidate_fusion"
 OUTPUT_ROOT = env_or_project_path("OUTPUT_10_1_ROOT_DIR", "data/output/10_rank_models")
+INPUT_09_MATCH_CHANNELS_ROOT = env_or_project_path(
+    "INPUT_09_MATCH_CHANNELS_ROOT_DIR",
+    "data/output/09_user_business_match_channels_v2",
+)
+INPUT_09_MATCH_CHANNELS_RUN_DIR = os.getenv("INPUT_09_MATCH_CHANNELS_RUN_DIR", "").strip()
+INPUT_09_TEXT_MATCH_ROOT = env_or_project_path(
+    "INPUT_09_TEXT_MATCH_ROOT_DIR",
+    "data/output/09_candidate_wise_text_match_features_v1",
+)
+INPUT_09_TEXT_MATCH_RUN_DIR = os.getenv("INPUT_09_TEXT_MATCH_RUN_DIR", "").strip()
+INPUT_09_RELATIVE_CROSS_ROOT = env_or_project_path(
+    "INPUT_09_RELATIVE_CROSS_ROOT_DIR",
+    "data/output/09_stage10_relative_cross_features_v1",
+)
+INPUT_09_RELATIVE_CROSS_RUN_DIR = os.getenv("INPUT_09_RELATIVE_CROSS_RUN_DIR", "").strip()
+INPUT_09_GROUP_GAP_ROOT = env_or_project_path(
+    "INPUT_09_GROUP_GAP_ROOT_DIR",
+    "data/output/09_stage10_group_gap_features_v1",
+)
+INPUT_09_GROUP_GAP_RUN_DIR = os.getenv("INPUT_09_GROUP_GAP_RUN_DIR", "").strip()
+INPUT_09_INDEX_MAPS_ROOT = env_or_project_path(
+    "INPUT_09_INDEX_MAPS_ROOT_DIR",
+    "data/output/09_index_maps",
+)
+INPUT_09_INDEX_MAPS_RUN_DIR = os.getenv("INPUT_09_INDEX_MAPS_RUN_DIR", "").strip()
+ENABLE_STAGE10_V2_MATCH_CHANNELS = os.getenv("ENABLE_STAGE10_V2_MATCH_CHANNELS", "false").strip().lower() == "true"
+STAGE10_V2_MATCH_CHANNEL_BUCKETS_RAW = os.getenv("STAGE10_V2_MATCH_CHANNEL_BUCKETS", "5").strip()
+STAGE10_V2_MATCH_CHANNEL_FEATURES_RAW = os.getenv(
+    "STAGE10_V2_MATCH_CHANNEL_FEATURES",
+    "channel_preference_core_v1,channel_recent_intent_v1,channel_context_time_v1,channel_conflict_v1,channel_evidence_support_v1",
+).strip()
+ENABLE_STAGE10_V2_TEXT_MATCH = os.getenv("ENABLE_STAGE10_V2_TEXT_MATCH", "false").strip().lower() == "true"
+STAGE10_V2_TEXT_MATCH_BUCKETS_RAW = os.getenv("STAGE10_V2_TEXT_MATCH_BUCKETS", "5").strip()
+STAGE10_V2_TEXT_MATCH_FEATURES_RAW = os.getenv("STAGE10_V2_TEXT_MATCH_FEATURES", "sim_long_pref_core,sim_context_merchant").strip()
+ENABLE_STAGE10_V2_RELATIVE_CROSS = os.getenv("ENABLE_STAGE10_V2_RELATIVE_CROSS", "false").strip().lower() == "true"
+STAGE10_V2_RELATIVE_CROSS_BUCKETS_RAW = os.getenv("STAGE10_V2_RELATIVE_CROSS_BUCKETS", "5").strip()
+STAGE10_V2_RELATIVE_CROSS_FEATURES_RAW = os.getenv(
+    "STAGE10_V2_RELATIVE_CROSS_FEATURES",
+    "pre_score_rel_z_v1,signal_score_rel_z_v1,semantic_score_rel_z_v1,item_train_pop_count_rel_z_v1,source_count_rel_z_v1,schema_overlap_total_ratio_v1,schema_conflict_user_ratio_v1,schema_net_minus_pop_z_v1,schema_overlap_minus_semantic_z_v1,high_source_low_semantic_flag_v1,challenger_low_pop_high_semantic_flag_v1",
+).strip()
+ENABLE_STAGE10_V2_GROUP_GAP = os.getenv("ENABLE_STAGE10_V2_GROUP_GAP", "false").strip().lower() == "true"
+STAGE10_V2_GROUP_GAP_BUCKETS_RAW = os.getenv("STAGE10_V2_GROUP_GAP_BUCKETS", "5").strip()
+STAGE10_V2_GROUP_GAP_FEATURES_RAW = os.getenv(
+    "STAGE10_V2_GROUP_GAP_FEATURES",
+    "schema_weighted_overlap_user_ratio_v2_rank_pct_v3,schema_weighted_overlap_user_ratio_v2_gap_to_top3_v3,schema_weighted_overlap_user_ratio_v2_gap_to_top10_v3,schema_weighted_net_score_v2_rank_pct_v3,schema_top_pop_low_flag_v3",
+).strip()
+STAGE10_FEATURE_COLUMNS_OVERRIDE_RAW = os.getenv("STAGE10_FEATURE_COLUMNS_OVERRIDE", "").strip()
 
 SPARK_DRIVER_MEMORY = os.getenv("SPARK_DRIVER_MEMORY", "6g").strip() or "6g"
 SPARK_EXECUTOR_MEMORY = os.getenv("SPARK_EXECUTOR_MEMORY", "6g").strip() or "6g"
@@ -41,12 +105,22 @@ SPARK_LOCAL_DIR = (
 )
 SPARK_SQL_SHUFFLE_PARTITIONS = int(os.getenv("SPARK_SQL_SHUFFLE_PARTITIONS", "16").strip() or 16)
 SPARK_DEFAULT_PARALLELISM = int(os.getenv("SPARK_DEFAULT_PARALLELISM", "16").strip() or 16)
-SPARK_SQL_ADAPTIVE_ENABLED = os.getenv("SPARK_SQL_ADAPTIVE_ENABLED", "false").strip().lower() == "true"
-SPARK_SQL_PARQUET_ENABLE_VECTORIZED = (
-    os.getenv("SPARK_SQL_PARQUET_ENABLE_VECTORIZED", "false").strip().lower() == "true"
-)
+_spark_sql_adaptive_enabled_raw = os.getenv("SPARK_SQL_ADAPTIVE_ENABLED", "").strip()
+if _spark_sql_adaptive_enabled_raw:
+    SPARK_SQL_ADAPTIVE_ENABLED = _spark_sql_adaptive_enabled_raw.lower() == "true"
+else:
+    SPARK_SQL_ADAPTIVE_ENABLED = STAGE10_CLOUD_FAST_MODE
+_spark_sql_parquet_vectorized_raw = os.getenv("SPARK_SQL_PARQUET_ENABLE_VECTORIZED", "").strip()
+if _spark_sql_parquet_vectorized_raw:
+    SPARK_SQL_PARQUET_ENABLE_VECTORIZED = _spark_sql_parquet_vectorized_raw.lower() == "true"
+else:
+    SPARK_SQL_PARQUET_ENABLE_VECTORIZED = STAGE10_CLOUD_FAST_MODE
 SPARK_SQL_FILES_MAX_PARTITION_BYTES = (
-    os.getenv("SPARK_SQL_FILES_MAX_PARTITION_BYTES", "64m").strip() or "64m"
+    os.getenv(
+        "SPARK_SQL_FILES_MAX_PARTITION_BYTES",
+        "128m" if STAGE10_CLOUD_FAST_MODE else "64m",
+    ).strip()
+    or ("128m" if STAGE10_CLOUD_FAST_MODE else "64m")
 )
 SPARK_NETWORK_TIMEOUT = os.getenv("SPARK_NETWORK_TIMEOUT", "600s").strip() or "600s"
 SPARK_EXECUTOR_HEARTBEAT_INTERVAL = (
@@ -54,11 +128,23 @@ SPARK_EXECUTOR_HEARTBEAT_INTERVAL = (
 )
 SPARK_DRIVER_EXTRA_JAVA_OPTIONS = os.getenv(
     "SPARK_DRIVER_EXTRA_JAVA_OPTIONS",
-    "-XX:+UseSerialGC -XX:TieredStopAtLevel=1 -XX:CICompilerCount=2 -XX:ReservedCodeCacheSize=128m -XX:MaxMetaspaceSize=256m -Xss512k",
+    (
+        "-XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:InitiatingHeapOccupancyPercent=35 "
+        "-XX:ReservedCodeCacheSize=256m -XX:MaxMetaspaceSize=512m -Xss1m"
+        if STAGE10_CLOUD_FAST_MODE
+        else "-XX:+UseSerialGC -XX:TieredStopAtLevel=1 -XX:CICompilerCount=2 "
+        "-XX:ReservedCodeCacheSize=128m -XX:MaxMetaspaceSize=256m -Xss512k"
+    ),
 ).strip()
 SPARK_EXECUTOR_EXTRA_JAVA_OPTIONS = os.getenv(
     "SPARK_EXECUTOR_EXTRA_JAVA_OPTIONS",
-    "-XX:+UseSerialGC -XX:TieredStopAtLevel=1 -XX:CICompilerCount=2 -XX:ReservedCodeCacheSize=128m -XX:MaxMetaspaceSize=256m -Xss512k",
+    (
+        "-XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:InitiatingHeapOccupancyPercent=35 "
+        "-XX:ReservedCodeCacheSize=256m -XX:MaxMetaspaceSize=512m -Xss1m"
+        if STAGE10_CLOUD_FAST_MODE
+        else "-XX:+UseSerialGC -XX:TieredStopAtLevel=1 -XX:CICompilerCount=2 "
+        "-XX:ReservedCodeCacheSize=128m -XX:MaxMetaspaceSize=256m -Xss512k"
+    ),
 ).strip()
 PY_TEMP_SESSION_ISOLATION = os.getenv("PY_TEMP_SESSION_ISOLATION", "true").strip().lower() == "true"
 PY_TEMP_SESSION_PREFIX = os.getenv("PY_TEMP_SESSION_PREFIX", "stage10_1").strip() or "stage10_1"
@@ -118,6 +204,14 @@ CALIBRATION_MIN_COEF = float(os.getenv("TRAIN_CALIBRATION_MIN_COEF", "0.0").stri
 ENABLE_GLOBAL_CALIBRATION = os.getenv("TRAIN_ENABLE_GLOBAL_CALIBRATION", "false").strip().lower() == "true"
 RANKER_REQUIRE_POSITIVE_GROUP = os.getenv("TRAIN_RANKER_REQUIRE_POSITIVE_GROUP", "true").strip().lower() == "true"
 RANKER_REQUIRE_POSITIVE_GROUP_VALID = os.getenv("TRAIN_RANKER_REQUIRE_POSITIVE_GROUP_VALID", "true").strip().lower() == "true"
+RANKER_TRAIN_LABEL_MODE = os.getenv("TRAIN_RANKER_TRAIN_LABEL_MODE", "label_train").strip().lower() or "label_train"
+if RANKER_TRAIN_LABEL_MODE not in {"label_train", "true_only"}:
+    RANKER_TRAIN_LABEL_MODE = "label_train"
+RANKER_GROUP_WEIGHT_MODE = os.getenv("TRAIN_RANKER_GROUP_WEIGHT_MODE", "none").strip().lower() or "none"
+if RANKER_GROUP_WEIGHT_MODE not in {"none", "sum_pos", "max_pos", "mean_pos"}:
+    RANKER_GROUP_WEIGHT_MODE = "none"
+RANKER_GROUP_WEIGHT_CLIP_MIN = float(os.getenv("TRAIN_RANKER_GROUP_WEIGHT_CLIP_MIN", "1.0").strip() or 1.0)
+RANKER_GROUP_WEIGHT_CLIP_MAX = float(os.getenv("TRAIN_RANKER_GROUP_WEIGHT_CLIP_MAX", "8.0").strip() or 8.0)
 TRAIN_USE_VALID_AS_POSITIVE = os.getenv("TRAIN_USE_VALID_AS_POSITIVE", "false").strip().lower() == "true"
 TRAIN_TRUE_POS_WEIGHT = float(os.getenv("TRAIN_TRUE_POS_WEIGHT", "1.0").strip() or 1.0)
 TRAIN_VALID_POS_WEIGHT = float(os.getenv("TRAIN_VALID_POS_WEIGHT", "0.6").strip() or 0.6)
@@ -135,6 +229,8 @@ SEQ_SCORE_SCALE = float(os.getenv("TRAIN_SEQ_SCORE_SCALE", "1.0").strip() or 1.0
 TOWER_INV_SCALE = float(os.getenv("TRAIN_TOWER_INV_SCALE", "1.0").strip() or 1.0)
 SEQ_INV_SCALE = float(os.getenv("TRAIN_SEQ_INV_SCALE", "1.0").strip() or 1.0)
 MODEL_BACKEND = os.getenv("TRAIN_MODEL_BACKEND", "sklearn_lr").strip().lower() or "sklearn_lr"
+NON_TREE_IMPUTE_ENABLE = os.getenv("NON_TREE_IMPUTE_ENABLE", "false").strip().lower() == "true"
+NON_TREE_ADD_MISSING_INDICATORS = os.getenv("NON_TREE_ADD_MISSING_INDICATORS", "false").strip().lower() == "true"
 XGB_N_ESTIMATORS = int(os.getenv("XGB_N_ESTIMATORS", "300").strip() or 300)
 XGB_MAX_DEPTH = int(os.getenv("XGB_MAX_DEPTH", "6").strip() or 6)
 XGB_LEARNING_RATE = float(os.getenv("XGB_LEARNING_RATE", "0.05").strip() or 0.05)
@@ -142,19 +238,58 @@ XGB_SUBSAMPLE = float(os.getenv("XGB_SUBSAMPLE", "0.8").strip() or 0.8)
 XGB_COLSAMPLE = float(os.getenv("XGB_COLSAMPLE", "0.8").strip() or 0.8)
 XGB_REG_LAMBDA = float(os.getenv("XGB_REG_LAMBDA", "2.0").strip() or 2.0)
 XGB_RANK_OBJECTIVE = os.getenv("XGB_RANK_OBJECTIVE", "rank:pairwise").strip() or "rank:pairwise"
-CANDIDATE_FILE = os.getenv("TRAIN_CANDIDATE_FILE", "candidates_pretrim150.parquet").strip() or "candidates_pretrim150.parquet"
+XGB_N_JOBS = int(os.getenv("XGB_N_JOBS", "4").strip() or 4)
+WIDE_DEEP_HIDDEN = [
+    int(x.strip())
+    for x in os.getenv("WIDE_DEEP_HIDDEN", "128,64").split(",")
+    if x.strip()
+]
+if not WIDE_DEEP_HIDDEN:
+    WIDE_DEEP_HIDDEN = [128, 64]
+WIDE_DEEP_DROPOUT = float(os.getenv("WIDE_DEEP_DROPOUT", "0.1").strip() or 0.1)
+WIDE_DEEP_LR = float(os.getenv("WIDE_DEEP_LR", "0.001").strip() or 0.001)
+WIDE_DEEP_WEIGHT_DECAY = float(os.getenv("WIDE_DEEP_WEIGHT_DECAY", "0.0001").strip() or 0.0001)
+WIDE_DEEP_EPOCHS = int(os.getenv("WIDE_DEEP_EPOCHS", "12").strip() or 12)
+WIDE_DEEP_BATCH_SIZE = int(os.getenv("WIDE_DEEP_BATCH_SIZE", "4096").strip() or 4096)
+WIDE_DEEP_EVAL_BATCH_SIZE = int(os.getenv("WIDE_DEEP_EVAL_BATCH_SIZE", "8192").strip() or 8192)
+WIDE_DEEP_PATIENCE = int(os.getenv("WIDE_DEEP_PATIENCE", "3").strip() or 3)
+WIDE_DEEP_DEVICE = os.getenv("WIDE_DEEP_DEVICE", "auto").strip().lower() or "auto"
+WIDE_DEEP_V2_USER_HASH_BUCKETS = int(os.getenv("WIDE_DEEP_V2_USER_HASH_BUCKETS", "8192").strip() or 8192)
+WIDE_DEEP_V2_BUSINESS_HASH_BUCKETS = int(os.getenv("WIDE_DEEP_V2_BUSINESS_HASH_BUCKETS", "8192").strip() or 8192)
+WIDE_DEEP_V2_CATEGORY_HASH_BUCKETS = int(os.getenv("WIDE_DEEP_V2_CATEGORY_HASH_BUCKETS", "512").strip() or 512)
+WIDE_DEEP_V2_SEGMENT_HASH_BUCKETS = int(os.getenv("WIDE_DEEP_V2_SEGMENT_HASH_BUCKETS", "32").strip() or 32)
+WIDE_DEEP_V2_USER_EMBED_DIM = int(os.getenv("WIDE_DEEP_V2_USER_EMBED_DIM", "16").strip() or 16)
+WIDE_DEEP_V2_ITEM_EMBED_DIM = int(os.getenv("WIDE_DEEP_V2_ITEM_EMBED_DIM", "24").strip() or 24)
+WIDE_DEEP_V2_BUSINESS_EMBED_DIM = int(os.getenv("WIDE_DEEP_V2_BUSINESS_EMBED_DIM", "16").strip() or 16)
+WIDE_DEEP_V2_CATEGORY_EMBED_DIM = int(os.getenv("WIDE_DEEP_V2_CATEGORY_EMBED_DIM", "8").strip() or 8)
+WIDE_DEEP_V2_SEGMENT_EMBED_DIM = int(os.getenv("WIDE_DEEP_V2_SEGMENT_EMBED_DIM", "4").strip() or 4)
+WIDE_DEEP_V2_ENABLE_WIDE_CROSS = os.getenv("WIDE_DEEP_V2_ENABLE_WIDE_CROSS", "true").strip().lower() == "true"
+WIDE_DEEP_V2_WIDE_CROSS_BUCKETS = int(os.getenv("WIDE_DEEP_V2_WIDE_CROSS_BUCKETS", "4096").strip() or 4096)
+WIDE_DEEP_V2_LOSS_TYPE = os.getenv("WIDE_DEEP_V2_LOSS_TYPE", "pointwise").strip().lower() or "pointwise"
+WIDE_DEEP_V2_PAIRWISE_NEG_PER_POS = int(os.getenv("WIDE_DEEP_V2_PAIRWISE_NEG_PER_POS", "6").strip() or 6)
+WIDE_DEEP_V2_PAIRWISE_NEG_PRE_RANK_MAX = int(os.getenv("WIDE_DEEP_V2_PAIRWISE_NEG_PRE_RANK_MAX", "80").strip() or 80)
+WIDE_DEEP_V2_EARLY_STOP_METRIC = os.getenv("WIDE_DEEP_V2_EARLY_STOP_METRIC", "auto").strip().lower() or "auto"
+WIDE_DEEP_V2_EARLY_STOP_TOP_K = int(os.getenv("WIDE_DEEP_V2_EARLY_STOP_TOP_K", str(TOP_K)).strip() or TOP_K)
+# Prefer the generic pretrim handoff name; keep the historical `*150` file as
+# a backward-compatible fallback for older Stage09 runs.
+CANDIDATE_FILE = os.getenv("TRAIN_CANDIDATE_FILE", "candidates_pretrim.parquet").strip() or "candidates_pretrim.parquet"
 CANDIDATE_FILE_FALLBACKS = ["candidates_pretrim.parquet", "candidates_pretrim150.parquet"]
 ROUTE_KEYS = ("als", "cluster", "profile", "popular")
+ROUTE_CALIBRATION_SUPPORT_COLUMNS = ["source_count", *[f"has_{route}" for route in ROUTE_KEYS]]
 BUCKETS_OVERRIDE = os.getenv("TRAIN_BUCKETS_OVERRIDE", "").strip()
 TRAIN_BUCKET_POLICY_JSON = os.getenv("TRAIN_BUCKET_POLICY_JSON", "").strip()
 CACHE_MODE = os.getenv("TRAIN_CACHE_MODE", "auto").strip().lower() or "auto"
 if CACHE_MODE not in {"auto", "disk", "none"}:
     CACHE_MODE = "auto"
+TRAIN_ENABLE_EXPENSIVE_DIAGNOSTICS = (
+    os.getenv("TRAIN_ENABLE_EXPENSIVE_DIAGNOSTICS", "true").strip().lower() == "true"
+)
+NON_TREE_MISSING_SUFFIX = "__is_missing"
 
 
 _SPARK_TMP_CTX: SparkTmpContext | None = None
 
-FEATURE_COLUMNS = [
+BASE_FEATURE_COLUMNS = [
     "pre_score",
     "signal_score",
     "quality_score",
@@ -199,6 +334,165 @@ FEATURE_COLUMNS = [
     "pre_minus_semantic",
 ]
 
+STAGE10_V2_MATCH_CHANNEL_SUPPORTED_FEATURES = [
+    "channel_preference_core_v1",
+    "channel_preference_property_v1",
+    "channel_recent_intent_v1",
+    "channel_context_time_v1",
+    "channel_context_geo_v1",
+    "channel_conflict_v1",
+    "channel_evidence_support_v1",
+    "channel_uncertainty_confidence_v1",
+    "channel_uncertainty_conflict_v1",
+    "channel_uncertainty_freshness_v1",
+    "channel_typed_prior_trust_v1",
+    "channel_preference_core_uaware_v1",
+    "channel_recent_intent_uaware_v1",
+    "channel_context_time_uaware_v1",
+    "channel_typed_specificity_v1",
+    "channel_breakfast_guard_scale_v1",
+    "channel_typed_prior_trust_v2",
+    "channel_preference_core_uaware_v2",
+    "channel_recent_intent_uaware_v2",
+    "channel_context_time_uaware_v2",
+    "channel_typed_exact_match_uaware_v1",
+]
+STAGE10_V2_MATCH_CHANNEL_FEATURES = [
+    x.strip()
+    for x in STAGE10_V2_MATCH_CHANNEL_FEATURES_RAW.split(",")
+    if x.strip() and x.strip() in STAGE10_V2_MATCH_CHANNEL_SUPPORTED_FEATURES
+]
+if not STAGE10_V2_MATCH_CHANNEL_FEATURES:
+    STAGE10_V2_MATCH_CHANNEL_FEATURES = [
+        "channel_preference_core_v1",
+        "channel_recent_intent_v1",
+        "channel_context_time_v1",
+        "channel_conflict_v1",
+        "channel_evidence_support_v1",
+    ]
+
+STAGE10_V2_TEXT_MATCH_SUPPORTED_FEATURES = [
+    "sim_long_pref_core",
+    "sim_recent_intent_semantic",
+    "sim_recent_intent_pos",
+    "sim_negative_avoid_neg",
+    "sim_negative_avoid_core",
+    "sim_context_merchant",
+    "sim_conflict_gap",
+]
+STAGE10_V2_TEXT_MATCH_FEATURES = [
+    x.strip()
+    for x in STAGE10_V2_TEXT_MATCH_FEATURES_RAW.split(",")
+    if x.strip() and x.strip() in STAGE10_V2_TEXT_MATCH_SUPPORTED_FEATURES
+]
+if not STAGE10_V2_TEXT_MATCH_FEATURES:
+    STAGE10_V2_TEXT_MATCH_FEATURES = ["sim_long_pref_core", "sim_context_merchant"]
+
+STAGE10_V2_RELATIVE_CROSS_SUPPORTED_FEATURES = [
+    "schema_overlap_total_count_v1",
+    "schema_conflict_total_count_v1",
+    "schema_net_score_v1",
+    "schema_overlap_total_ratio_v1",
+    "schema_overlap_user_ratio_v1",
+    "schema_conflict_user_ratio_v1",
+    "semantic_minus_item_pop_log_v1",
+    "signal_minus_item_pop_log_v1",
+    "quality_minus_item_pop_log_v1",
+    "schema_net_minus_pop_z_v1",
+    "schema_overlap_minus_pre_z_v1",
+    "schema_overlap_minus_semantic_z_v1",
+    "high_source_low_semantic_flag_v1",
+    "challenger_low_pop_high_semantic_flag_v1",
+    "quality_high_conflict_flag_v1",
+    "high_support_low_semantic_flag_v1",
+    "pre_score_rel_z_v1",
+    "signal_score_rel_z_v1",
+    "quality_score_rel_z_v1",
+    "semantic_score_rel_z_v1",
+    "item_train_pop_count_rel_z_v1",
+    "source_count_rel_z_v1",
+]
+STAGE10_V2_RELATIVE_CROSS_FEATURES = [
+    x.strip()
+    for x in STAGE10_V2_RELATIVE_CROSS_FEATURES_RAW.split(",")
+    if x.strip() and x.strip() in STAGE10_V2_RELATIVE_CROSS_SUPPORTED_FEATURES
+]
+if not STAGE10_V2_RELATIVE_CROSS_FEATURES:
+    STAGE10_V2_RELATIVE_CROSS_FEATURES = [
+        "pre_score_rel_z_v1",
+        "signal_score_rel_z_v1",
+        "semantic_score_rel_z_v1",
+        "item_train_pop_count_rel_z_v1",
+        "source_count_rel_z_v1",
+        "schema_overlap_total_ratio_v1",
+        "schema_conflict_user_ratio_v1",
+        "schema_net_minus_pop_z_v1",
+        "schema_overlap_minus_semantic_z_v1",
+        "high_source_low_semantic_flag_v1",
+        "challenger_low_pop_high_semantic_flag_v1",
+    ]
+
+STAGE10_V2_GROUP_GAP_SUPPORTED_FEATURES = [
+    "schema_weighted_overlap_user_ratio_v2_rank_pct_v3",
+    "schema_weighted_overlap_user_ratio_v2_gap_to_top3_v3",
+    "schema_weighted_overlap_user_ratio_v2_gap_to_top10_v3",
+    "schema_weighted_net_score_v2_rank_pct_v3",
+    "schema_top_pop_low_flag_v3",
+    "pre_score_rank_pct_v3",
+    "signal_score_rank_pct_v3",
+    "item_train_pop_count_rank_pct_v3",
+]
+STAGE10_V2_GROUP_GAP_FEATURES = [
+    x.strip()
+    for x in STAGE10_V2_GROUP_GAP_FEATURES_RAW.split(",")
+    if x.strip() and x.strip() in STAGE10_V2_GROUP_GAP_SUPPORTED_FEATURES
+]
+if not STAGE10_V2_GROUP_GAP_FEATURES:
+    STAGE10_V2_GROUP_GAP_FEATURES = [
+        "schema_weighted_overlap_user_ratio_v2_rank_pct_v3",
+        "schema_weighted_overlap_user_ratio_v2_gap_to_top3_v3",
+        "schema_weighted_overlap_user_ratio_v2_gap_to_top10_v3",
+        "schema_weighted_net_score_v2_rank_pct_v3",
+        "schema_top_pop_low_flag_v3",
+    ]
+
+FEATURE_COLUMNS = BASE_FEATURE_COLUMNS + (
+    STAGE10_V2_MATCH_CHANNEL_FEATURES if ENABLE_STAGE10_V2_MATCH_CHANNELS else []
+) + (
+    STAGE10_V2_TEXT_MATCH_FEATURES if ENABLE_STAGE10_V2_TEXT_MATCH else []
+) + (
+    STAGE10_V2_RELATIVE_CROSS_FEATURES if ENABLE_STAGE10_V2_RELATIVE_CROSS else []
+) + (
+    STAGE10_V2_GROUP_GAP_FEATURES if ENABLE_STAGE10_V2_GROUP_GAP else []
+)
+if STAGE10_FEATURE_COLUMNS_OVERRIDE_RAW:
+    feature_columns_active = []
+    feature_columns_seen: set[str] = set()
+    feature_columns_available = set(FEATURE_COLUMNS)
+    feature_columns_requested = [
+        x.strip() for x in STAGE10_FEATURE_COLUMNS_OVERRIDE_RAW.split(",") if x.strip()
+    ]
+    feature_columns_ignored = [
+        x for x in feature_columns_requested if x not in feature_columns_available
+    ]
+    for feature_name in feature_columns_requested:
+        if feature_name in feature_columns_available and feature_name not in feature_columns_seen:
+            feature_columns_active.append(feature_name)
+            feature_columns_seen.add(feature_name)
+    if not feature_columns_active:
+        raise RuntimeError(
+            "STAGE10_FEATURE_COLUMNS_OVERRIDE produced empty feature set; "
+            f"requested={feature_columns_requested}"
+        )
+    if feature_columns_ignored:
+        print(
+            "[WARN] ignored STAGE10_FEATURE_COLUMNS_OVERRIDE features not active: "
+            f"{feature_columns_ignored}"
+        )
+    FEATURE_COLUMNS = feature_columns_active
+
+PANDAS_SUPPORT_COLUMNS = [x for x in ROUTE_CALIBRATION_SUPPORT_COLUMNS if x not in FEATURE_COLUMNS]
+
 
 def normalize_model_backend(raw: str) -> str:
     v = (raw or "").strip().lower()
@@ -206,11 +500,176 @@ def normalize_model_backend(raw: str) -> str:
         return "xgboost_ranker"
     if v in {"xgboost_cls", "xgb_cls", "xgboost_classifier"}:
         return "xgboost_cls"
+    if v in {"wide_deep_v2", "widedeep_v2", "wide&deep_v2"}:
+        return "wide_deep_v2"
+    if v in {"wide_deep", "widedeep", "wide&deep"}:
+        return "wide_deep"
     if v in {"xgboost", "xgb"}:
         # Backward-compatible alias; default to ranking objective for better
         # consistency with recall-stage candidate ordering.
         return "xgboost_ranker"
     return "sklearn_lr"
+
+
+def resolve_torch_device(raw: str) -> str:
+    mode = (raw or "").strip().lower() or "auto"
+    if torch is None:
+        return "cpu"
+    if mode == "auto":
+        return "cuda" if torch.cuda.is_available() else "cpu"
+    if mode == "cuda":
+        return "cuda" if torch.cuda.is_available() else "cpu"
+    return "cpu"
+
+
+class WideDeepNet(nn.Module):
+    def __init__(self, input_dim: int, hidden_dims: list[int], dropout: float) -> None:
+        super().__init__()
+        self.wide = nn.Linear(input_dim, 1)
+        deep_layers: list[nn.Module] = []
+        prev = int(input_dim)
+        for h in hidden_dims:
+            deep_layers.append(nn.Linear(prev, int(h)))
+            deep_layers.append(nn.ReLU())
+            if float(dropout) > 0.0:
+                deep_layers.append(nn.Dropout(float(dropout)))
+            prev = int(h)
+        deep_layers.append(nn.Linear(prev, 1))
+        self.deep = nn.Sequential(*deep_layers)
+
+    def forward(self, x: "torch.Tensor") -> "torch.Tensor":
+        return self.wide(x) + self.deep(x)
+
+
+def predict_wide_deep_logits(
+    model: WideDeepNet,
+    x: np.ndarray,
+    device: str,
+    batch_size: int,
+) -> np.ndarray:
+    if torch is None:
+        raise RuntimeError("torch is not installed for wide_deep backend")
+    model.eval()
+    outputs: list[np.ndarray] = []
+    bs = max(256, int(batch_size))
+    with torch.no_grad():
+        for start in range(0, len(x), bs):
+            end = min(len(x), start + bs)
+            xb = torch.from_numpy(x[start:end]).to(device=device, dtype=torch.float32)
+            logits = model(xb).squeeze(-1).detach().cpu().numpy().astype(np.float64)
+            outputs.append(logits)
+    if not outputs:
+        return np.asarray([], dtype=np.float64)
+    return np.concatenate(outputs, axis=0)
+
+
+def train_wide_deep_model(
+    x_train: np.ndarray,
+    y_train: np.ndarray,
+    sample_weight: np.ndarray,
+    x_valid: np.ndarray,
+    y_valid: np.ndarray,
+    random_seed: int,
+) -> tuple[WideDeepNet, np.ndarray, dict[str, Any]]:
+    if torch is None or nn is None or DataLoader is None or TensorDataset is None:
+        raise RuntimeError("TRAIN_MODEL_BACKEND=wide_deep but torch is not installed")
+    device = resolve_torch_device(WIDE_DEEP_DEVICE)
+    torch.manual_seed(int(random_seed))
+    if device == "cuda":
+        torch.cuda.manual_seed_all(int(random_seed))
+    model = WideDeepNet(
+        input_dim=int(x_train.shape[1]),
+        hidden_dims=[int(x) for x in WIDE_DEEP_HIDDEN],
+        dropout=float(WIDE_DEEP_DROPOUT),
+    ).to(device)
+    dataset = TensorDataset(
+        torch.from_numpy(x_train.astype(np.float32)),
+        torch.from_numpy(y_train.astype(np.float32)),
+        torch.from_numpy(sample_weight.astype(np.float32)),
+    )
+    loader = DataLoader(
+        dataset,
+        batch_size=max(256, int(WIDE_DEEP_BATCH_SIZE)),
+        shuffle=True,
+        num_workers=0,
+        pin_memory=(device == "cuda"),
+        drop_last=False,
+    )
+    optimizer = torch.optim.AdamW(
+        model.parameters(),
+        lr=float(WIDE_DEEP_LR),
+        weight_decay=float(WIDE_DEEP_WEIGHT_DECAY),
+    )
+    criterion = nn.BCEWithLogitsLoss(reduction="none")
+    best_state: dict[str, Any] | None = None
+    best_valid_loss = float("inf")
+    best_epoch = -1
+    patience_left = int(WIDE_DEEP_PATIENCE)
+    history_rows: list[dict[str, Any]] = []
+    for epoch in range(1, int(WIDE_DEEP_EPOCHS) + 1):
+        model.train()
+        loss_sum = 0.0
+        weight_sum = 0.0
+        for xb, yb, wb in loader:
+            xb = xb.to(device=device, dtype=torch.float32, non_blocking=(device == "cuda"))
+            yb = yb.to(device=device, dtype=torch.float32, non_blocking=(device == "cuda"))
+            wb = wb.to(device=device, dtype=torch.float32, non_blocking=(device == "cuda"))
+            optimizer.zero_grad(set_to_none=True)
+            logits = model(xb).squeeze(-1)
+            loss_vec = criterion(logits, yb) * wb
+            loss = loss_vec.sum() / torch.clamp(wb.sum(), min=1e-6)
+            loss.backward()
+            optimizer.step()
+            loss_sum += float(loss_vec.sum().detach().cpu())
+            weight_sum += float(wb.sum().detach().cpu())
+        train_loss = float(loss_sum / max(weight_sum, 1e-6))
+        valid_logits = predict_wide_deep_logits(model, x_valid, device=device, batch_size=int(WIDE_DEEP_EVAL_BATCH_SIZE))
+        valid_prob = 1.0 / (1.0 + np.exp(-np.clip(valid_logits, -50.0, 50.0)))
+        valid_loss = float(log_loss(y_valid, valid_prob, labels=[0, 1])) if len(y_valid) > 0 else float("inf")
+        try:
+            valid_auc = float(roc_auc_score(y_valid, valid_prob)) if len(np.unique(y_valid)) > 1 else float("nan")
+        except Exception:
+            valid_auc = float("nan")
+        history_rows.append(
+            {
+                "epoch": int(epoch),
+                "train_loss": float(train_loss),
+                "valid_logloss": float(valid_loss),
+                "valid_auc": None if math.isnan(valid_auc) else float(valid_auc),
+            }
+        )
+        improved = valid_loss < (best_valid_loss - 1e-5)
+        if improved:
+            best_valid_loss = float(valid_loss)
+            best_epoch = int(epoch)
+            patience_left = int(WIDE_DEEP_PATIENCE)
+            best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
+        else:
+            patience_left -= 1
+            if patience_left <= 0:
+                break
+    if best_state is None:
+        best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
+        best_epoch = int(len(history_rows))
+    model.load_state_dict(best_state)
+    valid_logits = predict_wide_deep_logits(model, x_valid, device=device, batch_size=int(WIDE_DEEP_EVAL_BATCH_SIZE))
+    valid_prob = 1.0 / (1.0 + np.exp(-np.clip(valid_logits, -50.0, 50.0)))
+    meta = {
+        "device": str(device),
+        "hidden_dims": [int(x) for x in WIDE_DEEP_HIDDEN],
+        "dropout": float(WIDE_DEEP_DROPOUT),
+        "lr": float(WIDE_DEEP_LR),
+        "weight_decay": float(WIDE_DEEP_WEIGHT_DECAY),
+        "epochs_requested": int(WIDE_DEEP_EPOCHS),
+        "epochs_trained": int(len(history_rows)),
+        "batch_size": int(WIDE_DEEP_BATCH_SIZE),
+        "eval_batch_size": int(WIDE_DEEP_EVAL_BATCH_SIZE),
+        "patience": int(WIDE_DEEP_PATIENCE),
+        "best_epoch": int(best_epoch),
+        "best_valid_logloss": float(best_valid_loss),
+        "history": history_rows,
+    }
+    return model, valid_prob.astype(np.float64), meta
 
 
 def build_spark() -> SparkSession:
@@ -307,6 +766,15 @@ def resolve_stage09_run() -> Path:
     return pick_latest_run(INPUT_09_ROOT, INPUT_09_SUFFIX)
 
 
+def resolve_optional_run(raw: str, root: Path, suffix: str) -> Path:
+    if raw:
+        p = normalize_legacy_project_path(raw)
+        if not p.exists():
+            raise FileNotFoundError(f"run dir not found: {p}")
+        return p
+    return pick_latest_run(root, suffix)
+
+
 def parse_bucket_override(raw: str) -> set[int]:
     out: set[int] = set()
     text = (raw or "").strip()
@@ -321,6 +789,199 @@ def parse_bucket_override(raw: str) -> set[int]:
         except ValueError:
             continue
     return out
+
+
+def use_stage10_v2_match_channels(bucket: int) -> bool:
+    if not ENABLE_STAGE10_V2_MATCH_CHANNELS:
+        return False
+    buckets = parse_bucket_override(STAGE10_V2_MATCH_CHANNEL_BUCKETS_RAW)
+    return (not buckets) or (int(bucket) in buckets)
+
+
+def use_stage10_v2_text_match(bucket: int) -> bool:
+    if not ENABLE_STAGE10_V2_TEXT_MATCH:
+        return False
+    buckets = parse_bucket_override(STAGE10_V2_TEXT_MATCH_BUCKETS_RAW)
+    return (not buckets) or (int(bucket) in buckets)
+
+
+def use_stage10_v2_relative_cross(bucket: int) -> bool:
+    if not ENABLE_STAGE10_V2_RELATIVE_CROSS:
+        return False
+    buckets = parse_bucket_override(STAGE10_V2_RELATIVE_CROSS_BUCKETS_RAW)
+    return (not buckets) or (int(bucket) in buckets)
+
+
+def use_stage10_v2_group_gap(bucket: int) -> bool:
+    if not ENABLE_STAGE10_V2_GROUP_GAP:
+        return False
+    buckets = parse_bucket_override(STAGE10_V2_GROUP_GAP_BUCKETS_RAW)
+    return (not buckets) or (int(bucket) in buckets)
+
+
+def resolve_match_channel_run() -> Path:
+    return resolve_optional_run(
+        INPUT_09_MATCH_CHANNELS_RUN_DIR,
+        INPUT_09_MATCH_CHANNELS_ROOT,
+        "_full_stage09_user_business_match_channels_v2_build",
+    )
+
+
+def resolve_index_map_run() -> Path:
+    return resolve_optional_run(
+        INPUT_09_INDEX_MAPS_RUN_DIR,
+        INPUT_09_INDEX_MAPS_ROOT,
+        "_full_stage09_index_maps_build",
+    )
+
+
+def resolve_text_match_run() -> Path:
+    return resolve_optional_run(
+        INPUT_09_TEXT_MATCH_RUN_DIR,
+        INPUT_09_TEXT_MATCH_ROOT,
+        "_full_stage09_candidate_wise_text_match_features_v1_build",
+    )
+
+
+def resolve_relative_cross_run() -> Path:
+    return resolve_optional_run(
+        INPUT_09_RELATIVE_CROSS_RUN_DIR,
+        INPUT_09_RELATIVE_CROSS_ROOT,
+        "_full_stage09_stage10_relative_cross_features_v1_build",
+    )
+
+
+def resolve_group_gap_run() -> Path:
+    return resolve_optional_run(
+        INPUT_09_GROUP_GAP_RUN_DIR,
+        INPUT_09_GROUP_GAP_ROOT,
+        "_full_stage09_stage10_group_gap_features_v1_build",
+    )
+
+
+def attach_stage10_v2_match_channels(
+    spark: SparkSession,
+    cand: DataFrame,
+    bucket: int,
+) -> DataFrame:
+    if not use_stage10_v2_match_channels(bucket):
+        return cand
+    cols = set(cand.columns)
+    if "user_idx" not in cols or "business_id" not in cols:
+        return cand
+    match_run = resolve_match_channel_run()
+    map_run = resolve_index_map_run()
+    bucket_dir = map_run / f"bucket_{int(bucket)}"
+    user_map_path = bucket_dir / "user_index_map.parquet"
+    if not user_map_path.exists():
+        raise FileNotFoundError(f"user index map missing for bucket={bucket}: {user_map_path}")
+    channel_path = match_run / "user_business_match_channels_v2_user_item.parquet"
+    if not channel_path.exists():
+        raise FileNotFoundError(f"user-business channel parquet missing: {channel_path}")
+
+    user_map = (
+        spark.read.parquet(user_map_path.as_posix())
+        .select(
+            F.col("user_idx").cast("int").alias("user_idx"),
+            F.col("user_id").cast("string").alias("user_id"),
+        )
+        .dropDuplicates(["user_idx"])
+    )
+    channel_df = (
+        spark.read.parquet(channel_path.as_posix())
+        .select(
+            F.col("user_id").cast("string").alias("user_id"),
+            F.col("business_id").cast("string").alias("business_id"),
+            *[
+                F.col(f"mean_{c}").cast("double").alias(c)
+                for c in STAGE10_V2_MATCH_CHANNEL_FEATURES
+            ],
+        )
+        .dropDuplicates(["user_id", "business_id"])
+    )
+    return (
+        cand.join(F.broadcast(user_map), on="user_idx", how="left")
+        .join(F.broadcast(channel_df), on=["user_id", "business_id"], how="left")
+        .drop("user_id")
+    )
+
+
+def attach_stage10_v2_text_match(
+    spark: SparkSession,
+    cand: DataFrame,
+    bucket: int,
+) -> DataFrame:
+    if not use_stage10_v2_text_match(bucket):
+        return cand
+    cols = set(cand.columns)
+    if "user_idx" not in cols or "item_idx" not in cols:
+        return cand
+    text_run = resolve_text_match_run()
+    text_path = text_run / "candidate_text_match_features_v1.parquet"
+    if not text_path.exists():
+        raise FileNotFoundError(f"candidate text match parquet missing: {text_path}")
+    text_df = (
+        spark.read.parquet(text_path.as_posix())
+        .select(
+            F.col("user_idx").cast("int").alias("user_idx"),
+            F.col("item_idx").cast("int").alias("item_idx"),
+            *[F.col(c).cast("double").alias(c) for c in STAGE10_V2_TEXT_MATCH_FEATURES],
+        )
+        .dropDuplicates(["user_idx", "item_idx"])
+    )
+    return cand.join(F.broadcast(text_df), on=["user_idx", "item_idx"], how="left")
+
+
+def attach_stage10_v2_relative_cross(
+    spark: SparkSession,
+    cand: DataFrame,
+    bucket: int,
+) -> DataFrame:
+    if not use_stage10_v2_relative_cross(bucket):
+        return cand
+    cols = set(cand.columns)
+    if "user_idx" not in cols or "item_idx" not in cols:
+        return cand
+    rel_run = resolve_relative_cross_run()
+    rel_path = rel_run / "candidate_relative_cross_features_v1.parquet"
+    if not rel_path.exists():
+        raise FileNotFoundError(f"candidate relative/cross parquet missing: {rel_path}")
+    rel_df = (
+        spark.read.parquet(rel_path.as_posix())
+        .select(
+            F.col("user_idx").cast("int").alias("user_idx"),
+            F.col("item_idx").cast("int").alias("item_idx"),
+            *[F.col(c).cast("double").alias(c) for c in STAGE10_V2_RELATIVE_CROSS_FEATURES],
+        )
+        .dropDuplicates(["user_idx", "item_idx"])
+    )
+    return cand.join(F.broadcast(rel_df), on=["user_idx", "item_idx"], how="left")
+
+
+def attach_stage10_v2_group_gap(
+    spark: SparkSession,
+    cand: DataFrame,
+    bucket: int,
+) -> DataFrame:
+    if not use_stage10_v2_group_gap(bucket):
+        return cand
+    cols = set(cand.columns)
+    if "user_idx" not in cols or "item_idx" not in cols:
+        return cand
+    gap_run = resolve_group_gap_run()
+    gap_path = gap_run / "candidate_group_gap_features_v1.parquet"
+    if not gap_path.exists():
+        raise FileNotFoundError(f"candidate group-gap parquet missing: {gap_path}")
+    gap_df = (
+        spark.read.parquet(gap_path.as_posix())
+        .select(
+            F.col("user_idx").cast("int").alias("user_idx"),
+            F.col("item_idx").cast("int").alias("item_idx"),
+            *[F.col(c).cast("double").alias(c) for c in STAGE10_V2_GROUP_GAP_FEATURES],
+        )
+        .dropDuplicates(["user_idx", "item_idx"])
+    )
+    return cand.join(F.broadcast(gap_df), on=["user_idx", "item_idx"], how="left")
 
 
 def parse_bucket_policy_json(raw: str) -> dict[int, dict[str, Any]]:
@@ -414,6 +1075,10 @@ def add_feature_columns(
         .withColumn("semantic_score", F.coalesce(_col("semantic_score").cast("double"), F.lit(0.0)))
         .withColumn("semantic_confidence", F.coalesce(_col("semantic_confidence").cast("double"), F.lit(0.0)))
         .withColumn("semantic_support", F.coalesce(_col("semantic_support").cast("double"), F.lit(0.0)))
+        .withColumn(
+            "semantic_support_adj",
+            F.coalesce(_col("semantic_support_adj").cast("double"), F.col("semantic_support")),
+        )
         .withColumn("semantic_tag_richness", F.coalesce(_col("semantic_tag_richness").cast("double"), F.lit(0.0)))
         .withColumn(
             "tower_score",
@@ -431,7 +1096,81 @@ def add_feature_columns(
             "seq_inv",
             F.coalesce(_col("seq_inv").cast("double"), F.lit(0.0)) * F.lit(float(seq_inv_scale)),
         )
-        .withColumn("semantic_support_log", F.log1p(F.col("semantic_support")))
+        .withColumn("channel_recent_intent_v1", F.coalesce(_col("channel_recent_intent_v1").cast("double"), F.lit(0.0)))
+        .withColumn(
+            "channel_preference_property_v1",
+            F.coalesce(_col("channel_preference_property_v1").cast("double"), F.lit(0.0)),
+        )
+        .withColumn("channel_context_time_v1", F.coalesce(_col("channel_context_time_v1").cast("double"), F.lit(0.0)))
+        .withColumn("channel_conflict_v1", F.coalesce(_col("channel_conflict_v1").cast("double"), F.lit(0.0)))
+        .withColumn(
+            "channel_evidence_support_v1",
+            F.coalesce(_col("channel_evidence_support_v1").cast("double"), F.lit(0.0)),
+        )
+        .withColumn(
+            "channel_uncertainty_confidence_v1",
+            F.coalesce(_col("channel_uncertainty_confidence_v1").cast("double"), F.lit(0.0)),
+        )
+        .withColumn(
+            "channel_uncertainty_conflict_v1",
+            F.coalesce(_col("channel_uncertainty_conflict_v1").cast("double"), F.lit(0.0)),
+        )
+        .withColumn(
+            "channel_uncertainty_freshness_v1",
+            F.coalesce(_col("channel_uncertainty_freshness_v1").cast("double"), F.lit(0.0)),
+        )
+        .withColumn(
+            "channel_typed_prior_trust_v1",
+            F.coalesce(_col("channel_typed_prior_trust_v1").cast("double"), F.lit(0.0)),
+        )
+        .withColumn(
+            "channel_preference_core_uaware_v1",
+            F.coalesce(_col("channel_preference_core_uaware_v1").cast("double"), F.lit(0.0)),
+        )
+        .withColumn(
+            "channel_recent_intent_uaware_v1",
+            F.coalesce(_col("channel_recent_intent_uaware_v1").cast("double"), F.lit(0.0)),
+        )
+        .withColumn(
+            "channel_context_time_uaware_v1",
+            F.coalesce(_col("channel_context_time_uaware_v1").cast("double"), F.lit(0.0)),
+        )
+        .withColumn(
+            "channel_typed_specificity_v1",
+            F.coalesce(_col("channel_typed_specificity_v1").cast("double"), F.lit(0.0)),
+        )
+        .withColumn(
+            "channel_breakfast_guard_scale_v1",
+            F.coalesce(_col("channel_breakfast_guard_scale_v1").cast("double"), F.lit(0.0)),
+        )
+        .withColumn(
+            "channel_typed_prior_trust_v2",
+            F.coalesce(_col("channel_typed_prior_trust_v2").cast("double"), F.lit(0.0)),
+        )
+        .withColumn(
+            "channel_preference_core_uaware_v2",
+            F.coalesce(_col("channel_preference_core_uaware_v2").cast("double"), F.lit(0.0)),
+        )
+        .withColumn(
+            "channel_recent_intent_uaware_v2",
+            F.coalesce(_col("channel_recent_intent_uaware_v2").cast("double"), F.lit(0.0)),
+        )
+        .withColumn(
+            "channel_context_time_uaware_v2",
+            F.coalesce(_col("channel_context_time_uaware_v2").cast("double"), F.lit(0.0)),
+        )
+        .withColumn(
+            "channel_typed_exact_match_uaware_v1",
+            F.coalesce(_col("channel_typed_exact_match_uaware_v1").cast("double"), F.lit(0.0)),
+        )
+        .withColumn("sim_long_pref_core", F.coalesce(_col("sim_long_pref_core").cast("double"), F.lit(0.0)))
+        .withColumn("sim_recent_intent_semantic", F.coalesce(_col("sim_recent_intent_semantic").cast("double"), F.lit(0.0)))
+        .withColumn("sim_recent_intent_pos", F.coalesce(_col("sim_recent_intent_pos").cast("double"), F.lit(0.0)))
+        .withColumn("sim_negative_avoid_neg", F.coalesce(_col("sim_negative_avoid_neg").cast("double"), F.lit(0.0)))
+        .withColumn("sim_negative_avoid_core", F.coalesce(_col("sim_negative_avoid_core").cast("double"), F.lit(0.0)))
+        .withColumn("sim_context_merchant", F.coalesce(_col("sim_context_merchant").cast("double"), F.lit(0.0)))
+        .withColumn("sim_conflict_gap", F.coalesce(_col("sim_conflict_gap").cast("double"), F.lit(0.0)))
+        .withColumn("semantic_support_log", F.log1p(F.col("semantic_support_adj")))
         .withColumn("item_pop_log", F.log1p(F.coalesce(_col("item_train_pop_count").cast("double"), F.lit(0.0))))
         .withColumn("user_train_log", F.log1p(F.coalesce(_col("user_train_count").cast("double"), F.lit(0.0))))
         .withColumn("inv_pre_rank", _inv_rank("pre_rank"))
@@ -521,6 +1260,37 @@ def standardize(train_x: np.ndarray, valid_x: np.ndarray) -> tuple[np.ndarray, n
     return (train_x - mean) / std, (valid_x - mean) / std, mean, std
 
 
+def fit_non_tree_impute_values(train_x: np.ndarray) -> np.ndarray:
+    with np.errstate(all="ignore"):
+        impute = np.nanmedian(train_x, axis=0)
+    impute = np.asarray(impute, dtype=np.float32)
+    if impute.ndim == 0:
+        impute = np.asarray([float(impute)], dtype=np.float32)
+    impute[np.isnan(impute)] = 0.0
+    return impute
+
+
+def transform_non_tree_matrix(
+    x: np.ndarray,
+    impute_values: np.ndarray,
+    add_missing_indicators: bool,
+) -> np.ndarray:
+    x = np.asarray(x, dtype=np.float32)
+    missing = np.isnan(x)
+    filled = np.where(missing, np.asarray(impute_values, dtype=np.float32)[None, :], x).astype(np.float32, copy=False)
+    if not add_missing_indicators:
+        return filled
+    indicators = missing.astype(np.float32, copy=False)
+    return np.concatenate([filled, indicators], axis=1)
+
+
+def build_non_tree_augmented_feature_columns(base_feature_cols: list[str], add_missing_indicators: bool) -> list[str]:
+    cols = list(base_feature_cols)
+    if add_missing_indicators:
+        cols.extend([f"{c}{NON_TREE_MISSING_SUFFIX}" for c in base_feature_cols])
+    return cols
+
+
 def fit_platt_calibrator(scores: np.ndarray, labels: np.ndarray) -> dict[str, float] | None:
     if CALIBRATION_METHOD != "platt":
         return None
@@ -586,6 +1356,47 @@ def build_sample_weights(pre_rank: np.ndarray, labels: np.ndarray) -> np.ndarray
     )
     base = np.where(y == 1, pos_w, neg_w)
     return (base * np.power(inv, float(TRAIN_RANK_PRIOR_POWER))).astype(np.float32)
+
+
+def build_ranker_group_weights(
+    user_idx: np.ndarray,
+    labels: np.ndarray,
+    sample_weight: np.ndarray,
+    mode: str,
+    clip_min: float,
+    clip_max: float,
+) -> np.ndarray | None:
+    mode_norm = str(mode or "none").strip().lower() or "none"
+    if mode_norm == "none":
+        return None
+    pdf = pd.DataFrame(
+        {
+            "user_idx": np.asarray(user_idx, dtype=np.int64),
+            "label": np.asarray(labels, dtype=np.int32),
+            "sample_weight": np.asarray(sample_weight, dtype=np.float32),
+        }
+    )
+    if pdf.empty:
+        return None
+    pos_pdf = pdf.loc[pdf["label"] == 1, ["user_idx", "sample_weight"]].copy()
+    if pos_pdf.empty:
+        grouped = pdf.groupby("user_idx", sort=False).size().reset_index()[["user_idx"]]
+        values = np.ones(len(grouped), dtype=np.float32)
+    else:
+        agg = "sum" if mode_norm == "sum_pos" else "max" if mode_norm == "max_pos" else "mean"
+        grouped = (
+            pos_pdf.groupby("user_idx", sort=False)["sample_weight"]
+            .agg(agg)
+            .reset_index()
+            .rename(columns={"sample_weight": "group_weight"})
+        )
+        all_users = pdf.groupby("user_idx", sort=False).size().reset_index()[["user_idx"]]
+        grouped = all_users.merge(grouped, on="user_idx", how="left")
+        values = grouped["group_weight"].fillna(1.0).to_numpy(dtype=np.float32, copy=False)
+    lo = float(min(clip_min, clip_max))
+    hi = float(max(clip_min, clip_max))
+    values = np.clip(values, lo, hi).astype(np.float32, copy=False)
+    return values
 
 
 def compute_route_quality_calibration(valid_pdf: pd.DataFrame) -> dict[str, Any]:
@@ -704,6 +1515,7 @@ def main() -> None:
         "source_stage09_run": str(source_run),
         "feature_columns": FEATURE_COLUMNS,
         "params": {
+            "feature_columns_override_raw": STAGE10_FEATURE_COLUMNS_OVERRIDE_RAW,
             "holdout_user_frac": HOLDOUT_USER_FRAC,
             "split_test_user_frac": split_test_frac,
             "split_calib_user_frac": split_calib_frac,
@@ -747,6 +1559,10 @@ def main() -> None:
             "bucket_policy_by_bucket": bucket_policy_by_bucket,
             "ranker_require_positive_group": RANKER_REQUIRE_POSITIVE_GROUP,
             "ranker_require_positive_group_valid": RANKER_REQUIRE_POSITIVE_GROUP_VALID,
+            "ranker_train_label_mode": RANKER_TRAIN_LABEL_MODE,
+            "ranker_group_weight_mode": RANKER_GROUP_WEIGHT_MODE,
+            "ranker_group_weight_clip_min": RANKER_GROUP_WEIGHT_CLIP_MIN,
+            "ranker_group_weight_clip_max": RANKER_GROUP_WEIGHT_CLIP_MAX,
             "train_use_valid_as_positive": TRAIN_USE_VALID_AS_POSITIVE,
             "train_true_pos_weight": TRAIN_TRUE_POS_WEIGHT,
             "train_valid_pos_weight": TRAIN_VALID_POS_WEIGHT,
@@ -767,6 +1583,34 @@ def main() -> None:
             "xgb_colsample": XGB_COLSAMPLE,
             "xgb_reg_lambda": XGB_REG_LAMBDA,
             "xgb_rank_objective": XGB_RANK_OBJECTIVE,
+            "xgb_n_jobs": XGB_N_JOBS,
+            "wide_deep_hidden": [int(x) for x in WIDE_DEEP_HIDDEN],
+            "wide_deep_dropout": WIDE_DEEP_DROPOUT,
+            "wide_deep_lr": WIDE_DEEP_LR,
+            "wide_deep_weight_decay": WIDE_DEEP_WEIGHT_DECAY,
+            "wide_deep_epochs": WIDE_DEEP_EPOCHS,
+            "wide_deep_batch_size": WIDE_DEEP_BATCH_SIZE,
+            "wide_deep_eval_batch_size": WIDE_DEEP_EVAL_BATCH_SIZE,
+            "wide_deep_patience": WIDE_DEEP_PATIENCE,
+            "wide_deep_device": WIDE_DEEP_DEVICE,
+            "wide_deep_v2_user_hash_buckets": WIDE_DEEP_V2_USER_HASH_BUCKETS,
+            "wide_deep_v2_business_hash_buckets": WIDE_DEEP_V2_BUSINESS_HASH_BUCKETS,
+            "wide_deep_v2_category_hash_buckets": WIDE_DEEP_V2_CATEGORY_HASH_BUCKETS,
+            "wide_deep_v2_segment_hash_buckets": WIDE_DEEP_V2_SEGMENT_HASH_BUCKETS,
+            "wide_deep_v2_user_embed_dim": WIDE_DEEP_V2_USER_EMBED_DIM,
+            "wide_deep_v2_item_embed_dim": WIDE_DEEP_V2_ITEM_EMBED_DIM,
+        "wide_deep_v2_business_embed_dim": WIDE_DEEP_V2_BUSINESS_EMBED_DIM,
+        "wide_deep_v2_category_embed_dim": WIDE_DEEP_V2_CATEGORY_EMBED_DIM,
+        "wide_deep_v2_segment_embed_dim": WIDE_DEEP_V2_SEGMENT_EMBED_DIM,
+        "wide_deep_v2_enable_wide_cross": WIDE_DEEP_V2_ENABLE_WIDE_CROSS,
+        "wide_deep_v2_wide_cross_buckets": WIDE_DEEP_V2_WIDE_CROSS_BUCKETS,
+        "wide_deep_v2_loss_type": WIDE_DEEP_V2_LOSS_TYPE,
+        "wide_deep_v2_pairwise_neg_per_pos": WIDE_DEEP_V2_PAIRWISE_NEG_PER_POS,
+        "wide_deep_v2_pairwise_neg_pre_rank_max": WIDE_DEEP_V2_PAIRWISE_NEG_PRE_RANK_MAX,
+        "wide_deep_v2_early_stop_metric": WIDE_DEEP_V2_EARLY_STOP_METRIC,
+        "wide_deep_v2_early_stop_top_k": WIDE_DEEP_V2_EARLY_STOP_TOP_K,
+        "non_tree_impute_enable": NON_TREE_IMPUTE_ENABLE,
+        "non_tree_add_missing_indicators": NON_TREE_ADD_MISSING_INDICATORS,
             "calibration_method": CALIBRATION_METHOD,
             "calibration_min_pos": CALIBRATION_MIN_POS,
             "calibration_min_coef": CALIBRATION_MIN_COEF,
@@ -880,7 +1724,7 @@ def main() -> None:
         if TRAIN_ENABLE_TIMEWINDOW_POS and not history_path.exists():
             print(f"[WARN] bucket={bucket} train_history.parquet missing, disable timewindow positives")
         history_flags_df: DataFrame | None = None
-        history_rows_raw = 0
+        history_rows_raw = -1
         if use_timewindow_pos_this_bucket:
             hist_raw = (
                 spark.read.parquet(history_path.as_posix())
@@ -896,7 +1740,8 @@ def main() -> None:
             )
             if cache_this_bucket:
                 hist_raw = hist_raw.persist(StorageLevel.DISK_ONLY)
-            history_rows_raw = int(hist_raw.count())
+            if TRAIN_ENABLE_EXPENSIVE_DIAGNOSTICS:
+                history_rows_raw = int(hist_raw.count())
             w_hist_order = Window.partitionBy("user_idx").orderBy(
                 F.asc(F.col("days_to_test")),
                 F.desc(F.col("hist_ts")),
@@ -942,6 +1787,10 @@ def main() -> None:
             if cache_this_bucket:
                 history_flags_df = history_flags_df.persist(StorageLevel.DISK_ONLY)
                 hist_raw.unpersist()
+        cand = attach_stage10_v2_match_channels(spark, cand, bucket)
+        cand = attach_stage10_v2_text_match(spark, cand, bucket)
+        cand = attach_stage10_v2_relative_cross(spark, cand, bucket)
+        cand = attach_stage10_v2_group_gap(spark, cand, bucket)
         feats = add_feature_columns(
             cand,
             tower_score_scale=tower_score_scale,
@@ -1217,16 +2066,26 @@ def main() -> None:
             train_pos.unionByName(neg_keep.drop("_neg_type", "_neg_priority"), allowMissingColumns=True)
             .dropDuplicates(["user_idx", "item_idx"])
         )
-        hard_count = _timed_count(hard_neg, "hard_neg")
-        near_pos_count = _timed_count(near_pos_neg, "near_pos_neg")
-        route_mix_count = _timed_count(route_mix_neg, "route_mix_neg")
-        route_floor_keep_count = _timed_count(route_floor_keep, "route_mix_floor_kept")
-        same_category_count = _timed_count(same_category_neg, "same_cat_neg")
-        easy_count = _timed_count(easy_neg, "easy_neg")
-        random_count = _timed_count(random_neg, "random_neg")
-        neg_keep_count = _timed_count(neg_keep, "neg_after_budget")
-        neg_type_rows = neg_keep.groupBy("_neg_type").count().collect()
-        neg_type_summary = ", ".join(f"{r['_neg_type']}={int(r['count'])}" for r in neg_type_rows)
+        hard_count = -1
+        near_pos_count = -1
+        route_mix_count = -1
+        route_floor_keep_count = -1
+        same_category_count = -1
+        easy_count = -1
+        random_count = -1
+        neg_keep_count = -1
+        neg_type_summary = "skipped"
+        if TRAIN_ENABLE_EXPENSIVE_DIAGNOSTICS:
+            hard_count = _timed_count(hard_neg, "hard_neg")
+            near_pos_count = _timed_count(near_pos_neg, "near_pos_neg")
+            route_mix_count = _timed_count(route_mix_neg, "route_mix_neg")
+            route_floor_keep_count = _timed_count(route_floor_keep, "route_mix_floor_kept")
+            same_category_count = _timed_count(same_category_neg, "same_cat_neg")
+            easy_count = _timed_count(easy_neg, "easy_neg")
+            random_count = _timed_count(random_neg, "random_neg")
+            neg_keep_count = _timed_count(neg_keep, "neg_after_budget")
+            neg_type_rows = neg_keep.groupBy("_neg_type").count().collect()
+            neg_type_summary = ", ".join(f"{r['_neg_type']}={int(r['count'])}" for r in neg_type_rows)
         neg_base.unpersist()
 
         n_train_rows = _timed_count(train_keep, "train_rows_before_cap")
@@ -1234,12 +2093,17 @@ def main() -> None:
             frac = float(max_train_rows) / float(max(1, n_train_rows))
             train_keep = train_keep.sample(withReplacement=False, fraction=frac, seed=RANDOM_SEED + bucket + 7)
             n_train_rows = _timed_count(train_keep, "train_rows_after_cap")
-        print(
-            f"[SAMPLE] bucket={bucket} neg_mix hard={hard_count} near_pos={near_pos_count} route_mix={route_mix_count} "
-            f"route_floor={route_floor} route_floor_kept={route_floor_keep_count} "
-            f"same_cat={same_category_count} easy={easy_count} random={random_count} "
-            f"kept={neg_keep_count} by_type=[{neg_type_summary}] train_rows={n_train_rows}"
-        )
+        if TRAIN_ENABLE_EXPENSIVE_DIAGNOSTICS:
+            print(
+                f"[SAMPLE] bucket={bucket} neg_mix hard={hard_count} near_pos={near_pos_count} route_mix={route_mix_count} "
+                f"route_floor={route_floor} route_floor_kept={route_floor_keep_count} "
+                f"same_cat={same_category_count} easy={easy_count} random={random_count} "
+                f"kept={neg_keep_count} by_type=[{neg_type_summary}] train_rows={n_train_rows}"
+            )
+        else:
+            print(
+                f"[SAMPLE] bucket={bucket} neg_mix diagnostics=skipped route_floor={route_floor} train_rows={n_train_rows}"
+            )
 
         calib_users = calib_ds.select("user_idx").distinct()
         calib_user_count = _timed_count(calib_users, "calib_users_raw")
@@ -1263,6 +2127,11 @@ def main() -> None:
                 .drop("_valid_rank")
             )
 
+        backend_extra_pdf_cols = (
+            [c for c in WIDE_DEEP_V2_CONTEXT_COLUMNS if c in train_keep.columns and c in calib_eval.columns]
+            if model_backend == "wide_deep_v2"
+            else []
+        )
         train_pdf = train_keep.select(
             "user_idx",
             "item_idx",
@@ -1274,6 +2143,8 @@ def main() -> None:
             "label_hist_mid",
             "label_hist_old",
             "label_hist_any",
+            *backend_extra_pdf_cols,
+            *PANDAS_SUPPORT_COLUMNS,
             *FEATURE_COLUMNS,
         ).toPandas()
         valid_pdf = calib_eval.select(
@@ -1287,6 +2158,8 @@ def main() -> None:
             "label_hist_mid",
             "label_hist_old",
             "label_hist_any",
+            *backend_extra_pdf_cols,
+            *PANDAS_SUPPORT_COLUMNS,
             *FEATURE_COLUMNS,
         ).toPandas()
         if train_pdf.empty or valid_pdf.empty:
@@ -1330,6 +2203,11 @@ def main() -> None:
         valid_pdf["label_hist_any"] = pd.to_numeric(valid_pdf["label_hist_any"], errors="coerce").fillna(0).astype(np.int32)
         valid_pdf["label_eval"] = valid_pdf["label_true"].astype(np.int32)
         valid_pdf["label"] = valid_pdf["label_eval"].astype(np.int32)
+        train_pdf["ranker_label_train"] = (
+            train_pdf["label_true"].astype(np.int32)
+            if RANKER_TRAIN_LABEL_MODE == "true_only"
+            else train_pdf["label_train"].astype(np.int32)
+        )
         train_pdf["sample_weight"] = build_sample_weights(
             train_pdf["pre_rank"].to_numpy(dtype=np.float64),
             train_pdf["label_train"].to_numpy(dtype=np.int32),
@@ -1371,6 +2249,56 @@ def main() -> None:
         y_train = train_pdf["label_train"].to_numpy(dtype=np.int32)
         x_valid = valid_pdf[FEATURE_COLUMNS].to_numpy(dtype=np.float32)
         y_valid = valid_pdf["label_eval"].to_numpy(dtype=np.int32)
+        non_tree_preprocess: dict[str, Any] | None = None
+        if model_backend in {"sklearn_lr", "wide_deep", "wide_deep_v2"} and NON_TREE_IMPUTE_ENABLE:
+            impute_values = fit_non_tree_impute_values(x_train)
+            x_train_non_tree = transform_non_tree_matrix(
+                x_train,
+                impute_values=impute_values,
+                add_missing_indicators=NON_TREE_ADD_MISSING_INDICATORS,
+            )
+            x_valid_non_tree = transform_non_tree_matrix(
+                x_valid,
+                impute_values=impute_values,
+                add_missing_indicators=NON_TREE_ADD_MISSING_INDICATORS,
+            )
+            non_tree_preprocess = {
+                "enabled": True,
+                "strategy": "train_median",
+                "impute_values": impute_values.astype(float).tolist(),
+                "add_missing_indicators": bool(NON_TREE_ADD_MISSING_INDICATORS),
+                "missing_suffix": NON_TREE_MISSING_SUFFIX,
+                "augmented_feature_columns": build_non_tree_augmented_feature_columns(
+                    FEATURE_COLUMNS,
+                    add_missing_indicators=NON_TREE_ADD_MISSING_INDICATORS,
+                ),
+            }
+        else:
+            x_train_non_tree = x_train
+            x_valid_non_tree = x_valid
+        sparse_state: dict[str, Any] | None = None
+        sparse_train = np.zeros((len(train_pdf), 0), dtype=np.int64)
+        sparse_valid = np.zeros((len(valid_pdf), 0), dtype=np.int64)
+        if model_backend == "wide_deep_v2":
+            sparse_state = build_wide_deep_v2_sparse_state(
+                train_pdf=train_pdf,
+                valid_pdf=valid_pdf,
+                user_hash_buckets=WIDE_DEEP_V2_USER_HASH_BUCKETS,
+                business_hash_buckets=WIDE_DEEP_V2_BUSINESS_HASH_BUCKETS,
+                category_hash_buckets=WIDE_DEEP_V2_CATEGORY_HASH_BUCKETS,
+                segment_hash_buckets=WIDE_DEEP_V2_SEGMENT_HASH_BUCKETS,
+                user_embed_dim=WIDE_DEEP_V2_USER_EMBED_DIM,
+                item_embed_dim=WIDE_DEEP_V2_ITEM_EMBED_DIM,
+                business_embed_dim=WIDE_DEEP_V2_BUSINESS_EMBED_DIM,
+                category_embed_dim=WIDE_DEEP_V2_CATEGORY_EMBED_DIM,
+                segment_embed_dim=WIDE_DEEP_V2_SEGMENT_EMBED_DIM,
+                enable_wide_cross=WIDE_DEEP_V2_ENABLE_WIDE_CROSS,
+                wide_cross_buckets=WIDE_DEEP_V2_WIDE_CROSS_BUCKETS,
+            )
+            sparse_train = build_wide_deep_v2_sparse_matrix(train_pdf, sparse_state)
+            sparse_valid = build_wide_deep_v2_sparse_matrix(valid_pdf, sparse_state)
+            wide_train = build_wide_deep_v2_wide_matrix(train_pdf, sparse_state)
+            wide_valid = build_wide_deep_v2_wide_matrix(valid_pdf, sparse_state)
         metric_train_rows = int(len(train_pdf))
         metric_valid_rows = int(len(valid_pdf))
         metric_train_pos = int((y_train == 1).sum())
@@ -1418,7 +2346,7 @@ def main() -> None:
             dropped_train_groups = 0
             dropped_valid_groups = 0
             if RANKER_REQUIRE_POSITIVE_GROUP:
-                train_pos_users = set(train_rank_pdf.loc[train_rank_pdf["label_train"] == 1, "user_idx"].tolist())
+                train_pos_users = set(train_rank_pdf.loc[train_rank_pdf["ranker_label_train"] == 1, "user_idx"].tolist())
                 before_train_groups = int(train_rank_pdf["user_idx"].nunique())
                 train_rank_pdf = train_rank_pdf[train_rank_pdf["user_idx"].isin(train_pos_users)].copy()
                 dropped_train_groups = max(0, before_train_groups - int(train_rank_pdf["user_idx"].nunique()))
@@ -1442,11 +2370,27 @@ def main() -> None:
                     history_flags_df.unpersist()
                 continue
             x_train_rank = train_rank_pdf[FEATURE_COLUMNS].to_numpy(dtype=np.float32)
-            y_train_rank = train_rank_pdf["label_train"].to_numpy(dtype=np.int32)
+            y_train_rank = train_rank_pdf["ranker_label_train"].to_numpy(dtype=np.int32)
             x_valid_rank = valid_rank_pdf[FEATURE_COLUMNS].to_numpy(dtype=np.float32)
             y_valid_rank = valid_rank_pdf["label_eval"].to_numpy(dtype=np.int32)
             qid_train = train_rank_pdf.groupby("user_idx", sort=False).size().to_numpy(dtype=np.int32)
             qid_valid = valid_rank_pdf.groupby("user_idx", sort=False).size().to_numpy(dtype=np.int32)
+            train_group_weight = build_ranker_group_weights(
+                user_idx=train_rank_pdf["user_idx"].to_numpy(dtype=np.int64, copy=False),
+                labels=y_train_rank,
+                sample_weight=train_rank_pdf["sample_weight"].to_numpy(dtype=np.float32, copy=False),
+                mode=RANKER_GROUP_WEIGHT_MODE,
+                clip_min=float(RANKER_GROUP_WEIGHT_CLIP_MIN),
+                clip_max=float(RANKER_GROUP_WEIGHT_CLIP_MAX),
+            )
+            valid_group_weight = build_ranker_group_weights(
+                user_idx=valid_rank_pdf["user_idx"].to_numpy(dtype=np.int64, copy=False),
+                labels=y_valid_rank,
+                sample_weight=valid_rank_pdf["sample_weight"].to_numpy(dtype=np.float32, copy=False),
+                mode=RANKER_GROUP_WEIGHT_MODE,
+                clip_min=float(RANKER_GROUP_WEIGHT_CLIP_MIN),
+                clip_max=float(RANKER_GROUP_WEIGHT_CLIP_MAX),
+            )
 
             ranker = XGBRanker(
                 n_estimators=XGB_N_ESTIMATORS,
@@ -1459,7 +2403,7 @@ def main() -> None:
                 objective=XGB_RANK_OBJECTIVE,
                 eval_metric="ndcg@10",
                 tree_method="hist",
-                n_jobs=4,
+                n_jobs=XGB_N_JOBS,
             )
             fit_kwargs = {
                 "group": qid_train,
@@ -1467,9 +2411,12 @@ def main() -> None:
                 "eval_group": [qid_valid],
                 "verbose": False,
             }
-            # NOTE: For current local xgboost version, ranking mode expects
-            # sample_weight length == n_groups (group weights), not per-row
-            # weights. Keep fit unweighted here for compatibility.
+            # Current local xgboost ranking path expects group-level weights
+            # (one weight per query group), not per-row weights.
+            if train_group_weight is not None:
+                fit_kwargs["sample_weight"] = train_group_weight
+            if valid_group_weight is not None:
+                fit_kwargs["sample_weight_eval_set"] = [valid_group_weight]
             ranker.fit(
                 x_train_rank,
                 y_train_rank,
@@ -1526,6 +2473,12 @@ def main() -> None:
                 "valid_groups_kept": int(valid_users_kept),
                 "train_groups_dropped": int(dropped_train_groups),
                 "valid_groups_dropped": int(dropped_valid_groups),
+                "train_label_mode": RANKER_TRAIN_LABEL_MODE,
+                "group_weight_mode": RANKER_GROUP_WEIGHT_MODE,
+                "group_weight_clip_min": float(RANKER_GROUP_WEIGHT_CLIP_MIN),
+                "group_weight_clip_max": float(RANKER_GROUP_WEIGHT_CLIP_MAX),
+                "train_group_weights_applied": bool(train_group_weight is not None),
+                "valid_group_weights_applied": bool(valid_group_weight is not None),
             }
         elif model_backend == "xgboost_cls":
             if XGBClassifier is None:
@@ -1544,7 +2497,7 @@ def main() -> None:
                 objective="binary:logistic",
                 eval_metric="logloss",
                 tree_method="hist",
-                n_jobs=4,
+                n_jobs=XGB_N_JOBS,
                 scale_pos_weight=scale_pos_weight,
             )
             clf_xgb.fit(
@@ -1563,8 +2516,102 @@ def main() -> None:
                 "feature_columns": FEATURE_COLUMNS,
                 "model_file": model_rel,
             }
+        elif model_backend == "wide_deep":
+            x_train_z, x_valid_z, mean, std = standardize(x_train_non_tree, x_valid_non_tree)
+            model_wd, valid_prob, wd_meta = train_wide_deep_model(
+                x_train=x_train_z,
+                y_train=y_train,
+                sample_weight=train_pdf["sample_weight"].to_numpy(dtype=np.float32),
+                x_valid=x_valid_z,
+                y_valid=y_valid,
+                random_seed=RANDOM_SEED + bucket,
+            )
+            valid_pdf["learned_score"] = valid_prob.astype(np.float64)
+            model_rel = f"models/bucket_{bucket}_wide_deep.pt"
+            model_path = out_dir / model_rel
+            model_path.parent.mkdir(parents=True, exist_ok=True)
+            if torch is None:
+                raise RuntimeError("wide_deep backend requires torch")
+            torch.save(
+                {
+                    "state_dict": model_wd.state_dict(),
+                    "input_dim": int(x_train_z.shape[1]),
+                    "hidden_dims": [int(x) for x in WIDE_DEEP_HIDDEN],
+                    "dropout": float(WIDE_DEEP_DROPOUT),
+                },
+                model_path.as_posix(),
+            )
+            model_payload = {
+                "model_backend": "wide_deep",
+                "feature_columns": FEATURE_COLUMNS,
+                "model_file": model_rel,
+                "mean": mean.astype(float).tolist(),
+                "std": std.astype(float).tolist(),
+                "wide_deep_meta": wd_meta,
+            }
+            if non_tree_preprocess is not None:
+                model_payload["non_tree_preprocess"] = non_tree_preprocess
+        elif model_backend == "wide_deep_v2":
+            x_train_z, x_valid_z, mean, std = standardize(x_train_non_tree, x_valid_non_tree)
+            model_wd2, valid_prob, wd2_meta = train_wide_deep_v2_model(
+                dense_train=x_train_z,
+                sparse_train=sparse_train,
+                wide_train=wide_train,
+                user_idx_train=train_pdf["user_idx"].to_numpy(dtype=np.int64, copy=False),
+                pre_rank_train=train_pdf["pre_rank"].to_numpy(dtype=np.int64, copy=False),
+                y_train=y_train,
+                sample_weight=train_pdf["sample_weight"].to_numpy(dtype=np.float32),
+                dense_valid=x_valid_z,
+                sparse_valid=sparse_valid,
+                wide_valid=wide_valid,
+                user_idx_valid=valid_pdf["user_idx"].to_numpy(dtype=np.int64, copy=False),
+                pre_rank_valid=valid_pdf["pre_rank"].to_numpy(dtype=np.int64, copy=False),
+                y_valid=y_valid,
+                sparse_state=(sparse_state or {}),
+                hidden_dims=[int(x) for x in WIDE_DEEP_HIDDEN],
+                dropout=float(WIDE_DEEP_DROPOUT),
+                lr=float(WIDE_DEEP_LR),
+                weight_decay=float(WIDE_DEEP_WEIGHT_DECAY),
+                epochs=int(WIDE_DEEP_EPOCHS),
+                batch_size=int(WIDE_DEEP_BATCH_SIZE),
+                eval_batch_size=int(WIDE_DEEP_EVAL_BATCH_SIZE),
+                patience=int(WIDE_DEEP_PATIENCE),
+                device=resolve_torch_device(WIDE_DEEP_DEVICE),
+                random_seed=RANDOM_SEED + bucket,
+                loss_type=WIDE_DEEP_V2_LOSS_TYPE,
+                pairwise_neg_per_pos=int(WIDE_DEEP_V2_PAIRWISE_NEG_PER_POS),
+                pairwise_neg_pre_rank_max=int(WIDE_DEEP_V2_PAIRWISE_NEG_PRE_RANK_MAX),
+                early_stop_metric=WIDE_DEEP_V2_EARLY_STOP_METRIC,
+                early_stop_top_k=int(WIDE_DEEP_V2_EARLY_STOP_TOP_K),
+            )
+            valid_pdf["learned_score"] = valid_prob.astype(np.float64)
+            model_rel = f"models/bucket_{bucket}_wide_deep_v2.pt"
+            model_path = out_dir / model_rel
+            model_path.parent.mkdir(parents=True, exist_ok=True)
+            if torch is None:
+                raise RuntimeError("wide_deep_v2 backend requires torch")
+            torch.save(
+                {
+                    "state_dict": model_wd2.state_dict(),
+                    "dense_input_dim": int(x_train_z.shape[1]),
+                    "sparse_state": sparse_state or {},
+                    "hidden_dims": [int(x) for x in WIDE_DEEP_HIDDEN],
+                    "dropout": float(WIDE_DEEP_DROPOUT),
+                },
+                model_path.as_posix(),
+            )
+            model_payload = {
+                "model_backend": "wide_deep_v2",
+                "feature_columns": FEATURE_COLUMNS,
+                "model_file": model_rel,
+                "mean": mean.astype(float).tolist(),
+                "std": std.astype(float).tolist(),
+                "wide_deep_v2_meta": wd2_meta,
+            }
+            if non_tree_preprocess is not None:
+                model_payload["non_tree_preprocess"] = non_tree_preprocess
         else:
-            x_train_z, x_valid_z, mean, std = standardize(x_train, x_valid)
+            x_train_z, x_valid_z, mean, std = standardize(x_train_non_tree, x_valid_non_tree)
             clf = LogisticRegression(
                 solver="liblinear",
                 class_weight="balanced",
@@ -1581,6 +2628,8 @@ def main() -> None:
                 "coef": clf.coef_[0].astype(float).tolist(),
                 "intercept": float(clf.intercept_[0]),
             }
+            if non_tree_preprocess is not None:
+                model_payload["non_tree_preprocess"] = non_tree_preprocess
         valid_pdf["pre_prior"] = inv_rank_numpy(valid_pdf["pre_rank"].to_numpy(dtype=np.float64))
         route_cal = compute_route_quality_calibration(valid_pdf)
         route_factor = compute_route_factor(valid_pdf, route_cal.get("weights", {}))
@@ -1639,6 +2688,7 @@ def main() -> None:
             "history_used_as_feature": bool(use_timewindow_pos_this_bucket),
             "timewindow_history_file_exists": bool(history_path.exists()),
             "timewindow_history_rows_raw": int(history_rows_raw),
+            "timewindow_history_rows_counted": bool(TRAIN_ENABLE_EXPENSIVE_DIAGNOSTICS and history_rows_raw >= 0),
             "timewindow_short_days": int(window_short_days),
             "timewindow_mid_days": int(window_mid_days),
             "timewindow_max_short_pos_per_user": int(max_short_pos_per_user),
@@ -1738,6 +2788,7 @@ def main() -> None:
             "easy_neg_rows": int(easy_count),
             "random_neg_rows": int(random_count),
             "neg_rows_after_budget": int(neg_keep_count),
+            "expensive_diagnostics_enabled": bool(TRAIN_ENABLE_EXPENSIVE_DIAGNOSTICS),
         }
         payload["models_by_bucket"][str(bucket)] = model_payload
         payload["summaries"].append({"bucket": bucket, "status": "ok", **model_payload["metrics"]})
