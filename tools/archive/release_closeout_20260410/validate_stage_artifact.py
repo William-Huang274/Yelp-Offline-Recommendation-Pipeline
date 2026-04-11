@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 from __future__ import annotations
 
 import argparse
@@ -11,7 +10,7 @@ SCRIPTS_DIR = REPO_ROOT / "scripts"
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
-from pipeline.run_validators import (  # noqa: E402
+from pipeline.run_validators import (
     validate_stage09_candidate_run,
     validate_stage10_infer_eval_run,
     validate_stage10_rank_model_run,
@@ -28,7 +27,7 @@ VALIDATORS = {
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Validate a local Stage09-Stage11 run directory.")
+    parser = argparse.ArgumentParser(description="Validate stage artifact structure without running training.")
     parser.add_argument("--kind", choices=sorted(VALIDATORS), required=True, help="Artifact kind to validate.")
     parser.add_argument("--run-dir", required=True, help="Run directory to validate.")
     return parser

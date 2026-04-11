@@ -7,7 +7,7 @@ story:
 
 - `stage09`: current route-aware recall result files
 - `stage10`: current mainline structured rerank result files
-- `stage11`: current expert-training summaries and freeze-baseline evaluation files
+- `stage11`: current `Qwen3.5-9B` reward-model expert summaries and freeze-baseline evaluation files
 - `test_support`: local pipeline test fixture manifest
 
 The original provenance copies remain under:

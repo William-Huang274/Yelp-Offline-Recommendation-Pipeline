@@ -3,6 +3,13 @@
   "line": "bucket5 segmented expert training",
   "experts": [
     {
+      "expert_band": "11-30",
+      "run": "v101",
+      "true_win_11_30": 0.9559748428,
+      "listwise_win_rate": 0.9559748428,
+      "source_run_meta": "data/output/current_release/stage11/experts/bucket5_11_30_v101_run_meta.json"
+    },
+    {
       "expert_band": "31-60",
       "run": "v117",
       "true_win_31_40": 0.7385321100917431,
@@ -18,5 +25,5 @@
       "source_run_meta": "data/output/current_release/stage11/experts/bucket5_61_100_v122_run_meta.json"
     }
   ],
-  "note": "The exact localized 11-30 expert training run_meta has not yet been copied into the closeout surface."
+  "note": "The current public Stage11 line is a shared Qwen3.5-9B reward-model backbone specialized into 11-30, 31-60, and 61-100 experts."
 }

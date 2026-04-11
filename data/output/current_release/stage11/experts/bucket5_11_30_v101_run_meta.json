@@ -1,0 +1,10 @@
+{
+  "stage": "stage11_2_rm_train",
+  "expert_band": "11-30",
+  "run": "v101",
+  "eval_listwise_win_rate": 0.9559748428,
+  "eval_top1_prob_mean": 0.9568368196,
+  "eval_boundary_11_30_true_win_rate": 0.9559748428,
+  "source_note": "Recovered from the westd cloud Stage11 11-30-only run_meta.json during release closeout.",
+  "source_run_meta_path": "/root/autodl-tmp/5006_BDA_fast/bucket5_top250_semantic_compact_boundary_reason_rm_train_westd_v101_11_30only4pair/output/11_qlora_models/20260406_143942_stage11_2_rm_train/run_meta.json"
+}

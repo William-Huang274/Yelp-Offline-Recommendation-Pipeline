@@ -8,5 +8,6 @@ xgboost>=2.0
 pyspark>=3.5
 pytest>=8,<9
 
-# GPU-heavy stage11 QLoRA / DPO dependencies remain in:
+# Optional GPU-heavy dependencies for legacy QLoRA runs and the current
+# Stage11 reward-model training workflow remain in:
 # requirements-stage11-qlora.txt

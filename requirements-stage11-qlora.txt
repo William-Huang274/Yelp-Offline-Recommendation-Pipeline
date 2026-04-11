@@ -1,3 +1,7 @@
+# GPU-oriented extras used by legacy local QLoRA / DPO experiments and by
+# the repository's reward-model training stack when a GPU environment is
+# available. They are not required for the public CPU smoke surface.
+
 torch>=2.1
 transformers>=4.40
 accelerate>=0.29
