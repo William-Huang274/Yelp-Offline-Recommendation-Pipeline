@@ -4,6 +4,9 @@
 
 ## 1. Objective
 
+This Stage11 line is developed for offline restaurant recommendation in
+Louisiana on Yelp data.
+
 This note records the Stage11 redesign that introduced:
 
 - a dedicated `31-60 only` expert
