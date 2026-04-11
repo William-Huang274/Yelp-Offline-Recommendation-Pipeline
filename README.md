@@ -2,7 +2,8 @@
 
 [English](./README.md) | [中文](./README.zh-CN.md)
 
-Route-aware offline ranking stack for Yelp restaurant recommendation.
+Route-aware offline ranking stack for Yelp restaurant recommendation, with a
+Qwen3.5-9B reward-model rerank layer specialized into three expert checkpoints.
 
 The current repository version is built around a unified `stage09 -> stage10 -> stage11` line:
 
@@ -19,12 +20,51 @@ It is now positioned as:
 
 - a shared `stage09` recall contract
 - a stronger `stage10` rerank baseline across `bucket2`, `bucket5`, and `bucket10`
-- a `bucket5 stage11` rescue stack built on top of the upgraded `stage09 -> stage10` path
+- a `bucket5 stage11` rescue stack built on top of the upgraded
+  `stage09 -> stage10` path, implemented with one shared Qwen3.5-9B
+  reward-model backbone and three rank-window experts
 
 Two Stage11 reference points are kept intentionally:
 
 - `two-band research peak`: best offline `11-30 + 31-60` result after alpha grid
 - `tri-band freeze baseline`: conservative `11-30 + 31-60 + 61-100` freeze candidate
+
+## Outward-Facing `bucket5` Scope
+
+The main outward-facing Stage11 line is currently centered on the
+mid-to-high interaction set (`bucket5`). This is the scope behind the release
+metrics shown in the root README.
+
+| scope item | current `bucket5` line |
+| --- | ---: |
+| businesses | `1,798` |
+| users | `9,765` |
+| train interactions | `133,048` |
+| validation users | `9,765` |
+| test users | `9,765` |
+| fixed `Stage10` eval users | `1,935` |
+| `Stage11` rescue eval users | `517` |
+
+## Data Scale
+
+The public result surface is built on one shared source-parity scope after
+filtering:
+
+- `196,939` users
+- `1,798` businesses
+
+The three evaluation lines are defined by minimum interaction thresholds:
+
+| user set | users | train interactions | validation users | test users |
+| --- | ---: | ---: | ---: | ---: |
+| cold-start-inclusive trainable set under leave-two-out (`bucket2`) | `26,686` | `178,636` | `26,686` | `26,686` |
+| mid-to-high interaction set (`bucket5`) | `9,765` | `133,048` | `9,765` | `9,765` |
+| high-interaction set (`bucket10`) | `3,618` | `93,789` | `3,618` | `3,618` |
+
+Current mainline evaluation sizes:
+
+- `Stage10` fixed eval users: `bucket2 = 5,344`, `bucket5 = 1,935`, `bucket10 = 738`
+- `Stage11` rescue eval users on `bucket5`: `517`
 
 ## Current Metrics Snapshot
 
@@ -47,9 +87,15 @@ Two Stage11 reference points are kept intentionally:
 
 ### Stage11
 
+`Stage11` is built as a Qwen3.5-9B reward-model line. The current freeze
+version does not use three unrelated models; it uses one shared reward-model
+backbone with three expert checkpoints specialized for the rerank windows
+`11-30`, `31-60`, and `61-100`.
+
 Training-side evidence:
 
 - `11-30 only expert`
+  - `11-30 true win = 0.9560`
   - frozen boundary-rescue expert used for front-rank rescue
 - `31-60 only expert`
   - `31-40 true win = 0.7385`
@@ -161,6 +207,22 @@ Launcher variable definitions are documented here:
   [docs/stage11/stage11_31_60_only_and_segmented_fusion_20260408.md](./docs/stage11/stage11_31_60_only_and_segmented_fusion_20260408.md)
 - Stage11 case notes:
   [docs/stage11/stage11_case_notes_20260409.md](./docs/stage11/stage11_case_notes_20260409.md)
+
+## Internal Version Comparison Note
+
+The repository also keeps one internal comparison note for release review. It
+explains:
+
+- what exactly was frozen in the previous version
+- why the current version improves more across the upgraded stack
+- why `Stage11` moved from generic `SFT / DPO` to reward-model rescue rerank
+
+Local path:
+
+- `docs/release/version_comparison_previous_vs_current_20260410.md`
+
+This note is kept as a local release-comparison artifact and is not part of the
+current public technical surface.
 
 ## Repository Boundary
 

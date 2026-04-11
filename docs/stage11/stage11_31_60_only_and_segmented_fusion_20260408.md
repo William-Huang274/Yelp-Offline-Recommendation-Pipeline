@@ -11,6 +11,13 @@ This note records the Stage11 redesign that introduced:
 - second-stage shortlist reranking
 - bounded policy gates
 
+The current freeze line is built on one shared `Qwen3.5-9B` reward-model
+backbone, then specialized into three rerank experts:
+
+- `11-30` boundary rescue
+- `31-60` mid-rank rescue
+- `61-100` deep-rank uplift
+
 ## 2. Design Constraints
 
 The redesign keeps the following fixed:
@@ -35,6 +42,21 @@ The redesign therefore separated:
 - `11-30` boundary rescue
 - `31-40 / 41-60` mid rescue
 
+## 3.1 Outward-Facing `bucket5` Scope
+
+The current public Stage11 line is centered on the `bucket5` mid-to-high
+interaction set. This is the scope behind the root README metrics.
+
+| scope item | current `bucket5` line |
+| --- | ---: |
+| businesses | `1,798` |
+| users | `9,765` |
+| train interactions | `133,048` |
+| validation users | `9,765` |
+| test users | `9,765` |
+| fixed `Stage10` eval users | `1,935` |
+| `Stage11` rescue eval users | `517` |
+
 ## 4. 31-60 Training Design
 
 The dedicated `31-60` path uses:
@@ -54,6 +76,24 @@ Subband treatment:
 
 - `31-40`: closer to boundary, more boundary blockers
 - `41-60`: more same-band blockers, target first release into `top20 / top30`
+
+The current freeze line uses the following training scale:
+
+- `11-30` expert:
+  - `11-30 true win = 0.9560`
+- `31-60` expert:
+  - training users `891`
+  - evaluation users `215`
+  - `train_pairs = 2363`
+  - `eval_pairs = 552`
+- `61-100` expert:
+  - training users `679`
+  - evaluation users `178`
+  - `train_pairs = 1532`
+  - `eval_pairs = 393`
+
+Both expert lines are built from slices of the `bucket5` `11-100` rescue pool,
+rather than from a separately defined user population.
 
 ## 5. 61-100 Position In The Current Freeze
 
@@ -93,11 +133,16 @@ Current policy interpretation:
 
 Training-side:
 
+- `Stage11` mainline rescue evaluation on `bucket5` uses `517` users
+- `11-30 only` frozen boundary snapshot:
+  - `11-30 true win = 0.9560`
 - `31-60 only` best snapshot:
   - `31-40 true win = 0.7385`
   - `41-60 true win = 0.7605`
+  - `listwise win rate = 0.7518`
 - `61-100 only` best snapshot:
   - `61-100 true win = 0.8626`
+  - `listwise win rate = 0.8626`
 
 Evaluation-side:
 
