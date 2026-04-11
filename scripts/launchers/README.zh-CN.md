@@ -4,7 +4,11 @@
 
 这里是当前版本统一的对外 launcher 入口。
 
-根目录下的长名 `run_stage*.sh` 继续保留，用于兼容旧调用；文档、演示和 release 说明统一引用这里的 wrapper。
+长名 shell 启动器已统一收进：
+
+- [../runtime_sh/](../runtime_sh)
+
+文档、演示和 release 说明统一引用这里的 wrapper。
 
 ## 命名方式
 
@@ -64,6 +68,6 @@ Python 回退路径，避免每个 launcher 各自写死绝对路径，同时保
 
 wrapper 保持薄封装：
 
-- 转发到当前 active root launcher
+- 转发到当前 active runtime shell launcher
 - 原样透传环境变量
 - 不承载业务逻辑

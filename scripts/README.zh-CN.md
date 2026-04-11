@@ -48,10 +48,13 @@
 
 - `pipeline/`
 - [launchers/](./launchers)：当前对外稳定入口
+- [runtime_sh/](./runtime_sh)：集中存放长名 shell 启动器
 
 ## Launcher 规则
 
-根目录下的 `run_stage*.sh` 仍然保留，用于兼容旧调用。
+长名 shell 启动器现在统一收进：
+
+- [runtime_sh/](./runtime_sh)
 
 对外展示、文档引用和演示入口统一指向：
 

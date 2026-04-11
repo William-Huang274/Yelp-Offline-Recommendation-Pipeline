@@ -2,4 +2,4 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-exec "${SCRIPT_DIR}/../run_stage11_bucket5_top250_semantic_compact_rm_11_1.sh" "$@"
+exec "${SCRIPT_DIR}/../runtime_sh/run_stage11_bucket5_top250_semantic_compact_rm_11_1.sh" "$@"

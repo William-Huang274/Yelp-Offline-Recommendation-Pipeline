@@ -50,10 +50,13 @@ Current active Stage11 surface includes:
 
 - `pipeline/`
 - [launchers/](./launchers): stable outward-facing wrappers
+- [runtime_sh/](./runtime_sh): grouped long-form shell launchers used by the wrappers
 
 ## Launcher Rule
 
-Root `run_stage*.sh` files remain in place for compatibility.
+The long shell launchers are now grouped under:
+
+- [runtime_sh/](./runtime_sh)
 
 Outward-facing documentation and demos should point to:
 

@@ -5,9 +5,12 @@
 This directory is the stable outward-facing launcher surface for the current
 repository line.
 
-The long root `run_stage*.sh` files are still kept for compatibility. These
-wrappers are the entry points that should appear in docs, demos, and release
-notes.
+The long-form shell launchers now live under:
+
+- [../runtime_sh/](../runtime_sh)
+
+These wrappers are the entry points that should appear in docs, demos, and
+release notes.
 
 ## Naming
 
@@ -67,6 +70,6 @@ paths across every launcher.
 
 Wrappers should stay thin:
 
-- forward to the active root launcher
+- forward to the active runtime shell launcher
 - preserve environment variables unchanged
 - avoid business logic
