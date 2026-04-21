@@ -26,6 +26,11 @@ REQUIRED_DOCS = [
     REPO_ROOT / "docs" / "project" / "repo_navigation.md",
     REPO_ROOT / "docs" / "project" / "proposal_template_content.md",
     REPO_ROOT / "docs" / "project" / "final_report_outline.md",
+    REPO_ROOT / "docs" / "recruiter_pitch.zh-CN.md",
+    REPO_ROOT / "docs" / "release_notes.md",
+    REPO_ROOT / "docs" / "eval_protocol.md",
+    REPO_ROOT / "docs" / "badcase_taxonomy.md",
+    REPO_ROOT / "docs" / "model_card.md",
 ]
 
 PYTEST_TARGETS = [
@@ -91,8 +96,10 @@ def main() -> int:
 
     if not args.skip_demo:
         ok &= run_command("demo_cli", [PYTHON, "tools/demo_recommend.py", "summary"])
+        ok &= run_command("stage01_11_minidemo", [PYTHON, "tools/run_stage01_11_minidemo.py"])
         ok &= run_command("batch_infer_demo", [PYTHON, "tools/batch_infer_demo.py"])
         ok &= run_command("mock_serving_self_test", [PYTHON, "tools/mock_serving_api.py", "--self-test"])
+        ok &= run_command("mock_serving_load_test", [PYTHON, "tools/load_test_mock_serving.py", "--requests", "6", "--concurrency", "2"])
 
     if not args.skip_pytest:
         ok &= run_command("pytest_core", [PYTHON, "-m", "pytest", "-q", *PYTEST_TARGETS])

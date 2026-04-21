@@ -166,6 +166,7 @@ python -m pip install -r requirements.txt
 python tools/run_release_checks.py --skip-pytest
 python tools/run_stage11_model_prompt_smoke.py
 python tools/run_full_chain_smoke.py
+python tools/run_stage01_11_minidemo.py
 .\tools\run_stage09_local.ps1 -CheckOnly
 .\tools\run_stage10_bucket5_local.ps1 -CheckOnly
 ```
@@ -176,8 +177,11 @@ python tools/run_full_chain_smoke.py
 
 ```powershell
 python tools/demo_recommend.py show-case --case boundary_11_30
-python tools/batch_infer_demo.py
+python tools/batch_infer_demo.py --strategy baseline
+python tools/batch_infer_demo.py --strategy xgboost
+python tools/batch_infer_demo.py --strategy reward_rerank
 python tools/mock_serving_api.py --self-test
+python tools/load_test_mock_serving.py --requests 20 --concurrency 4 --simulate-fallback-every 5
 python tools/demo_recommend.py
 ```
 
@@ -216,7 +220,11 @@ PASS release_checks
 [PASS] Stage10 bucket5 local prerequisites are present.
 Batch Inference Demo
 - request_id: demo_request_bucket5_001
+- strategy: requested=reward_rerank used=reward_rerank
 - stage11_rescued_into_top_k: 1
+Mock Serving Load Test
+- success_rate: 1.0
+- fallback_count: 4
 {
   "status": "ok",
   "service": "mock_serving_api",
@@ -241,6 +249,7 @@ Current Frozen Yelp Ranking Review Line
 
 - [scripts/launchers](./scripts/launchers)：主 launcher 入口
 - [tools](./tools)：本地校验、demo 和辅助脚本
+- [config/serving.yaml](./config/serving.yaml)：mock serving 策略、release id、fallback 顺序和 latency budget
 - [tests](./tests)：release surface 与指标快照的公开 smoke tests
 - [data/output/current_release](./data/output/current_release)：checked-in release 输出
 - [data/metrics/current_release](./data/metrics/current_release)：checked-in 指标快照
@@ -251,7 +260,12 @@ Current Frozen Yelp Ranking Review Line
 ## 更多细节
 
 - [系统架构页](./docs/architecture.zh-CN.md)
+- [面向招聘方的搜广推项目说明](./docs/recruiter_pitch.zh-CN.md)
 - [离线评估页](./docs/evaluation.zh-CN.md)
+- [实验协议](./docs/eval_protocol.md)
+- [bad case 分类](./docs/badcase_taxonomy.md)
+- [model card](./docs/model_card.md)
+- [release notes](./docs/release_notes.md)
 - [serving / fallback / rollback 说明](./docs/serving_release.zh-CN.md)
 - [详细冻结线与数据规模](./docs/project/current_frozen_line.zh-CN.md)
 - [设计取舍与泄露控制](./docs/project/design_choices.zh-CN.md)

@@ -15,8 +15,18 @@ repository line.
 
 - interviewer-facing system architecture:
   [architecture.md](./architecture.md)
+- recruiter-facing search/recommendation pitch:
+  [recruiter_pitch.zh-CN.md](./recruiter_pitch.zh-CN.md)
 - interviewer-facing offline evaluation summary:
   [evaluation.md](./evaluation.md)
+- evaluation protocol:
+  [eval_protocol.md](./eval_protocol.md)
+- bad-case taxonomy:
+  [badcase_taxonomy.md](./badcase_taxonomy.md)
+- model card:
+  [model_card.md](./model_card.md)
+- release notes:
+  [release_notes.md](./release_notes.md)
 - release, fallback, and rollback surface:
   [serving_release.md](./serving_release.md)
 - detailed frozen-line summary:

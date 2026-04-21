@@ -14,8 +14,18 @@
 
 - 面向面试官的系统架构页：
   [architecture.zh-CN.md](./architecture.zh-CN.md)
+- 面向招聘方的搜广推项目说明：
+  [recruiter_pitch.zh-CN.md](./recruiter_pitch.zh-CN.md)
 - 面向面试官的离线评估页：
   [evaluation.zh-CN.md](./evaluation.zh-CN.md)
+- 实验协议：
+  [eval_protocol.md](./eval_protocol.md)
+- bad case 分类：
+  [badcase_taxonomy.md](./badcase_taxonomy.md)
+- model card：
+  [model_card.md](./model_card.md)
+- release notes：
+  [release_notes.md](./release_notes.md)
 - release / fallback / rollback 说明页：
   [serving_release.zh-CN.md](./serving_release.zh-CN.md)
 - 详细冻结线说明：

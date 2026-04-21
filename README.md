@@ -171,6 +171,7 @@ python -m pip install -r requirements.txt
 python tools/run_release_checks.py --skip-pytest
 python tools/run_stage11_model_prompt_smoke.py
 python tools/run_full_chain_smoke.py
+python tools/run_stage01_11_minidemo.py
 .\tools\run_stage09_local.ps1 -CheckOnly
 .\tools\run_stage10_bucket5_local.ps1 -CheckOnly
 ```
@@ -182,8 +183,11 @@ current frozen line.
 
 ```powershell
 python tools/demo_recommend.py show-case --case boundary_11_30
-python tools/batch_infer_demo.py
+python tools/batch_infer_demo.py --strategy baseline
+python tools/batch_infer_demo.py --strategy xgboost
+python tools/batch_infer_demo.py --strategy reward_rerank
 python tools/mock_serving_api.py --self-test
+python tools/load_test_mock_serving.py --requests 20 --concurrency 4 --simulate-fallback-every 5
 python tools/demo_recommend.py
 ```
 
@@ -224,7 +228,11 @@ PASS release_checks
 [PASS] Stage10 bucket5 local prerequisites are present.
 Batch Inference Demo
 - request_id: demo_request_bucket5_001
+- strategy: requested=reward_rerank used=reward_rerank
 - stage11_rescued_into_top_k: 1
+Mock Serving Load Test
+- success_rate: 1.0
+- fallback_count: 4
 {
   "status": "ok",
   "service": "mock_serving_api",
@@ -249,6 +257,7 @@ Files you should expect to validate immediately:
 
 - [scripts/launchers](./scripts/launchers): main launcher entry points
 - [tools](./tools): local checks, demos, and helper scripts
+- [config/serving.yaml](./config/serving.yaml): mock serving strategy, release id, fallback order, and latency budget
 - [tests](./tests): public smoke tests for release surface and metrics
 - [data/output/current_release](./data/output/current_release): checked-in release outputs
 - [data/metrics/current_release](./data/metrics/current_release): checked-in metric snapshots
@@ -259,7 +268,12 @@ Files you should expect to validate immediately:
 ## More Details
 
 - [System architecture note](./docs/architecture.md)
+- [Recruiter-facing search/recommendation pitch](./docs/recruiter_pitch.zh-CN.md)
 - [Evaluation buckets and offline evidence](./docs/evaluation.md)
+- [Evaluation protocol](./docs/eval_protocol.md)
+- [Bad-case taxonomy](./docs/badcase_taxonomy.md)
+- [Model card](./docs/model_card.md)
+- [Release notes](./docs/release_notes.md)
 - [Serving, fallback, and rollback surface](./docs/serving_release.md)
 - [Detailed frozen line and data scale](./docs/project/current_frozen_line.md)
 - [Design choices and leakage control](./docs/project/design_choices.md)
