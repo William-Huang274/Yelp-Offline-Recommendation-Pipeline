@@ -34,34 +34,79 @@
 ### 主链路
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {
+  'primaryColor': '#F8FAFC',
+  'primaryBorderColor': '#CBD5E1',
+  'primaryTextColor': '#0F172A',
+  'lineColor': '#475569',
+  'secondaryColor': '#EEF2FF',
+  'tertiaryColor': '#ECFDF5',
+  'clusterBkg': '#FFFFFF',
+  'clusterBorder': '#CBD5E1',
+  'fontSize': '15px'
+}}}%%
 flowchart LR
-    U["用户信号<br/>历史、画像、近期意图"] --> R["Stage09<br/>召回路由"]
-    B["商户信号<br/>元数据、文本、结构化信息"] --> R
-    R --> T["候选裁剪<br/>route lane 和 shortlist"]
-    T --> X["Stage10<br/>XGBoost 结构化精排"]
-    X --> M["Stage11<br/>有边界奖励模型救援"]
-    M --> K["最终 Top-K"]
+    classDef input fill:#EFF6FF,stroke:#3B82F6,color:#0F172A,stroke-width:1.6px;
+    classDef stage fill:#F8FAFC,stroke:#334155,color:#0F172A,stroke-width:1.6px;
+    classDef output fill:#ECFDF5,stroke:#059669,color:#064E3B,stroke-width:1.6px;
+    linkStyle default stroke:#64748B,stroke-width:1.8px;
+
+    U["用户信号<br/>历史 / 画像<br/>近期意图"]:::input
+    B["商户信号<br/>文本 / 元数据<br/>结构化特征"]:::input
+    R["Stage09<br/>召回路由"]:::stage
+    T["候选裁剪<br/>Lane + shortlist"]:::stage
+    X["Stage10<br/>XGBoost 结构化精排"]:::stage
+    M["Stage11<br/>有边界 RM 救援"]:::stage
+    K["最终 Top-K<br/>+ 指标快照"]:::output
+
+    U --> R
+    B --> R
+    R --> T --> X --> M --> K
 ```
 
 ### 训练流 vs 推理流
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {
+  'primaryColor': '#F8FAFC',
+  'primaryBorderColor': '#CBD5E1',
+  'primaryTextColor': '#0F172A',
+  'lineColor': '#475569',
+  'secondaryColor': '#EEF2FF',
+  'tertiaryColor': '#ECFDF5',
+  'clusterBkg': '#FFFFFF',
+  'clusterBorder': '#CBD5E1',
+  'fontSize': '15px'
+}}}%%
 flowchart LR
-    subgraph Training
-        D["原始 Yelp 数据 + parquet 特征层"] --> C["Stage09 候选产物"]
-        C --> F["Stage10 特征拼装"]
-        F --> X["训练 XGBoost 精排器"]
-        C --> P["Stage11 数据集导出"]
-        P --> Q["训练分段 RM 专家<br/>11-30 / 31-60 / 61-100"]
-        X --> A["冻结 run metadata 和 checkpoint"]
-        Q --> A
+    classDef data fill:#FFF7ED,stroke:#F59E0B,color:#7C2D12,stroke-width:1.5px;
+    classDef stage fill:#EEF2FF,stroke:#6366F1,color:#1E1B4B,stroke-width:1.5px;
+    classDef artifact fill:#ECFDF5,stroke:#10B981,color:#064E3B,stroke-width:1.5px;
+    classDef output fill:#F0F9FF,stroke:#0EA5E9,color:#0C4A6E,stroke-width:1.5px;
+    linkStyle default stroke:#64748B,stroke-width:1.7px;
+
+    subgraph TR["训练流"]
+        direction TB
+        D["原始 Yelp 数据<br/>+ parquet 特征层"]:::data
+        C["Stage09 产物<br/>候选池"]:::stage
+        F["Stage10 特征拼装"]:::stage
+        X["训练 Stage10<br/>XGBoost 精排器"]:::stage
+        P["Stage11 导出<br/>pair / reward 数据"]:::stage
+        Q["训练 Stage11 专家<br/>11-30 | 31-60 | 61-100"]:::stage
+        A["冻结产物<br/>run、指标、checkpoint"]:::artifact
+        D --> C
+        C --> F --> X --> A
+        C --> P --> Q --> A
     end
 
-    subgraph Inference
-        I1["用户 + 商户信号"] --> I9["Stage09 召回路由"]
-        I9 --> I10["Stage10 结构化精排"]
-        I10 --> I11["Stage11 有边界救援"]
-        I11 --> O["Top-K 与指标快照"]
+    subgraph IN["推理流"]
+        direction TB
+        I1["线上请求<br/>用户 + 商户信号"]:::data
+        I9["Stage09<br/>召回路由"]:::stage
+        I10["Stage10<br/>结构化精排"]:::stage
+        I11["Stage11<br/>有边界救援"]:::stage
+        O["Top-K 结果<br/>+ 指标快照"]:::output
+        I1 --> I9 --> I10 --> I11 --> O
     end
 ```
 

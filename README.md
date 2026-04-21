@@ -35,34 +35,79 @@ exposure. This project aims to build an end-to-end ranking stack that:
 ### Ranking Pipeline
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {
+  'primaryColor': '#F8FAFC',
+  'primaryBorderColor': '#CBD5E1',
+  'primaryTextColor': '#0F172A',
+  'lineColor': '#475569',
+  'secondaryColor': '#EEF2FF',
+  'tertiaryColor': '#ECFDF5',
+  'clusterBkg': '#FFFFFF',
+  'clusterBorder': '#CBD5E1',
+  'fontSize': '15px'
+}}}%%
 flowchart LR
-    U["User behavior, history, and profile signals"] --> R["Stage09<br/>Recall routing"]
-    B["Business text, metadata, and structured features"] --> R
-    R --> T["Candidate trim<br/>route lanes and shortlist"]
-    T --> X["Stage10<br/>XGBoost structured rerank"]
-    X --> M["Stage11<br/>Bounded reward-model rescue rerank"]
-    M --> K["Final Top-K"]
+    classDef input fill:#EFF6FF,stroke:#3B82F6,color:#0F172A,stroke-width:1.6px;
+    classDef stage fill:#F8FAFC,stroke:#334155,color:#0F172A,stroke-width:1.6px;
+    classDef output fill:#ECFDF5,stroke:#059669,color:#064E3B,stroke-width:1.6px;
+    linkStyle default stroke:#64748B,stroke-width:1.8px;
+
+    U["User Signals<br/>History / profile<br/>Recent intent"]:::input
+    B["Business Signals<br/>Text / metadata<br/>Structured fields"]:::input
+    R["Stage09<br/>Recall routing"]:::stage
+    T["Candidate trim<br/>Lanes + shortlist"]:::stage
+    X["Stage10<br/>Structured XGBoost rerank"]:::stage
+    M["Stage11<br/>Bounded RM rescue"]:::stage
+    K["Final Top-K<br/>+ metric snapshot"]:::output
+
+    U --> R
+    B --> R
+    R --> T --> X --> M --> K
 ```
 
 ### Training Flow Vs. Inference Flow
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {
+  'primaryColor': '#F8FAFC',
+  'primaryBorderColor': '#CBD5E1',
+  'primaryTextColor': '#0F172A',
+  'lineColor': '#475569',
+  'secondaryColor': '#EEF2FF',
+  'tertiaryColor': '#ECFDF5',
+  'clusterBkg': '#FFFFFF',
+  'clusterBorder': '#CBD5E1',
+  'fontSize': '15px'
+}}}%%
 flowchart LR
-    subgraph Training
-        D["Raw Yelp data + parquet feature layers"] --> C["Stage09 candidate outputs"]
-        C --> F["Stage10 feature build"]
-        F --> X["Train XGBoost reranker"]
-        C --> P["Stage11 dataset export"]
-        P --> Q["Train segmented RM experts<br/>11-30 / 31-60 / 61-100"]
-        X --> A["Frozen run metadata and checkpoints"]
-        Q --> A
+    classDef data fill:#FFF7ED,stroke:#F59E0B,color:#7C2D12,stroke-width:1.5px;
+    classDef stage fill:#EEF2FF,stroke:#6366F1,color:#1E1B4B,stroke-width:1.5px;
+    classDef artifact fill:#ECFDF5,stroke:#10B981,color:#064E3B,stroke-width:1.5px;
+    classDef output fill:#F0F9FF,stroke:#0EA5E9,color:#0C4A6E,stroke-width:1.5px;
+    linkStyle default stroke:#64748B,stroke-width:1.7px;
+
+    subgraph TR["Training"]
+        direction TB
+        D["Raw Yelp data<br/>+ parquet feature layers"]:::data
+        C["Stage09 outputs<br/>Candidate pool"]:::stage
+        F["Stage10 feature build"]:::stage
+        X["Train Stage10<br/>XGBoost reranker"]:::stage
+        P["Stage11 export<br/>Pair / reward data"]:::stage
+        Q["Train Stage11 experts<br/>11-30 | 31-60 | 61-100"]:::stage
+        A["Frozen artifacts<br/>Runs, metrics, checkpoints"]:::artifact
+        D --> C
+        C --> F --> X --> A
+        C --> P --> Q --> A
     end
 
-    subgraph Inference
-        I1["User + business signals"] --> I9["Stage09 recall routing"]
-        I9 --> I10["Stage10 structured rerank"]
-        I10 --> I11["Stage11 bounded RM rescue"]
-        I11 --> O["Top-K + metric snapshots"]
+    subgraph IN["Inference"]
+        direction TB
+        I1["Online request<br/>User + business signals"]:::data
+        I9["Stage09<br/>Recall routing"]:::stage
+        I10["Stage10<br/>Structured rerank"]:::stage
+        I11["Stage11<br/>Bounded rescue"]:::stage
+        O["Top-K results<br/>+ metric snapshots"]:::output
+        I1 --> I9 --> I10 --> I11 --> O
     end
 ```
 
