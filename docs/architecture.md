@@ -24,8 +24,7 @@ The repository is organized around one practical ranking objective:
 Current Stage11 model surface:
 
 - frozen reward-model mainline: one shared `Qwen3.5-9B` backbone
-- optional prompt-only / persona probes: `Qwen3.5-35B-A3B` and `Qwen3-30B-A3B`
-  experiments documented separately from the frozen line
+- current public docs and smoke checks only cover the frozen reward-model line
 
 ## Main Inference Path
 

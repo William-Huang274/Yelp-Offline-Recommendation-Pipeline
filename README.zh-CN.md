@@ -137,6 +137,20 @@ flowchart LR
 | `bucket5` | `0.0935 / 0.0440` | `0.1261 / 0.0581` |
 | `bucket10` | `0.0569 / 0.0265` | `0.0772 / 0.0341` |
 
+### 分桶定义与规模
+
+| bucket | 用户密度含义 | 冻结 Stage10 评估用户数 | 商家数 | 候选行数 | 为什么要看 |
+| --- | --- | ---: | ---: | ---: | --- |
+| `bucket2` | leave-two-out 下仍可训练、含冷启动倾向的用户 | `5,344` | `1,798` | `3,058,600` | 验证稀疏用户可迁移性 |
+| `bucket5` | 中高交互用户 | `1,935` | `1,798` | `935,160` | 当前主要公开排序线 |
+| `bucket10` | 高交互用户 | `738` | `1,794` | `697,299` | 更干净的高密度验证切片 |
+
+规模说明：Stage09 的 `bucket5` 召回审计覆盖更宽的 `9,765` 个 truth users；
+进入 Stage10 时再使用固定 eval cohort。更细的冷启动子集，例如 `0-3`
+或 `4-6` 交互用户，当前已经可以通过显式 cohort CSV 重放，但还没有冻结进
+headline `current_release` 表。三条 Stage10 线使用的商户 universe 基本一致，
+因此对比主要反映用户密度和候选池差异，而不是换了一套餐厅集合。
+
 ## Quickstart
 
 ### A. 验证路径
@@ -180,11 +194,9 @@ python tools/cloud_stage11.py inventory
 python tools/cloud_stage11.py print-ssh
 ```
 
-### D. Stage11 模型 / Prompt 检查
+### D. Stage11 奖励模型检查
 
-当前冻结 `Stage11` 奖励模型主线使用 `Qwen3.5-9B`。与之分开的
-prompt-only 用户状态实验面，则使用 `Qwen3.5-35B-A3B` /
-`Qwen3-30B-A3B` 模板和审计脚本。
+当前公开 `Stage11` 只说明已经冻结的 `Qwen3.5-9B` 奖励模型重排线。
 
 ```powershell
 python -m pip install -r requirements-stage11-qlora.txt
@@ -246,7 +258,7 @@ Current Frozen Yelp Ranking Review Line
 - [仓库地图与推荐入口](./docs/project/repository_map.zh-CN.md)
 - [Stage11 设计说明](./docs/stage11/stage11_31_60_only_and_segmented_fusion_20260408.zh-CN.md)
 - [Stage11 案例说明](./docs/stage11/stage11_case_notes_20260409.zh-CN.md)
-- [Stage11 模型与 prompt smoke case](./config/demo/stage11_model_prompt_smoke_case.json)
+- [Stage11 奖励模型 smoke case](./config/demo/stage11_model_prompt_smoke_case.json)
 - [主线复现指南](./docs/project/reproduce_mainline.md)
 
 ## 设计取舍

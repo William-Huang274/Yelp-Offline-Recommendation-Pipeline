@@ -11,7 +11,7 @@ These files are part of the current public mainline:
 - `demo/batch_infer_demo_input.json`: small request payload used by the mock
   `Stage09 -> Stage10 -> Stage11` demo path
 - `demo/stage11_model_prompt_smoke_case.json`: smoke-case contract for the
-  Stage11 `Qwen3.5-9B` reward-model surface and prompt-only probe templates
+  Stage11 `Qwen3.5-9B` reward-model surface
 
 ### 2. Legacy compatibility training profiles
 

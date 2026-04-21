@@ -11,5 +11,5 @@ pytest>=8,<9
 paramiko>=3.4
 
 # Optional GPU-heavy dependencies for the current Stage11 Qwen3.5-9B
-# reward-model training workflow and prompt-only probe runs remain in:
+# reward-model training workflow remain in:
 # requirements-stage11-qlora.txt

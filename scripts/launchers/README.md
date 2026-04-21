@@ -46,8 +46,6 @@ release notes.
 - `stage11_bucket5_watch.sh`
 - `stage11_bucket5_constructability_audit.sh`
 - `stage11_bucket5_pool_audit.sh`
-- `stage11_persona_sft_v3_build_dataset.sh`
-- `stage11_persona_sft_v3_quality_6144.sh`
 
 ## Variable Naming Conventions
 

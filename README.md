@@ -140,6 +140,22 @@ flowchart LR
 | `bucket5` | `0.0935 / 0.0440` | `0.1261 / 0.0581` |
 | `bucket10` | `0.0569 / 0.0265` | `0.0772 / 0.0341` |
 
+### Bucket Definitions And Scale
+
+| bucket | user-density meaning | frozen Stage10 eval users | businesses | candidate rows | why it matters |
+| --- | --- | ---: | ---: | ---: | --- |
+| `bucket2` | cold-start-inclusive trainable users under leave-two-out | `5,344` | `1,798` | `3,058,600` | tests sparse-user portability |
+| `bucket5` | mid-to-high interaction users | `1,935` | `1,798` | `935,160` | current main public ranking line |
+| `bucket10` | high-interaction users | `738` | `1,794` | `697,299` | cleaner dense-user validation slice |
+
+Scale note: the Stage09 `bucket5` recall audit covers a broader `9,765` truth
+users before the fixed Stage10 eval cohort is applied. Finer cold-start cohorts,
+such as `0-3` or `4-6` interactions, are script-supported through explicit
+cohort CSVs but are not frozen into the headline `current_release` tables yet.
+The three Stage10 lines use nearly the same business universe, so the comparison
+mainly reflects user-density and candidate-pool differences rather than a
+different restaurant set.
+
 ## Quickstart
 
 ### A. Verification Path
@@ -184,11 +200,10 @@ python tools/cloud_stage11.py inventory
 python tools/cloud_stage11.py print-ssh
 ```
 
-### D. Stage11 Model / Prompt Surface
+### D. Stage11 Reward-Model Surface
 
-The current frozen `Stage11` reward-model line uses `Qwen3.5-9B`. Prompt-only
-user-state probes are tracked separately and use `Qwen3.5-35B-A3B` /
-`Qwen3-30B-A3B` templates and audit scripts.
+The current public `Stage11` surface only documents the frozen `Qwen3.5-9B`
+reward-model reranking line.
 
 ```powershell
 python -m pip install -r requirements-stage11-qlora.txt
@@ -251,7 +266,7 @@ Files you should expect to validate immediately:
 - [Repository map and entry points](./docs/project/repository_map.md)
 - [Stage11 design notes](./docs/stage11/stage11_31_60_only_and_segmented_fusion_20260408.md)
 - [Stage11 case notes](./docs/stage11/stage11_case_notes_20260409.md)
-- [Stage11 model and prompt smoke case](./config/demo/stage11_model_prompt_smoke_case.json)
+- [Stage11 reward-model smoke case](./config/demo/stage11_model_prompt_smoke_case.json)
 - [Reproduction guide](./docs/project/reproduce_mainline.md)
 
 ## Design Choices

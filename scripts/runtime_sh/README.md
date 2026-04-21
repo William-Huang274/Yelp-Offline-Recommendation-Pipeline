@@ -17,8 +17,3 @@ Use [../launchers/](../launchers) as the public entry surface.
 
 Use this directory when you need the underlying full shell launcher that a
 wrapper forwards to.
-
-Additional persona-SFT quality-first launchers are also grouped here:
-
-- `run_stage11_persona_sft_v3_build_dataset.sh`
-- `run_stage11_persona_sft_v3_quality_6144.sh`

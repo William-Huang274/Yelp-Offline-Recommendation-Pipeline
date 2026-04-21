@@ -23,14 +23,4 @@ def test_stage11_model_prompt_case_contract(repo_root: Path) -> None:
     payload = json.loads(case_path.read_text(encoding="utf-8"))
 
     assert payload["reward_model_mainline"]["base_model"] == "Qwen3.5-9B"
-    assert payload["prompt_only_probe_surface"]["probe_launchers"] == [
-        {
-            "path": "scripts/runtime_sh/run_stage11_persona_sft_v3_qwen35_35b_a3b_probe.sh",
-            "model_marker": "Qwen3.5-35B-A3B-Base",
-        },
-        {
-            "path": "scripts/runtime_sh/run_stage11_persona_sft_v3_qwen3_30b_a3b_probe.sh",
-            "model_marker": "Qwen3-30B-A3B-Base",
-        },
-    ]
-    assert payload["prompt_only_probe_surface"]["prompt_templates"]
+    assert "prompt_only_probe_surface" not in payload

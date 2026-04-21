@@ -21,8 +21,7 @@
 当前 Stage11 模型面分成两类：
 
 - 冻结 reward-model 主线：共享 `Qwen3.5-9B` 主干
-- 额外 prompt-only / persona probe：`Qwen3.5-35B-A3B` 和
-  `Qwen3-30B-A3B`，这类实验与当前 freeze 线分开记录
+- 当前公开文档和 smoke 检查只覆盖冻结 reward-model 线
 
 ## 主推理链路
 

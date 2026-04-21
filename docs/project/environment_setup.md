@@ -78,8 +78,7 @@ These extras are not required for review-only workflows.
 Current Stage11 model surfaces:
 
 - frozen reward-model mainline: `Qwen3.5-9B`
-- optional prompt-only user-state probes: `Qwen3.5-35B-A3B` /
-  `Qwen3-30B-A3B`
+- current public checks only cover the frozen reward-model line
 
 The quickest public verification for that split is:
 
