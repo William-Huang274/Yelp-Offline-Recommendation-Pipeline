@@ -8,6 +8,7 @@
 | --- | --- |
 | `data/output/current_release` | 当前 README 和 demo 使用的 compact outward-facing 结果面 |
 | `data/metrics/current_release` | 当前对外主线的 compact 指标快照 |
+| `config/serving.yaml` | mock serving 使用的策略、版本、fallback 顺序和 latency budget |
 | `data/output/showcase_history` | 用于对照和讲故事的历史 run metadata |
 | `data/metrics/showcase_history` | 用于受控比较的历史指标 |
 | `data/output/_prod_runs` | release manifest、active pointer 和 rollback snapshot |
@@ -50,7 +51,11 @@
 ```bash
 python tools/run_release_checks.py --skip-pytest
 python tools/batch_infer_demo.py
+python tools/batch_infer_demo.py --strategy baseline
+python tools/batch_infer_demo.py --strategy xgboost
+python tools/batch_infer_demo.py --strategy reward_rerank
 python tools/mock_serving_api.py --self-test
+python tools/load_test_mock_serving.py --requests 20 --concurrency 4 --simulate-fallback-every 5
 python tools/demo_recommend.py
 python tools/demo_recommend.py show-case --case boundary_11_30
 ```
@@ -87,7 +92,22 @@ python tools/mock_serving_api.py --host 127.0.0.1 --port 8000
 当前 API surface 只保留最小必要 contract：
 
 - `GET /health`：返回当前 release id 和服务状态
-- `POST /rank`：输入一条 mock 用户画像和候选商户列表，输出 Stage09 -> Stage10 -> Stage11 的排序结果
+- `POST /rank`：输入一条 mock 用户画像、候选商户列表和可选策略，输出 Stage09 -> Stage10 -> Stage11 的排序结果
+
+当前支持三种策略：
+
+- `baseline`：使用候选基础分作为轻量 baseline
+- `xgboost`：使用 Stage10 结构化精排逻辑
+- `reward_rerank`：使用 Stage11 bounded reward-model rescue 逻辑
+
+服务响应会显式返回：
+
+- `strategy_requested`
+- `strategy_used`
+- `fallback_used`
+- `fallback_reason`
+- `serving_metrics.latency_ms`
+- `serving_metrics.fallback_count`
 
 如果要看内部 release runner 入口，见：
 

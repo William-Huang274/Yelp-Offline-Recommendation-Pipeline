@@ -3,17 +3,74 @@ from __future__ import annotations
 
 import argparse
 import json
+import time
 from pathlib import Path
 from typing import Any
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_INPUT_PATH = REPO_ROOT / "config" / "demo" / "batch_infer_demo_input.json"
+SERVING_CONFIG_PATH = REPO_ROOT / "config" / "serving.yaml"
 CURRENT_RELEASE = REPO_ROOT / "data" / "output" / "current_release"
+
+DEFAULT_SERVING_CONFIG: dict[str, Any] = {
+    "release_id": "release_closeout_20260409",
+    "release_surface": "data/output/current_release",
+    "model_version": "stage09_route_v5__stage10_xgb_mainline__stage11_qwen35_9b_rm_v124",
+    "default_strategy": "reward_rerank",
+    "allowed_strategies": ["baseline", "xgboost", "reward_rerank"],
+    "fallback_order": ["reward_rerank", "xgboost", "baseline"],
+    "top_k": 5,
+    "stage09_topn": 12,
+    "stage11_topn": 30,
+    "latency_budget_ms": 250,
+    "champion_pointer": "stage11_release",
+    "aligned_fallback_pointer": "stage10_release",
+    "emergency_baseline_pointer": "stage09_release",
+}
 
 
 def read_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def parse_config_scalar(value: str) -> Any:
+    raw = value.strip()
+    if not raw:
+        return ""
+    if raw.startswith("[") and raw.endswith("]"):
+        body = raw[1:-1].strip()
+        if not body:
+            return []
+        return [item.strip().strip("\"'") for item in body.split(",")]
+    lowered = raw.lower()
+    if lowered in {"true", "false"}:
+        return lowered == "true"
+    try:
+        if "." in raw:
+            return float(raw)
+        return int(raw)
+    except ValueError:
+        return raw.strip("\"'")
+
+
+def load_serving_config(path: Path = SERVING_CONFIG_PATH) -> dict[str, Any]:
+    config = {
+        key: list(value) if isinstance(value, list) else value
+        for key, value in DEFAULT_SERVING_CONFIG.items()
+    }
+    if not path.exists():
+        return config
+
+    for line in path.read_text(encoding="utf-8").splitlines():
+        stripped = line.split("#", 1)[0].strip()
+        if not stripped or ":" not in stripped:
+            continue
+        key, value = stripped.split(":", 1)
+        key = key.strip()
+        if key:
+            config[key] = parse_config_scalar(value)
+    return config
 
 
 def clamp(value: float, lo: float = 0.0, hi: float = 1.0) -> float:
@@ -130,16 +187,42 @@ def stage11_bonus(features: dict[str, float], stage10_rank: int, alpha: float, s
     return bonus, band
 
 
-def rank_payload(payload: dict[str, Any]) -> dict[str, Any]:
+def strategy_attempt_order(requested_strategy: str, serving_config: dict[str, Any]) -> list[str]:
+    allowed = [str(item) for item in serving_config.get("allowed_strategies", [])]
+    fallback_order = [str(item) for item in serving_config.get("fallback_order", []) if str(item) in allowed]
+    if requested_strategy not in allowed:
+        raise ValueError(f"unsupported strategy: {requested_strategy}")
+    if requested_strategy in fallback_order:
+        return fallback_order[fallback_order.index(requested_strategy) :]
+    return [requested_strategy]
+
+
+def should_simulate_failure(payload: dict[str, Any], strategy: str) -> bool:
+    marker = payload.get("simulate_failure_for", payload.get("force_fail_strategy"))
+    if marker is None:
+        return False
+    if isinstance(marker, list):
+        return strategy in {str(item) for item in marker}
+    return str(marker).strip() == strategy
+
+
+def rank_payload_for_strategy(
+    payload: dict[str, Any],
+    strategy: str,
+    release_ref: dict[str, Any],
+    serving_config: dict[str, Any],
+) -> dict[str, Any]:
+    if should_simulate_failure(payload, strategy):
+        raise RuntimeError(f"simulated failure for {strategy}")
+
     user_profile = payload.get("user_profile", {}) if isinstance(payload.get("user_profile", {}), dict) else {}
     candidates_raw = payload.get("candidates", [])
     if not isinstance(candidates_raw, list) or not candidates_raw:
         raise ValueError("payload requires a non-empty candidates list")
 
-    top_k = max(1, int(payload.get("top_k", 5)))
-    stage09_topn = max(top_k, int(payload.get("stage09_topn", 12)))
-    stage11_topn = max(top_k, int(payload.get("stage11_topn", 30)))
-    release_ref = load_release_reference()
+    top_k = max(1, int(payload.get("top_k", serving_config.get("top_k", 5))))
+    stage09_topn = max(top_k, int(payload.get("stage09_topn", serving_config.get("stage09_topn", 12))))
+    stage11_topn = max(top_k, int(payload.get("stage11_topn", serving_config.get("stage11_topn", 30))))
 
     enriched: list[dict[str, Any]] = []
     for row in candidates_raw:
@@ -155,6 +238,7 @@ def rank_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "zone": str(row.get("zone", "")).strip(),
                 "cuisine_tags": [str(item) for item in row.get("cuisine_tags", [])],
                 "features": features,
+                "baseline_score": features["prescore"],
                 "stage09_route_score": route_score,
                 "stage09_primary_route": route_name,
                 "stage10_score": stage10_score,
@@ -164,22 +248,34 @@ def rank_payload(payload: dict[str, Any]) -> dict[str, Any]:
     enriched.sort(key=lambda row: (row["stage09_route_score"], row["stage10_score"]), reverse=True)
     retained = enriched[:stage09_topn]
 
+    for index, row in enumerate(sorted(retained, key=lambda item: item["baseline_score"], reverse=True), start=1):
+        row["baseline_rank"] = index
     for index, row in enumerate(sorted(retained, key=lambda item: item["stage10_score"], reverse=True), start=1):
         row["stage10_rank"] = index
-    retained.sort(key=lambda row: row["stage10_rank"])
 
-    alpha = float(release_ref["stage11_tri_band_alpha"])
+    alpha = float(release_ref["stage11_tri_band_alpha"]) if strategy == "reward_rerank" else 0.0
     for row in retained:
-        bonus, band = stage11_bonus(row["features"], int(row["stage10_rank"]), alpha=alpha, stage11_topn=stage11_topn)
+        bonus, band = (
+            stage11_bonus(row["features"], int(row["stage10_rank"]), alpha=alpha, stage11_topn=stage11_topn)
+            if strategy == "reward_rerank"
+            else (0.0, None)
+        )
         row["stage11_bonus"] = bonus
         row["stage11_band"] = band
-        row["final_score"] = row["stage10_score"] + bonus
+        if strategy == "baseline":
+            row["final_score"] = row["baseline_score"]
+        elif strategy == "xgboost":
+            row["final_score"] = row["stage10_score"]
+        else:
+            row["final_score"] = row["stage10_score"] + bonus
 
     final_sorted = sorted(retained, key=lambda row: row["final_score"], reverse=True)
     for index, row in enumerate(final_sorted, start=1):
         row["final_rank"] = index
 
-    rescued = [row for row in final_sorted if row["stage11_band"] and row["final_rank"] < row["stage10_rank"]]
+    rescued = [
+        row for row in final_sorted if strategy == "reward_rerank" and row["stage11_band"] and row["final_rank"] < row["stage10_rank"]
+    ]
     top_candidates = []
     for row in final_sorted[:top_k]:
         top_candidates.append(
@@ -188,9 +284,11 @@ def rank_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "business_id": row["business_id"],
                 "name": row["name"],
                 "zone": row["zone"],
+                "baseline_rank": int(row["baseline_rank"]),
                 "stage10_rank": int(row["stage10_rank"]),
                 "stage09_primary_route": row["stage09_primary_route"],
                 "stage11_band": row["stage11_band"],
+                "baseline_score": round(float(row["baseline_score"]), 4),
                 "stage10_score": round(float(row["stage10_score"]), 4),
                 "stage11_bonus": round(float(row["stage11_bonus"]), 4),
                 "final_score": round(float(row["final_score"]), 4),
@@ -205,6 +303,8 @@ def rank_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "name": row["name"],
                 "stage09_route_score": round(float(row["stage09_route_score"]), 4),
                 "stage09_primary_route": row["stage09_primary_route"],
+                "baseline_score": round(float(row["baseline_score"]), 4),
+                "baseline_rank": int(row["baseline_rank"]),
                 "stage10_score": round(float(row["stage10_score"]), 4),
                 "stage10_rank": int(row["stage10_rank"]),
                 "stage11_band": row["stage11_band"],
@@ -217,7 +317,13 @@ def rank_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "request_id": str(payload.get("request_id", "")).strip() or "demo_request",
         "service": "batch_infer_demo",
         "mode": "mock_batch_inference",
+        "strategy_used": strategy,
         "release_reference": release_ref,
+        "serving_config": {
+            "config_path": str(SERVING_CONFIG_PATH.relative_to(REPO_ROOT)),
+            "model_version": str(serving_config.get("model_version", "")),
+            "latency_budget_ms": int(serving_config.get("latency_budget_ms", 0)),
+        },
         "user_profile": {
             "user_id": str(user_profile.get("user_id", "")).strip(),
             "activity_bucket": str(user_profile.get("activity_bucket", "")).strip(),
@@ -250,11 +356,55 @@ def rank_payload(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def rank_payload(payload: dict[str, Any], serving_config: dict[str, Any] | None = None) -> dict[str, Any]:
+    started = time.perf_counter()
+    config = serving_config or load_serving_config()
+    release_ref = load_release_reference()
+    requested_strategy = str(
+        payload.get("strategy", payload.get("ranking_strategy", config.get("default_strategy", "reward_rerank")))
+    ).strip()
+
+    errors: list[str] = []
+    result: dict[str, Any] | None = None
+    strategy_used = ""
+    for strategy in strategy_attempt_order(requested_strategy, config):
+        try:
+            result = rank_payload_for_strategy(payload, strategy, release_ref, config)
+            strategy_used = strategy
+            break
+        except Exception as exc:
+            errors.append(f"{strategy}: {exc}")
+
+    if result is None:
+        raise ValueError("; ".join(errors) or "ranking failed")
+
+    latency_ms = round((time.perf_counter() - started) * 1000.0, 3)
+    fallback_used = strategy_used != requested_strategy
+    fallback_count = 1 if fallback_used else 0
+    result["strategy_requested"] = requested_strategy
+    result["strategy_used"] = strategy_used
+    result["fallback_used"] = fallback_used
+    result["fallback_reason"] = errors[0] if fallback_used and errors else ""
+    result["serving_metrics"] = {
+        "success": True,
+        "latency_ms": latency_ms,
+        "latency_budget_ms": int(config.get("latency_budget_ms", 0)),
+        "strategy_requested": requested_strategy,
+        "strategy_used": strategy_used,
+        "fallback_count": fallback_count,
+    }
+    result["summary_metrics"]["fallback_count"] = fallback_count
+    result["summary_metrics"]["latency_ms"] = latency_ms
+    return result
+
+
 def print_text_report(result: dict[str, Any], input_path: Path) -> None:
     print("Batch Inference Demo")
     print(f"- request_id: {result['request_id']}")
     print(f"- input: {input_path}")
     print(f"- release_id: {result['release_reference']['release_id']}")
+    print(f"- strategy: requested={result['strategy_requested']} used={result['strategy_used']}")
+    print(f"- latency_ms: {result['serving_metrics']['latency_ms']}")
     print("")
     print("Summary Metrics")
     for key, value in result["summary_metrics"].items():
@@ -316,6 +466,12 @@ def build_parser() -> argparse.ArgumentParser:
         default="text",
         help="output format",
     )
+    parser.add_argument(
+        "--strategy",
+        choices=("baseline", "xgboost", "reward_rerank"),
+        default=None,
+        help="override the serving strategy from config/serving.yaml",
+    )
     return parser
 
 
@@ -323,6 +479,8 @@ def main() -> int:
     args = build_parser().parse_args()
     input_path = Path(args.input).expanduser().resolve()
     payload = read_json(input_path)
+    if args.strategy:
+        payload["strategy"] = args.strategy
     result = rank_payload(payload)
     if args.format == "json":
         print(json.dumps(result, ensure_ascii=True, indent=2))

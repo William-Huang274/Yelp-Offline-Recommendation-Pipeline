@@ -1,16 +1,13 @@
 {
   "pointer_name": "stage10_release",
-  "run_dir": "D:\\5006_BDA_project\\data\\output\\10_2_rank_infer_eval\\20260313_193213_stage10_2_rank_infer_eval",
-  "release_label": "internal_pilot_v1_champion_20260313",
+  "run_dir": "data/output/current_release/stage10",
+  "release_label": "release_closeout_20260409",
   "release_role": "aligned_fallback",
-  "source_run_09": "20260311_005450_full_stage09_candidate_fusion",
-  "rank_model_json": "D:\\5006_BDA_project\\data\\output\\10_rank_models\\20260307_210530_stage10_1_rank_train\\rank_model.json",
-  "eval_user_cohort_path": "D:\\5006_BDA_project\\data\\output\\11_eval_cohorts\\20260311_011112_bucket10_eval_users.csv",
-  "metrics_file": "D:\\5006_BDA_project\\data\\metrics\\recsys_stage10_results_gl07.csv",
-  "eval_candidate_topn": 250,
-  "top_k": 10,
+  "summary_file": "data/output/current_release/stage10/stage10_current_mainline_summary.json",
+  "metrics_file": "data/output/current_release/stage10/bucket5_mainline/metrics.csv",
+  "bucket": "bucket5",
   "selected_model": "LearnedBlendXGBCls@10",
-  "recall_at_k": 0.065041,
-  "ndcg_at_k": 0.029217,
+  "recall_at_k": 0.126098,
+  "ndcg_at_k": 0.058108,
   "fallback_from_release_policy": true
 }

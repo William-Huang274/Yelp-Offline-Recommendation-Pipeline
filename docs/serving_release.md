@@ -9,6 +9,7 @@ real release-management surface for batch-style ranking and review workflows.
 | --- | --- |
 | `data/output/current_release` | compact outward-facing result surface used in README and demo flows |
 | `data/metrics/current_release` | compact metric snapshot for the active outward-facing line |
+| `config/serving.yaml` | mock serving strategy, version, fallback order, and latency budget |
 | `data/output/showcase_history` | selected historical run metadata kept for comparisons |
 | `data/metrics/showcase_history` | selected historical metrics used for controlled comparisons |
 | `data/output/_prod_runs` | release manifests, active pointers, and rollback snapshots |
@@ -56,7 +57,11 @@ Use the checked-in compact artifacts and demo helpers:
 ```bash
 python tools/run_release_checks.py --skip-pytest
 python tools/batch_infer_demo.py
+python tools/batch_infer_demo.py --strategy baseline
+python tools/batch_infer_demo.py --strategy xgboost
+python tools/batch_infer_demo.py --strategy reward_rerank
 python tools/mock_serving_api.py --self-test
+python tools/load_test_mock_serving.py --requests 20 --concurrency 4 --simulate-fallback-every 5
 python tools/demo_recommend.py
 python tools/demo_recommend.py show-case --case boundary_11_30
 ```
@@ -83,6 +88,8 @@ lightweight tools on top of the checked-in frozen line:
   [../tools/batch_infer_demo.py](../tools/batch_infer_demo.py)
 - HTTP mock serving surface:
   [../tools/mock_serving_api.py](../tools/mock_serving_api.py)
+- local load test:
+  [../tools/load_test_mock_serving.py](../tools/load_test_mock_serving.py)
 
 Example:
 
@@ -94,8 +101,23 @@ python tools/mock_serving_api.py --host 127.0.0.1 --port 8000
 The API surface is intentionally small:
 
 - `GET /health`: returns the active release id and compact serving status
-- `POST /rank`: accepts one mock user-profile request plus candidate list and
-  returns Stage09 -> Stage10 -> Stage11 ranked output
+- `POST /rank`: accepts one mock user-profile request, candidate list, and
+  optional strategy, then returns Stage09 -> Stage10 -> Stage11 ranked output
+
+Supported strategies:
+
+- `baseline`: lightweight candidate baseline
+- `xgboost`: Stage10 structured-rerank path
+- `reward_rerank`: Stage11 bounded reward-model rescue path
+
+The response reports:
+
+- `strategy_requested`
+- `strategy_used`
+- `fallback_used`
+- `fallback_reason`
+- `serving_metrics.latency_ms`
+- `serving_metrics.fallback_count`
 
 For the internal release-runner surface, see
 [../scripts/pipeline/internal_pilot_runner.py](../scripts/pipeline/internal_pilot_runner.py).

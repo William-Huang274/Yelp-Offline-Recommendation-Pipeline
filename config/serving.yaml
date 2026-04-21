@@ -1,0 +1,20 @@
+# Minimal serving configuration for the public mock ranking service.
+# The parser in tools/batch_infer_demo.py intentionally supports this small
+# key/value subset so the demo does not require PyYAML.
+
+release_id: release_closeout_20260409
+release_surface: data/output/current_release
+model_version: stage09_route_v5__stage10_xgb_mainline__stage11_qwen35_9b_rm_v124
+
+default_strategy: reward_rerank
+allowed_strategies: [baseline, xgboost, reward_rerank]
+fallback_order: [reward_rerank, xgboost, baseline]
+
+top_k: 5
+stage09_topn: 12
+stage11_topn: 30
+latency_budget_ms: 250
+
+champion_pointer: stage11_release
+aligned_fallback_pointer: stage10_release
+emergency_baseline_pointer: stage09_release

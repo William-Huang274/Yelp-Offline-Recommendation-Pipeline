@@ -12,17 +12,22 @@ TOOLS_DIR = Path(__file__).resolve().parent
 if str(TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(TOOLS_DIR))
 
-from batch_infer_demo import DEFAULT_INPUT_PATH, load_release_reference, rank_payload, read_json
+from batch_infer_demo import DEFAULT_INPUT_PATH, load_release_reference, load_serving_config, rank_payload, read_json
 
 
 def health_payload() -> dict[str, Any]:
     release_ref = load_release_reference()
+    serving_config = load_serving_config()
     return {
         "status": "ok",
         "service": "mock_serving_api",
         "mode": "mock_http_service",
         "release_id": release_ref["release_id"],
         "current_output_surface": release_ref["current_output_surface"],
+        "model_version": serving_config["model_version"],
+        "default_strategy": serving_config["default_strategy"],
+        "allowed_strategies": serving_config["allowed_strategies"],
+        "latency_budget_ms": serving_config["latency_budget_ms"],
     }
 
 
