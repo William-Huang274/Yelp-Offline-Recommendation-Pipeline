@@ -1,0 +1,272 @@
+{
+  "request_id": "demo_request_bucket5_001",
+  "top_k": 5,
+  "stage09_topn": 12,
+  "stage11_topn": 30,
+  "user_profile": {
+    "user_id": "demo_user_bucket5_001",
+    "activity_bucket": "bucket5",
+    "preferred_cuisines": [
+      "ramen",
+      "japanese",
+      "asian fusion"
+    ],
+    "preferred_price_tier": 2,
+    "preferred_zone": "Mid-City"
+  },
+  "candidates": [
+    {
+      "business_id": "b001",
+      "name": "Creole Garden Kitchen",
+      "cuisine_tags": [
+        "creole",
+        "southern"
+      ],
+      "price_tier": 2,
+      "zone": "Mid-City",
+      "prescore": 0.83,
+      "quality": 0.88,
+      "popularity": 0.78,
+      "novelty": 0.18,
+      "rm_score": 0.18,
+      "route_hints": {
+        "als": 0.71,
+        "profile": 0.42,
+        "context": 0.49,
+        "popular": 0.81
+      }
+    },
+    {
+      "business_id": "b002",
+      "name": "Canal Sushi Counter",
+      "cuisine_tags": [
+        "sushi",
+        "japanese"
+      ],
+      "price_tier": 3,
+      "zone": "Warehouse District",
+      "prescore": 0.79,
+      "quality": 0.84,
+      "popularity": 0.73,
+      "novelty": 0.32,
+      "rm_score": 0.26,
+      "route_hints": {
+        "als": 0.64,
+        "profile": 0.61,
+        "context": 0.47,
+        "popular": 0.63
+      }
+    },
+    {
+      "business_id": "b003",
+      "name": "Bayou Noodle House",
+      "cuisine_tags": [
+        "ramen",
+        "japanese"
+      ],
+      "price_tier": 2,
+      "zone": "CBD",
+      "prescore": 0.76,
+      "quality": 0.79,
+      "popularity": 0.59,
+      "novelty": 0.38,
+      "rm_score": 0.31,
+      "route_hints": {
+        "als": 0.56,
+        "profile": 0.74,
+        "context": 0.62,
+        "popular": 0.41
+      }
+    },
+    {
+      "business_id": "b004",
+      "name": "Magazine Small Plates",
+      "cuisine_tags": [
+        "new american",
+        "small plates"
+      ],
+      "price_tier": 3,
+      "zone": "Lower Garden District",
+      "prescore": 0.74,
+      "quality": 0.83,
+      "popularity": 0.69,
+      "novelty": 0.46,
+      "rm_score": 0.21,
+      "route_hints": {
+        "als": 0.59,
+        "profile": 0.39,
+        "context": 0.54,
+        "popular": 0.68
+      }
+    },
+    {
+      "business_id": "b005",
+      "name": "Midtown Taco Lab",
+      "cuisine_tags": [
+        "mexican",
+        "tacos"
+      ],
+      "price_tier": 1,
+      "zone": "Mid-City",
+      "prescore": 0.72,
+      "quality": 0.76,
+      "popularity": 0.66,
+      "novelty": 0.42,
+      "rm_score": 0.24,
+      "route_hints": {
+        "als": 0.62,
+        "profile": 0.33,
+        "context": 0.58,
+        "popular": 0.57
+      }
+    },
+    {
+      "business_id": "b006",
+      "name": "Union Pho Corner",
+      "cuisine_tags": [
+        "vietnamese",
+        "pho"
+      ],
+      "price_tier": 2,
+      "zone": "CBD",
+      "prescore": 0.68,
+      "quality": 0.75,
+      "popularity": 0.51,
+      "novelty": 0.51,
+      "rm_score": 0.35,
+      "route_hints": {
+        "als": 0.49,
+        "profile": 0.57,
+        "context": 0.61,
+        "popular": 0.32
+      }
+    },
+    {
+      "business_id": "b007",
+      "name": "French Quarter Brunch Club",
+      "cuisine_tags": [
+        "brunch",
+        "new american"
+      ],
+      "price_tier": 2,
+      "zone": "French Quarter",
+      "prescore": 0.67,
+      "quality": 0.78,
+      "popularity": 0.74,
+      "novelty": 0.24,
+      "rm_score": 0.19,
+      "route_hints": {
+        "als": 0.61,
+        "profile": 0.31,
+        "context": 0.39,
+        "popular": 0.76
+      }
+    },
+    {
+      "business_id": "b008",
+      "name": "Warehouse Izakaya",
+      "cuisine_tags": [
+        "izakaya",
+        "japanese"
+      ],
+      "price_tier": 3,
+      "zone": "Warehouse District",
+      "prescore": 0.64,
+      "quality": 0.77,
+      "popularity": 0.46,
+      "novelty": 0.56,
+      "rm_score": 0.41,
+      "route_hints": {
+        "als": 0.41,
+        "profile": 0.71,
+        "context": 0.45,
+        "popular": 0.28
+      }
+    },
+    {
+      "business_id": "b009",
+      "name": "Lakeview Dumpling Spot",
+      "cuisine_tags": [
+        "dumplings",
+        "asian fusion"
+      ],
+      "price_tier": 2,
+      "zone": "Lakeview",
+      "prescore": 0.62,
+      "quality": 0.73,
+      "popularity": 0.43,
+      "novelty": 0.47,
+      "rm_score": 0.36,
+      "route_hints": {
+        "als": 0.39,
+        "profile": 0.67,
+        "context": 0.44,
+        "popular": 0.26
+      }
+    },
+    {
+      "business_id": "b010",
+      "name": "Garden District Curry Hall",
+      "cuisine_tags": [
+        "indian",
+        "curry"
+      ],
+      "price_tier": 2,
+      "zone": "Lower Garden District",
+      "prescore": 0.6,
+      "quality": 0.71,
+      "popularity": 0.4,
+      "novelty": 0.55,
+      "rm_score": 0.6,
+      "route_hints": {
+        "als": 0.38,
+        "profile": 0.52,
+        "context": 0.43,
+        "popular": 0.25
+      }
+    },
+    {
+      "business_id": "b011",
+      "name": "Mid-City Ramen Lab",
+      "cuisine_tags": [
+        "ramen",
+        "japanese",
+        "asian fusion"
+      ],
+      "price_tier": 2,
+      "zone": "Mid-City",
+      "prescore": 0.49,
+      "quality": 0.68,
+      "popularity": 0.28,
+      "novelty": 0.74,
+      "rm_score": 0.97,
+      "route_hints": {
+        "als": 0.36,
+        "profile": 0.92,
+        "context": 0.81,
+        "popular": 0.12
+      }
+    },
+    {
+      "business_id": "b012",
+      "name": "Riverfront Bento Express",
+      "cuisine_tags": [
+        "japanese",
+        "bento"
+      ],
+      "price_tier": 2,
+      "zone": "Riverfront",
+      "prescore": 0.53,
+      "quality": 0.66,
+      "popularity": 0.31,
+      "novelty": 0.61,
+      "rm_score": 0.48,
+      "route_hints": {
+        "als": 0.35,
+        "profile": 0.63,
+        "context": 0.48,
+        "popular": 0.16
+      }
+    }
+  ]
+}

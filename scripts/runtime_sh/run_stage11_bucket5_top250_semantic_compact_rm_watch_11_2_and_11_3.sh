@@ -4,7 +4,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="${REPO_ROOT:-$(cd "${SCRIPT_DIR}/.." && pwd)}"
-source "${SCRIPT_DIR}/launchers/_path_contract.sh"
+source "${SCRIPT_DIR}/../launchers/_path_contract.sh"
 PYTHON_BIN="${PYTHON_BIN:-${BDA_REMOTE_PYTHON_BIN}}"
 
 WATCH_11_2_RUN_DIR="${WATCH_11_2_RUN_DIR:-}"

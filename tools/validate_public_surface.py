@@ -15,6 +15,20 @@ PUBLIC_FILES = [
     REPO_ROOT / "README.zh-CN.md",
     REPO_ROOT / "docs" / "README.md",
     REPO_ROOT / "docs" / "README.zh-CN.md",
+    REPO_ROOT / "docs" / "architecture.md",
+    REPO_ROOT / "docs" / "architecture.zh-CN.md",
+    REPO_ROOT / "docs" / "evaluation.md",
+    REPO_ROOT / "docs" / "evaluation.zh-CN.md",
+    REPO_ROOT / "docs" / "serving_release.md",
+    REPO_ROOT / "docs" / "serving_release.zh-CN.md",
+    REPO_ROOT / "docs" / "project" / "README.md",
+    REPO_ROOT / "docs" / "project" / "README.zh-CN.md",
+    REPO_ROOT / "docs" / "project" / "current_frozen_line.md",
+    REPO_ROOT / "docs" / "project" / "current_frozen_line.zh-CN.md",
+    REPO_ROOT / "docs" / "project" / "design_choices.md",
+    REPO_ROOT / "docs" / "project" / "design_choices.zh-CN.md",
+    REPO_ROOT / "docs" / "project" / "repository_map.md",
+    REPO_ROOT / "docs" / "project" / "repository_map.zh-CN.md",
     REPO_ROOT / "docs" / "contracts" / "launcher_env_conventions.md",
     REPO_ROOT / "docs" / "stage11" / "stage11_case_notes_20260409.md",
     REPO_ROOT / "config" / "README.md",
@@ -22,6 +36,13 @@ PUBLIC_FILES = [
     REPO_ROOT / "data" / "output" / "current_release" / "stage10" / "stage10_current_mainline_summary.json",
     REPO_ROOT / "data" / "output" / "current_release" / "stage11" / "experts" / "bucket5_11_30_v101_run_meta.json",
     REPO_ROOT / "data" / "output" / "current_release" / "stage11" / "experts" / "expert_training_summary.json",
+]
+
+LINKED_FILES = [
+    REPO_ROOT / "README.md",
+    REPO_ROOT / "README.zh-CN.md",
+    REPO_ROOT / "docs" / "README.md",
+    REPO_ROOT / "docs" / "README.zh-CN.md",
 ]
 
 
@@ -42,7 +63,7 @@ def main() -> int:
     errors: list[str] = []
     for path in PUBLIC_FILES:
         errors.extend(assert_exists(path))
-    for path in PUBLIC_FILES[:4]:
+    for path in LINKED_FILES:
         if path.exists():
             errors.extend(assert_links(path))
 

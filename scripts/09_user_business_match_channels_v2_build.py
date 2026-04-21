@@ -26,6 +26,7 @@ USER_INTENT_ROOT = env_or_project_path(
 MATCH_FEATURE_RUN_DIR = os.getenv('INPUT_09_USER_BUSINESS_MATCH_FEATURES_V2_RUN_DIR', '').strip()
 MERCHANT_CARD_RUN_DIR = os.getenv('INPUT_09_MERCHANT_CARD_RUN_DIR', '').strip()
 USER_INTENT_RUN_DIR = os.getenv('INPUT_09_USER_INTENT_PROFILE_V2_RUN_DIR', '').strip()
+ALLOW_LEGACY_INTENT_FALLBACK = os.getenv('USER_BUSINESS_MATCH_CHANNELS_V2_ALLOW_LEGACY_INTENT_FALLBACK', 'false').strip().lower() == 'true'
 SPLIT_AWARE_HISTORY_ONLY = os.getenv('USER_BUSINESS_MATCH_CHANNELS_V2_SPLIT_AWARE_HISTORY_ONLY', 'false').strip().lower() == 'true'
 HISTORY_STAGE09_BUCKET_DIR = os.getenv('INPUT_09_STAGE09_BUCKET_DIR', '').strip()
 INDEX_MAPS_ROOT = env_or_project_path(
@@ -83,6 +84,11 @@ CHANNEL_COLS = [
     'channel_recent_intent_uaware_v2',
     'channel_context_time_uaware_v2',
     'channel_typed_exact_match_uaware_v1',
+    'channel_pass2_preference_core_v1',
+    'channel_pass2_recent_intent_v1',
+    'channel_pass2_conflict_v1',
+    'channel_pass2_service_guard_v1',
+    'channel_pass2_confidence_v1',
 ]
 
 
@@ -181,6 +187,69 @@ def proxy_summary(df: pd.DataFrame, proxy_cols: list[str]) -> pd.DataFrame:
     return out.sort_values(['proxy', 'abs_corr'], ascending=[True, False]).reset_index(drop=True)
 
 
+def series_or_zero(df: pd.DataFrame, col: str) -> pd.Series:
+    if col in df.columns:
+        return pd.to_numeric(df[col], errors='coerce').fillna(0.0)
+    return pd.Series(0.0, index=df.index, dtype=float)
+
+
+def ensure_user_intent_columns(users: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, object]]:
+    users = users.copy()
+    fallback_meta = {
+        'legacy_intent_fallback_applied': False,
+        'legacy_intent_missing_columns': [],
+    }
+    required = [
+        'typed_intent_primary_cuisine',
+        'typed_intent_primary_source',
+        'typed_intent_confidence',
+        'typed_intent_conflict_score',
+        'typed_intent_staleness_score',
+    ]
+    missing = [col for col in required if col not in users.columns]
+    if not missing:
+        return users, fallback_meta
+    if not ALLOW_LEGACY_INTENT_FALLBACK:
+        raise KeyError(
+            'missing typed intent columns in user_intent_profile_v2.parquet; '
+            f'set USER_BUSINESS_MATCH_CHANNELS_V2_ALLOW_LEGACY_INTENT_FALLBACK=true to allow cautious fallback. missing={missing}'
+        )
+    fallback_meta['legacy_intent_fallback_applied'] = True
+    fallback_meta['legacy_intent_missing_columns'] = missing
+    latest_top = users['latest_top_cuisine'] if 'latest_top_cuisine' in users.columns else pd.Series('', index=users.index, dtype='object')
+    recent_top = users['recent_top_cuisine'] if 'recent_top_cuisine' in users.columns else pd.Series('', index=users.index, dtype='object')
+    long_top = users['long_term_top_cuisine'] if 'long_term_top_cuisine' in users.columns else pd.Series('', index=users.index, dtype='object')
+    latest_top = latest_top.fillna('').astype(str)
+    recent_top = recent_top.fillna('').astype(str)
+    long_top = long_top.fillna('').astype(str)
+    recent_source = users['recent_top_cuisine_source'] if 'recent_top_cuisine_source' in users.columns else pd.Series('', index=users.index, dtype='object')
+    recent_source = recent_source.fillna('').astype(str)
+    has_recent_view = pd.to_numeric(users.get('has_recent_intent_view', 0.0), errors='coerce').fillna(0.0)
+    negative_pressure = pd.to_numeric(users.get('negative_pressure', 0.0), errors='coerce').fillna(0.0).clip(0.0, 1.0)
+    typed_cuisine = latest_top.where(latest_top.ne(''), recent_top)
+    typed_cuisine = typed_cuisine.where(typed_cuisine.ne(''), long_top)
+    typed_source = pd.Series('unknown', index=users.index, dtype='object')
+    typed_source = typed_source.mask(latest_top.ne(''), 'latest_fallback')
+    typed_source = typed_source.mask((typed_source == 'unknown') & recent_top.ne(''), recent_source.where(recent_source.ne(''), 'recent_fallback'))
+    typed_source = typed_source.mask((typed_source == 'unknown') & long_top.ne(''), 'long_term')
+    typed_confidence = pd.Series(0.0, index=users.index, dtype=float)
+    typed_confidence = typed_confidence.mask(long_top.ne(''), 0.45)
+    typed_confidence = typed_confidence.mask(recent_top.ne(''), 0.60)
+    typed_confidence = typed_confidence.mask(latest_top.ne(''), 0.72)
+    typed_confidence = np.clip(typed_confidence + 0.08 * has_recent_view.clip(0.0, 1.0), 0.0, 1.0)
+    typed_staleness = pd.Series(0.85, index=users.index, dtype=float)
+    typed_staleness = typed_staleness.mask(long_top.ne(''), 0.65)
+    typed_staleness = typed_staleness.mask(recent_top.ne(''), 0.35)
+    typed_staleness = typed_staleness.mask(latest_top.ne(''), 0.20)
+    typed_staleness = typed_staleness.mask(has_recent_view.gt(0), np.minimum(typed_staleness, 0.25))
+    users['typed_intent_primary_cuisine'] = typed_cuisine
+    users['typed_intent_primary_source'] = typed_source
+    users['typed_intent_confidence'] = typed_confidence
+    users['typed_intent_conflict_score'] = negative_pressure
+    users['typed_intent_staleness_score'] = typed_staleness
+    return users, fallback_meta
+
+
 def build_sample_book(df: pd.DataFrame) -> dict[str, object]:
     cols = [
         'event_id', 'event_type', 'user_id', 'business_id',
@@ -205,6 +274,11 @@ def build_sample_book(df: pd.DataFrame) -> dict[str, object]:
         'channel_recent_intent_uaware_v2',
         'channel_context_time_uaware_v2',
         'channel_typed_exact_match_uaware_v1',
+        'channel_pass2_preference_core_v1',
+        'channel_pass2_recent_intent_v1',
+        'channel_pass2_conflict_v1',
+        'channel_pass2_service_guard_v1',
+        'channel_pass2_confidence_v1',
     ]
     return {
         'strong_preference_events': df.sort_values(['channel_preference_core_v1', 'channel_recent_intent_v1'], ascending=[False, False]).head(10)[cols].replace({np.nan: None}).to_dict(orient='records'),
@@ -262,7 +336,9 @@ def main() -> None:
         'audit_tip_rows',
         'audit_checkin_rows',
     ])
-    users = pd.read_parquet(user_intent_run / 'user_intent_profile_v2.parquet', columns=[
+    users = pd.read_parquet(user_intent_run / 'user_intent_profile_v2.parquet')
+    users, legacy_intent_meta = ensure_user_intent_columns(users)
+    users = users[[
         'user_id',
         'n_train_max',
         'has_recent_intent_view',
@@ -274,7 +350,7 @@ def main() -> None:
         'typed_intent_confidence',
         'typed_intent_conflict_score',
         'typed_intent_staleness_score',
-    ])
+    ]].copy()
     users['activity_band'] = activity_band(pd.to_numeric(users['n_train_max'], errors='coerce').fillna(0))
 
     df = df.merge(merchant, on='business_id', how='left')
@@ -371,6 +447,11 @@ def main() -> None:
         * df['channel_typed_prior_trust_v2']
         * typed_match_support
     )
+    df['channel_pass2_preference_core_v1'] = series_or_zero(df, 'match_pass2_preference_core_v1')
+    df['channel_pass2_recent_intent_v1'] = series_or_zero(df, 'match_pass2_recent_intent_v1')
+    df['channel_pass2_conflict_v1'] = series_or_zero(df, 'match_pass2_conflict_v1')
+    df['channel_pass2_service_guard_v1'] = series_or_zero(df, 'match_pass2_service_conflict_v1')
+    df['channel_pass2_confidence_v1'] = series_or_zero(df, 'match_pass2_confidence_v1')
 
     channel_event_summary = df.groupby('event_type', as_index=False).agg(
         n_rows=('event_id', 'count'),
@@ -442,6 +523,7 @@ def main() -> None:
             'no_recombined_total_feature': True,
             'split_aware_history_only': bool(history_pairs is not None),
             'split_aware_bucket': int(SPLIT_AWARE_BUCKET) if history_pairs is not None else None,
+            **legacy_intent_meta,
         },
         'outputs': {
             'event_rows_parquet': str(out_dir / 'user_business_match_channels_v2_event_rows.parquet'),

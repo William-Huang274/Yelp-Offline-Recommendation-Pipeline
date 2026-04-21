@@ -2,9 +2,31 @@
 set -euo pipefail
 # Legacy compatibility launcher. Prefer scripts/launchers/stage10_bucket2_mainline.sh.
 
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  cat <<'EOF'
+Usage: scripts/launchers/stage10_bucket2_mainline.sh [env overrides]
+
+Runs the bucket2 fixed-cohort Stage10 train + infer path on top of a bucket2
+Stage09 source-parity candidate run.
+
+Key overrides:
+- STAGE09_RUN_DIR / STAGE09_RUN_ROOT
+- FIXED_EVAL_COHORT_PATH
+- TEXT_MATCH_RUN_DIR
+- GROUP_GAP_RUN_DIR
+- TRAIN_OUTPUT_ROOT
+- INFER_OUTPUT_ROOT
+
+For finer cold-start slices such as 0-3 or 4-6 interactions, point Stage09 and
+Stage10 at explicit cohort CSVs before building/rerunning the upstream bucket2
+candidate run.
+EOF
+  exit 0
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="${REPO_ROOT:-$(cd "${SCRIPT_DIR}/.." && pwd)}"
-source "${SCRIPT_DIR}/launchers/_path_contract.sh"
+source "${SCRIPT_DIR}/../launchers/_path_contract.sh"
 PYTHON_BIN="${PYTHON_BIN:-}"
 if [[ -z "${PYTHON_BIN}" ]]; then
   if command -v python3 >/dev/null 2>&1; then
@@ -20,9 +42,13 @@ if [[ -z "${PYTHON_BIN}" ]]; then
 fi
 
 STAGE09_RUN_ROOT="${STAGE09_RUN_ROOT:-${BDA_REMOTE_FAST_ROOT}/bucket2_repair_v3_1/output/09_candidate_fusion_bucket2_repair_v3_1_sourceparity}"
+STAGE09_FALLBACK_REMOTE_ROOT="${STAGE09_FALLBACK_REMOTE_ROOT:-${BDA_REMOTE_FAST_ROOT}/bucket2_baseline_fixed/output/09_candidate_fusion_bucket2_baseline_fixed_sourceparity}"
 STAGE09_RUN_DIR="${STAGE09_RUN_DIR:-}"
 if [[ -z "${STAGE09_RUN_DIR}" ]] && [[ -d "${STAGE09_RUN_ROOT}" ]]; then
   STAGE09_RUN_DIR="$(find "${STAGE09_RUN_ROOT}" -mindepth 1 -maxdepth 1 -type d | sort | tail -n 1)"
+fi
+if [[ -z "${STAGE09_RUN_DIR}" ]] && [[ -d "${STAGE09_FALLBACK_REMOTE_ROOT}" ]]; then
+  STAGE09_RUN_DIR="$(find "${STAGE09_FALLBACK_REMOTE_ROOT}" -mindepth 1 -maxdepth 1 -type d | sort | tail -n 1)"
 fi
 if [[ -z "${STAGE09_RUN_DIR}" ]]; then
   STAGE09_RUN_DIR="${REPO_ROOT}/data/output/backfill/09_candidate_fusion/20260317_225205_full_stage09_candidate_fusion"

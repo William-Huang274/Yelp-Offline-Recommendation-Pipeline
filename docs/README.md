@@ -8,10 +8,25 @@ repository line.
 ## Public Sections
 
 - [contracts](./contracts): launcher variable conventions
+- [project](./project): teacher-facing engineering pack, demo runbook, and reproduction notes
 - [stage11](./stage11): current Stage11 design notes and case notes
 
 ## Public Entry Documents
 
+- interviewer-facing system architecture:
+  [architecture.md](./architecture.md)
+- interviewer-facing offline evaluation summary:
+  [evaluation.md](./evaluation.md)
+- release, fallback, and rollback surface:
+  [serving_release.md](./serving_release.md)
+- detailed frozen-line summary:
+  [project/current_frozen_line.md](./project/current_frozen_line.md)
+- design-choice summary:
+  [project/design_choices.md](./project/design_choices.md)
+- repository map:
+  [project/repository_map.md](./project/repository_map.md)
+- project engineering pack:
+  [project/README.md](./project/README.md)
 - launcher variable conventions:
   [contracts/launcher_env_conventions.md](./contracts/launcher_env_conventions.md)
 - Stage11 segmented-expert design note:

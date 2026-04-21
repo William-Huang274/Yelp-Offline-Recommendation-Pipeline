@@ -356,6 +356,11 @@ STAGE10_V2_MATCH_CHANNEL_SUPPORTED_FEATURES = [
     "channel_recent_intent_uaware_v2",
     "channel_context_time_uaware_v2",
     "channel_typed_exact_match_uaware_v1",
+    "channel_pass2_preference_core_v1",
+    "channel_pass2_recent_intent_v1",
+    "channel_pass2_conflict_v1",
+    "channel_pass2_service_guard_v1",
+    "channel_pass2_confidence_v1",
 ]
 STAGE10_V2_MATCH_CHANNEL_FEATURES = [
     x.strip()

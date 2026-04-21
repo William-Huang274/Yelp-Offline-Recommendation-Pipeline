@@ -4,6 +4,7 @@ import json
 import os
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -22,10 +23,16 @@ USER_INTENT_ROOT = env_or_project_path(
     'INPUT_09_USER_INTENT_PROFILE_V2_ROOT_DIR',
     'data/output/09_user_intent_profile_v2',
 )
+PASS2_STAGE09_BRIDGE_ROOT = env_or_project_path(
+    'INPUT_11_PASS2_STAGE09_TARGET_BRIDGE_V1_ROOT_DIR',
+    'data/output/11_pass2_stage09_target_bridge_v1',
+)
 
 INTERACTION_V2_WEIGHTED_RUN_DIR = os.getenv('INPUT_09_INTERACTION_V2_WEIGHTED_RUN_DIR', '').strip()
 MERCHANT_CARD_RUN_DIR = os.getenv('INPUT_09_MERCHANT_CARD_RUN_DIR', '').strip()
 USER_INTENT_RUN_DIR = os.getenv('INPUT_09_USER_INTENT_PROFILE_V2_RUN_DIR', '').strip()
+PASS2_STAGE09_BRIDGE_RUN_DIR = os.getenv('INPUT_11_PASS2_STAGE09_TARGET_BRIDGE_V1_RUN_DIR', '').strip()
+ENABLE_PASS2_SIDECAR = os.getenv('USER_BUSINESS_MATCH_FEATURES_V2_ENABLE_PASS2_SIDECAR', 'false').strip().lower() == 'true'
 SPLIT_AWARE_HISTORY_ONLY = os.getenv('USER_BUSINESS_MATCH_FEATURES_V2_SPLIT_AWARE_HISTORY_ONLY', 'false').strip().lower() == 'true'
 HISTORY_STAGE09_BUCKET_DIR = os.getenv('INPUT_09_STAGE09_BUCKET_DIR', '').strip()
 INDEX_MAPS_ROOT = env_or_project_path(
@@ -61,6 +68,16 @@ MEAL_COLS = ['meal_breakfast_fit', 'meal_lunch_fit', 'meal_dinner_fit', 'late_ni
 USER_MEAL_COLS = ['breakfast_pref', 'lunch_pref', 'dinner_pref', 'late_night_pref']
 PROPERTY_COLS = ['attr_delivery', 'attr_takeout', 'attr_reservations', 'open_weekend', 'open_late_any']
 USER_PROPERTY_COLS = ['delivery_pref', 'takeout_pref', 'reservation_pref', 'weekend_pref', 'late_share_pref']
+PASS2_SCENE_MERCHANT_COLS = {
+    'family_friendly': 'family_scene_fit',
+    'group_dining': 'group_scene_fit',
+    'date_night': 'date_scene_fit',
+    'late_night': 'nightlife_scene_fit',
+    'quick_bite': 'fast_casual_fit',
+}
+PASS2_CONFIDENCE_WEIGHT_MAP = {'high': 1.0, 'medium': 0.75, 'low': 0.35}
+PASS2_SERVICE_WEIGHT_MAP = {'high': 1.0, 'medium': 0.65, 'low': 0.35, 'unknown': 0.0}
+PASS2_RECENT_SHIFT_WEIGHT_MAP = {'switching': 1.0, 'broadening': 0.85, 'stable': 0.6, 'unknown': 0.0}
 
 
 def now_run_id() -> str:
@@ -130,6 +147,153 @@ def safe_ratio(num: pd.Series, den: pd.Series) -> pd.Series:
     return (num / den_safe).replace([np.inf, -np.inf], np.nan).fillna(0.0)
 
 
+def safe_text(value: Any) -> str:
+    if value is None:
+        return ''
+    if isinstance(value, float) and pd.isna(value):
+        return ''
+    return str(value).strip()
+
+
+def safe_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, float) and pd.isna(value):
+        return []
+    if isinstance(value, str):
+        text = value.strip()
+        return [text] if text else []
+    try:
+        items = list(value)
+    except TypeError:
+        return []
+    out: list[str] = []
+    seen: set[str] = set()
+    for item in items:
+        text = safe_text(item)
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        out.append(text)
+    return out
+
+
+def parse_json_object(text: Any) -> dict[str, Any]:
+    raw = safe_text(text)
+    if not raw:
+        return {}
+    try:
+        payload = json.loads(raw)
+    except Exception:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def parse_pass2_core_profile(text: Any) -> dict[str, list[str]]:
+    payload = parse_json_object(text)
+    core = payload.get('core_profile', {}) if isinstance(payload, dict) else {}
+    stable = core.get('stable_preferences', {}) if isinstance(core, dict) else {}
+    avoid = core.get('avoid_signals', {}) if isinstance(core, dict) else {}
+    recent = core.get('recent_preferences', {}) if isinstance(core, dict) else {}
+    return {
+        'preferred_cuisines': safe_list(stable.get('preferred_cuisines')),
+        'preferred_scenes': safe_list(stable.get('preferred_scenes')),
+        'avoided_cuisines': safe_list(avoid.get('avoided_cuisines')),
+        'recent_cuisines': safe_list(recent.get('recent_cuisines')),
+        'recent_scenes': safe_list(recent.get('recent_scenes')),
+    }
+
+
+def build_pass2_cuisine_long(
+    df: pd.DataFrame,
+    *,
+    list_col: str,
+    score_col: str,
+    output_col: str,
+) -> pd.DataFrame:
+    keep = df[['user_id', list_col, score_col]].copy()
+    keep[list_col] = keep[list_col].map(safe_list)
+    keep = keep.explode(list_col)
+    keep[list_col] = keep[list_col].map(safe_text)
+    keep = keep.loc[keep[list_col].ne('') & pd.to_numeric(keep[score_col], errors='coerce').fillna(0).gt(0)].copy()
+    if keep.empty:
+        return pd.DataFrame(columns=['user_id', 'cuisine', output_col])
+    keep = keep[['user_id', list_col, score_col]].drop_duplicates(['user_id', list_col])
+    keep = keep.rename(columns={list_col: 'cuisine', score_col: output_col})
+    keep[output_col] = pd.to_numeric(keep[output_col], errors='coerce').fillna(0.0)
+    return keep
+
+
+def load_pass2_sidecar_assets(run_dir: Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    bridge = pd.read_parquet(
+        run_dir / 'user_preference_target_schema_v1.parquet',
+        columns=[
+            'user_id',
+            'source_pool',
+            'sft_ready_v1',
+            'target_schema_v1_json',
+            'recent_shift_value',
+            'service_risk_sensitivity',
+            'confidence_overall',
+        ],
+    ).copy()
+    bridge['user_id'] = bridge['user_id'].astype(str)
+    parsed = bridge['target_schema_v1_json'].map(parse_pass2_core_profile).apply(pd.Series)
+    bridge = pd.concat([bridge.reset_index(drop=True), parsed.reset_index(drop=True)], axis=1)
+    bridge['pass2_confidence_weight'] = (
+        bridge['confidence_overall'].map(PASS2_CONFIDENCE_WEIGHT_MAP).fillna(0.0).astype(float)
+    )
+    bridge['pass2_service_sensitivity_weight'] = (
+        bridge['service_risk_sensitivity'].map(PASS2_SERVICE_WEIGHT_MAP).fillna(0.0).astype(float)
+    )
+    bridge['pass2_recent_shift_weight'] = (
+        bridge['recent_shift_value'].map(PASS2_RECENT_SHIFT_WEIGHT_MAP).fillna(0.0).astype(float)
+    )
+    bridge['pass2_sidecar_active_v1'] = bridge['pass2_confidence_weight'].gt(0).astype(float)
+    bridge['pass2_recent_cuisine_score'] = bridge['pass2_confidence_weight'] * bridge['pass2_recent_shift_weight']
+    bridge['pass2_avoid_cuisine_score'] = bridge['pass2_confidence_weight']
+    for scene_label in PASS2_SCENE_MERCHANT_COLS:
+        bridge[f'pass2_scene_pref__{scene_label}'] = bridge['preferred_scenes'].map(
+            lambda values, scene=scene_label: float(scene in set(safe_list(values)))
+        )
+        bridge[f'pass2_recent_scene_pref__{scene_label}'] = bridge['recent_scenes'].map(
+            lambda values, scene=scene_label: float(scene in set(safe_list(values)))
+        )
+    preferred_long = build_pass2_cuisine_long(
+        bridge,
+        list_col='preferred_cuisines',
+        score_col='pass2_confidence_weight',
+        output_col='pass2_pref_score',
+    )
+    recent_long = build_pass2_cuisine_long(
+        bridge,
+        list_col='recent_cuisines',
+        score_col='pass2_recent_cuisine_score',
+        output_col='pass2_recent_score',
+    )
+    avoid_long = build_pass2_cuisine_long(
+        bridge,
+        list_col='avoided_cuisines',
+        score_col='pass2_avoid_cuisine_score',
+        output_col='pass2_avoid_score',
+    )
+    user_keep = [
+        'user_id',
+        'source_pool',
+        'sft_ready_v1',
+        'recent_shift_value',
+        'service_risk_sensitivity',
+        'confidence_overall',
+        'pass2_confidence_weight',
+        'pass2_service_sensitivity_weight',
+        'pass2_recent_shift_weight',
+        'pass2_sidecar_active_v1',
+        *[f'pass2_scene_pref__{label}' for label in PASS2_SCENE_MERCHANT_COLS],
+        *[f'pass2_recent_scene_pref__{label}' for label in PASS2_SCENE_MERCHANT_COLS],
+    ]
+    return bridge[user_keep].copy(), preferred_long, recent_long, avoid_long
+
+
 def classify_field(col: pd.Series, name: str) -> str:
     name_l = name.lower()
     if name_l in {'event_id', 'user_id', 'business_id', 'event_type', 'merchant_primary_cuisine', 'merchant_secondary_cuisine', 'city', 'geo_cell_3dp', 'top_city', 'top_geo_cell_3dp'}:
@@ -173,6 +337,8 @@ def build_sample_book(df: pd.DataFrame) -> dict[str, object]:
         'match_scene_dot', 'match_meal_dot', 'match_property_dot',
         'match_geo_alignment', 'match_recent_cuisine', 'match_recent_tip_context',
         'match_positive_evidence', 'match_negative_conflict', 'match_total_v1',
+        'match_pass2_preference_core_v1', 'match_pass2_recent_intent_v1',
+        'match_pass2_conflict_v1', 'match_pass2_confidence_v1',
     ]
     out = {
         'highest_total_positive_events': df.loc[df['event_type'] == 'review_positive']
@@ -204,6 +370,18 @@ def main() -> None:
         USER_INTENT_ROOT,
         '_full_stage09_user_intent_profile_split_aware_v2_build' if SPLIT_AWARE_HISTORY_ONLY else '_full_stage09_user_intent_profile_v2_build',
     )
+    pass2_run = None
+    pass2_user = pd.DataFrame()
+    pass2_preferred_long = pd.DataFrame(columns=['user_id', 'cuisine', 'pass2_pref_score'])
+    pass2_recent_long = pd.DataFrame(columns=['user_id', 'cuisine', 'pass2_recent_score'])
+    pass2_avoid_long = pd.DataFrame(columns=['user_id', 'cuisine', 'pass2_avoid_score'])
+    if ENABLE_PASS2_SIDECAR:
+        pass2_run = resolve_optional_run(
+            PASS2_STAGE09_BRIDGE_RUN_DIR,
+            PASS2_STAGE09_BRIDGE_ROOT,
+            '_full_stage11_pass2_stage09_target_bridge_v1_build',
+        )
+        pass2_user, pass2_preferred_long, pass2_recent_long, pass2_avoid_long = load_pass2_sidecar_assets(pass2_run)
 
     out_dir = OUTPUT_ROOT / now_run_id()
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -323,6 +501,21 @@ def main() -> None:
     events = events.merge(user_profile, on='user_id', how='left')
     events = events.merge(primary_cuisine, on=['user_id', 'merchant_primary_cuisine'], how='left')
     events = events.merge(secondary_cuisine, on=['user_id', 'merchant_secondary_cuisine'], how='left')
+    if ENABLE_PASS2_SIDECAR and not pass2_user.empty:
+        events = events.merge(pass2_user, on='user_id', how='left')
+        for name, long_df, out_col in [
+            ('merchant_primary_cuisine', pass2_preferred_long, 'pass2_primary_pref_score'),
+            ('merchant_secondary_cuisine', pass2_preferred_long, 'pass2_secondary_pref_score'),
+            ('merchant_primary_cuisine', pass2_recent_long, 'pass2_primary_recent_score'),
+            ('merchant_secondary_cuisine', pass2_recent_long, 'pass2_secondary_recent_score'),
+            ('merchant_primary_cuisine', pass2_avoid_long, 'pass2_primary_avoid_score'),
+            ('merchant_secondary_cuisine', pass2_avoid_long, 'pass2_secondary_avoid_score'),
+        ]:
+            if long_df.empty:
+                events[out_col] = 0.0
+                continue
+            lookup = long_df.rename(columns={'cuisine': name, long_df.columns[-1]: out_col})
+            events = events.merge(lookup, on=['user_id', name], how='left')
 
     fill_zero_cols = [
         'primary_cuisine_positive_weight', 'primary_cuisine_negative_weight', 'primary_cuisine_tip_weight',
@@ -330,6 +523,21 @@ def main() -> None:
         'secondary_cuisine_positive_weight', 'secondary_cuisine_negative_weight', 'secondary_cuisine_tip_weight',
         'secondary_cuisine_taste_weight', 'secondary_cuisine_net_weight', 'secondary_cuisine_recent_weight',
     ]
+    if ENABLE_PASS2_SIDECAR:
+        fill_zero_cols.extend([
+            'pass2_confidence_weight',
+            'pass2_service_sensitivity_weight',
+            'pass2_recent_shift_weight',
+            'pass2_sidecar_active_v1',
+            'pass2_primary_pref_score',
+            'pass2_secondary_pref_score',
+            'pass2_primary_recent_score',
+            'pass2_secondary_recent_score',
+            'pass2_primary_avoid_score',
+            'pass2_secondary_avoid_score',
+            *[f'pass2_scene_pref__{label}' for label in PASS2_SCENE_MERCHANT_COLS],
+            *[f'pass2_recent_scene_pref__{label}' for label in PASS2_SCENE_MERCHANT_COLS],
+        ])
     for col in fill_zero_cols:
         events[col] = pd.to_numeric(events[col], errors='coerce').fillna(0.0)
 
@@ -402,6 +610,72 @@ def main() -> None:
         + 0.05 * events['match_time_context']
     )
 
+    pass2_match_cols = [
+        'match_pass2_preferred_cuisine_v1',
+        'match_pass2_recent_cuisine_v1',
+        'match_pass2_avoid_cuisine_v1',
+        'match_pass2_scene_dot_v1',
+        'match_pass2_recent_scene_dot_v1',
+        'match_pass2_service_conflict_v1',
+        'match_pass2_preference_core_v1',
+        'match_pass2_recent_intent_v1',
+        'match_pass2_conflict_v1',
+        'match_pass2_confidence_v1',
+        'match_pass2_sidecar_active_v1',
+    ]
+    for col in pass2_match_cols:
+        events[col] = 0.0
+    if ENABLE_PASS2_SIDECAR:
+        events['match_pass2_preferred_cuisine_v1'] = np.clip(
+            events['pass2_primary_pref_score'] + 0.6 * events['pass2_secondary_pref_score'],
+            0.0,
+            1.0,
+        )
+        events['match_pass2_recent_cuisine_v1'] = np.clip(
+            events['pass2_primary_recent_score'] + 0.6 * events['pass2_secondary_recent_score'],
+            0.0,
+            1.0,
+        )
+        events['match_pass2_avoid_cuisine_v1'] = np.clip(
+            events['pass2_primary_avoid_score'] + 0.6 * events['pass2_secondary_avoid_score'],
+            0.0,
+            1.0,
+        )
+        scene_terms = []
+        recent_scene_terms = []
+        for scene_label, merchant_col in PASS2_SCENE_MERCHANT_COLS.items():
+            scene_terms.append(
+                pd.to_numeric(events[merchant_col], errors='coerce').fillna(0.0)
+                * pd.to_numeric(events[f'pass2_scene_pref__{scene_label}'], errors='coerce').fillna(0.0)
+            )
+            recent_scene_terms.append(
+                pd.to_numeric(events[merchant_col], errors='coerce').fillna(0.0)
+                * pd.to_numeric(events[f'pass2_recent_scene_pref__{scene_label}'], errors='coerce').fillna(0.0)
+            )
+        events['match_pass2_scene_dot_v1'] = np.mean(np.column_stack(scene_terms), axis=1)
+        events['match_pass2_recent_scene_dot_v1'] = np.mean(np.column_stack(recent_scene_terms), axis=1)
+        events['match_pass2_service_conflict_v1'] = (
+            events['pass2_service_sensitivity_weight']
+            * pd.to_numeric(events['evidence_negative_per_review'], errors='coerce').fillna(0.0)
+        )
+        events['match_pass2_preference_core_v1'] = np.clip(
+            0.75 * events['match_pass2_preferred_cuisine_v1'] + 0.25 * events['match_pass2_scene_dot_v1'],
+            0.0,
+            1.0,
+        )
+        events['match_pass2_recent_intent_v1'] = np.clip(
+            0.85 * events['match_pass2_recent_cuisine_v1'] + 0.15 * events['match_pass2_recent_scene_dot_v1'],
+            0.0,
+            1.0,
+        )
+        events['match_pass2_conflict_v1'] = np.clip(
+            0.70 * events['match_pass2_avoid_cuisine_v1'] + 0.30 * events['match_pass2_service_conflict_v1'],
+            0.0,
+            1.0,
+        )
+        events['match_pass2_confidence_v1'] = np.clip(events['pass2_confidence_weight'], 0.0, 1.0)
+        events['match_pass2_sidecar_active_v1'] = np.clip(events['pass2_sidecar_active_v1'], 0.0, 1.0)
+
     out_cols = [
         'event_id', 'event_type', 'user_id', 'business_id',
         'merchant_primary_cuisine', 'merchant_secondary_cuisine',
@@ -414,6 +688,12 @@ def main() -> None:
         'match_geo_city', 'match_geo_cell', 'match_geo_alignment',
         'match_recent_tip_context', 'match_time_context',
         'match_positive_evidence', 'match_negative_conflict',
+        'match_pass2_preferred_cuisine_v1', 'match_pass2_recent_cuisine_v1',
+        'match_pass2_avoid_cuisine_v1', 'match_pass2_scene_dot_v1',
+        'match_pass2_recent_scene_dot_v1', 'match_pass2_service_conflict_v1',
+        'match_pass2_preference_core_v1', 'match_pass2_recent_intent_v1',
+        'match_pass2_conflict_v1', 'match_pass2_confidence_v1',
+        'match_pass2_sidecar_active_v1',
         'match_total_v1',
     ]
     match_df = events[out_cols].copy()
@@ -458,6 +738,7 @@ def main() -> None:
             'interaction_v2_weighted_run_dir': str(interaction_run),
             'merchant_semantic_card_run_dir': str(merchant_run),
             'user_intent_profile_v2_run_dir': str(user_intent_run),
+            'pass2_stage09_target_bridge_v1_run_dir': str(pass2_run) if pass2_run is not None else '',
         },
         'schema_rule_v1': {
             'scope': 'trainable events only',
@@ -465,6 +746,7 @@ def main() -> None:
             'split_aware_bucket': int(SPLIT_AWARE_BUCKET) if history_pairs is not None else None,
             'merchant_asset_required': 'merchant_semantic_card_v2',
             'user_asset_required': 'user_intent_profile_v2 + user_cuisine_pref_v2',
+            'pass2_sidecar_enabled': bool(ENABLE_PASS2_SIDECAR),
             'event_level_output': True,
             'user_item_agg_output': True,
             'checkin_direct_user_item_feedback_allowed': False,
@@ -475,6 +757,7 @@ def main() -> None:
             'user_item_rows': int(len(user_item_df)),
             'users': int(match_df['user_id'].nunique()),
             'businesses': int(match_df['business_id'].nunique()),
+            'pass2_sidecar_users': int(pass2_user['user_id'].nunique()) if ENABLE_PASS2_SIDECAR and not pass2_user.empty else 0,
         },
         'event_type_summary': event_type_summary.to_dict(orient='records'),
         'output_files': {

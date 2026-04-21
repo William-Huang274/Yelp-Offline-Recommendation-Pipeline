@@ -5,6 +5,11 @@
 This directory is the stable outward-facing launcher surface for the current
 repository line.
 
+These `.sh` launchers target Linux / cloud / WSL-style environments. On a local
+Windows review machine, use the PowerShell and Python helpers under
+[../../tools](../../tools), especially `run_stage09_local.ps1`,
+`run_stage10_bucket5_local.ps1`, and `run_release_checks.ps1`.
+
 The long-form shell launchers now live under:
 
 - [../runtime_sh/](../runtime_sh)
@@ -41,6 +46,8 @@ release notes.
 - `stage11_bucket5_watch.sh`
 - `stage11_bucket5_constructability_audit.sh`
 - `stage11_bucket5_pool_audit.sh`
+- `stage11_persona_sft_v3_build_dataset.sh`
+- `stage11_persona_sft_v3_quality_6144.sh`
 
 ## Variable Naming Conventions
 

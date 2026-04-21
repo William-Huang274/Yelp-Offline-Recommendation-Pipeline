@@ -4,7 +4,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="${REPO_ROOT:-$(cd "${SCRIPT_DIR}/.." && pwd)}"
-source "${SCRIPT_DIR}/launchers/_path_contract.sh"
+source "${SCRIPT_DIR}/../launchers/_path_contract.sh"
 FAST_ROOT="${FAST_ROOT:-${BDA_REMOTE_TMP_ROOT}/bucket10_rerank_v1}"
 PYTHON_BIN="${PYTHON_BIN:-}"
 if [[ -z "${PYTHON_BIN}" ]]; then

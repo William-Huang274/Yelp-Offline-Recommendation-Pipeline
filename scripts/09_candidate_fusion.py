@@ -46,6 +46,9 @@ USER_PROFILE_VECTOR_FILE = "user_profile_vectors.npz"
 USER_PROFILE_MULTI_VECTOR_FILE_TEMPLATE = "user_profile_vectors_{scope}.npz"
 USER_PROFILE_TABLE_FILE = "user_profiles.csv"
 USER_PROFILE_TAG_LONG_FILE = "user_profile_tag_profile_long.csv"
+USER_PROFILE_TAG_LONG_EXTRA_CSV = os.getenv("USER_PROFILE_TAG_LONG_EXTRA_CSV", "").strip()
+USER_PROFILE_TAG_LONG_EXTRA_WEIGHT = float(os.getenv("USER_PROFILE_TAG_LONG_EXTRA_WEIGHT", "1.0").strip() or 1.0)
+CANDIDATE_FUSION_USER_COHORT_PATH = os.getenv("CANDIDATE_FUSION_USER_COHORT_PATH", "").strip()
 ENABLE_PROFILE_RECALL = os.getenv("ENABLE_PROFILE_RECALL", "true").strip().lower() == "true"
 ENABLE_PROFILE_VECTOR_ROUTE = os.getenv("ENABLE_PROFILE_VECTOR_ROUTE", "true").strip().lower() == "true"
 ENABLE_TAG_SHARED_ROUTE = os.getenv("ENABLE_TAG_SHARED_ROUTE", "false").strip().lower() == "true"
@@ -1710,6 +1713,46 @@ def load_user_profile_tag_long(path: Path | None) -> pd.DataFrame:
     pdf["support"] = pd.to_numeric(pdf["support"], errors="coerce").fillna(1.0).clip(lower=0.0)
     pdf = pdf[(pdf["user_id"] != "") & (pdf["tag"] != "")]
     return pdf[["user_id", "tag", "tag_type", "net_w", "tag_confidence", "support"]]
+
+
+def load_user_profile_tag_long_extra(path_text: str, weight_scale: float) -> pd.DataFrame:
+    raw = str(path_text or "").strip()
+    if not raw:
+        return pd.DataFrame(columns=["user_id", "tag", "tag_type", "net_w", "tag_confidence", "support"])
+    path = Path(raw)
+    if not path.is_absolute():
+        path = project_path(raw)
+    if not path.exists():
+        raise FileNotFoundError(f"USER_PROFILE_TAG_LONG_EXTRA_CSV not found: {path}")
+    pdf = load_user_profile_tag_long(path)
+    if pdf.empty:
+        return pdf
+    scale = float(weight_scale)
+    if scale != 1.0:
+        pdf = pdf.copy()
+        pdf["net_w"] = pd.to_numeric(pdf["net_w"], errors="coerce").fillna(0.0) * scale
+    return pdf
+
+
+def load_candidate_fusion_user_cohort(path_text: str) -> pd.DataFrame:
+    raw = str(path_text or "").strip()
+    if not raw:
+        return pd.DataFrame(columns=["user_id"])
+    path = Path(raw)
+    if not path.is_absolute():
+        path = project_path(raw)
+    if not path.exists():
+        raise FileNotFoundError(f"CANDIDATE_FUSION_USER_COHORT_PATH not found: {path}")
+    suffix = path.suffix.lower()
+    if suffix == ".parquet":
+        pdf = pd.read_parquet(path)
+    else:
+        pdf = pd.read_csv(path)
+    if "user_id" not in pdf.columns:
+        raise RuntimeError(f"CANDIDATE_FUSION_USER_COHORT_PATH missing user_id column: {path}")
+    pdf["user_id"] = pdf["user_id"].astype(str).str.strip()
+    pdf = pdf[pdf["user_id"] != ""].copy()
+    return pdf[["user_id"]].drop_duplicates()
 
 
 def load_item_semantic_tag_long(path: Path | None) -> pd.DataFrame:
@@ -3574,6 +3617,35 @@ def load_interactions(spark: SparkSession, biz: DataFrame) -> DataFrame:
     return rvw.persist(StorageLevel.DISK_ONLY)
 
 
+def apply_user_cohort_filter(spark: SparkSession, rvw: DataFrame) -> tuple[DataFrame, dict[str, Any]]:
+    raw = str(CANDIDATE_FUSION_USER_COHORT_PATH or "").strip()
+    if not raw:
+        return rvw, {"enabled": False}
+    cohort_pdf = load_candidate_fusion_user_cohort(raw)
+    if cohort_pdf.empty:
+        return rvw.limit(0).persist(StorageLevel.DISK_ONLY), {
+            "enabled": True,
+            "path": raw,
+            "cohort_users": 0,
+            "matched_users": 0,
+            "matched_rows": 0,
+        }
+    cohort_sp = spark.createDataFrame(cohort_pdf)
+    filtered = (
+        rvw.join(F.broadcast(cohort_sp), on="user_id", how="inner")
+        .persist(StorageLevel.DISK_ONLY)
+    )
+    matched_users = int(filtered.select("user_id").distinct().count())
+    matched_rows = int(filtered.count())
+    return filtered, {
+        "enabled": True,
+        "path": raw,
+        "cohort_users": int(cohort_pdf.shape[0]),
+        "matched_users": matched_users,
+        "matched_rows": matched_rows,
+    }
+
+
 def leave_two_out(
     rvw: DataFrame, min_user_reviews: int
 ) -> tuple[DataFrame, DataFrame, DataFrame, DataFrame]:
@@ -3942,9 +4014,12 @@ def main() -> None:
 
     print("[STEP] load interactions")
     rvw = load_interactions(spark, biz)
+    rvw, cohort_meta = apply_user_cohort_filter(spark, rvw)
     scoped_interaction_rows = int(rvw.count())
     scoped_interaction_users = int(rvw.select("user_id").distinct().count())
     print(f"[COUNT] interactions={scoped_interaction_rows} users={scoped_interaction_users}")
+    if bool(cohort_meta.get("enabled")):
+        print(f"[COHORT] user_filter={cohort_meta}")
 
     print("[STEP] load cluster profile map")
     profile_csv = resolve_cluster_profile_csv()
@@ -3964,6 +4039,7 @@ def main() -> None:
     profile_vec_path = None
     profile_table_path = None
     profile_tag_long_path = None
+    profile_tag_long_extra_path = None
     profile_calibration_path = None
     profile_user_ids = np.array([], dtype=str)
     profile_vectors = np.zeros((0, 0), dtype=np.float32)
@@ -3984,6 +4060,16 @@ def main() -> None:
         profile_calibration_path = resolve_profile_calibration_json()
         profile_calibration_models = load_profile_calibration_models(profile_calibration_path)
         user_profile_tag_long_pdf = load_user_profile_tag_long(profile_tag_long_path)
+        if USER_PROFILE_TAG_LONG_EXTRA_CSV:
+            profile_tag_long_extra_path = Path(USER_PROFILE_TAG_LONG_EXTRA_CSV)
+            if not profile_tag_long_extra_path.is_absolute():
+                profile_tag_long_extra_path = project_path(USER_PROFILE_TAG_LONG_EXTRA_CSV)
+            extra_tag_pdf = load_user_profile_tag_long_extra(
+                USER_PROFILE_TAG_LONG_EXTRA_CSV,
+                USER_PROFILE_TAG_LONG_EXTRA_WEIGHT,
+            )
+            if not extra_tag_pdf.empty:
+                user_profile_tag_long_pdf = pd.concat([user_profile_tag_long_pdf, extra_tag_pdf], ignore_index=True)
         print(
             f"[INFO] user_profile_vectors={profile_vec_path} "
             f"users={int(profile_user_ids.shape[0])} dim={int(profile_vectors.shape[1])}"
@@ -4001,6 +4087,11 @@ def main() -> None:
             f"[INFO] user_profile_tag_long={profile_tag_long_path if profile_tag_long_path is not None else '<missing>'} "
             f"rows={int(user_profile_tag_long_pdf.shape[0])}"
         )
+        if profile_tag_long_extra_path is not None:
+            print(
+                f"[INFO] user_profile_tag_long_extra={profile_tag_long_extra_path} "
+                f"weight={float(USER_PROFILE_TAG_LONG_EXTRA_WEIGHT):.4f}"
+            )
         if ENABLE_PROFILE_MULTIVECTOR_ROUTE_AUDIT or ENABLE_PROFILE_MULTIVECTOR_ROUTE_INTEGRATION:
             for scope in PROFILE_MULTIVECTOR_ROUTE_SCOPES:
                 path = resolve_user_profile_multivector_file(profile_vec_path, scope)
@@ -5182,6 +5273,10 @@ def main() -> None:
             else:
                 _write_output_df(fused_pretrim_out, legacy_pretrim_alias_path)
         _write_output_df(truth_out, bucket_dir / "truth.parquet")
+        user_map_out = _coalesce_for_write(_checkpoint_for_write(spark, user_map))
+        item_map_out = _coalesce_for_write(_checkpoint_for_write(spark, item_map))
+        _write_output_df(user_map_out, bucket_dir / "user_map.parquet")
+        _write_output_df(item_map_out, bucket_dir / "item_map.parquet")
         if WRITE_TRUTH_USER_ROSTER:
             truth_roster_cols = [c for c in ("user_id", "user_idx") if c in truth_out.columns]
             truth_roster_dedupe_cols = ["user_id"] if "user_id" in truth_roster_cols else truth_roster_cols
@@ -5233,7 +5328,7 @@ def main() -> None:
                 multivector_route_out.unpersist(blocking=False)
             except Exception:
                 pass
-        for _tmp_df in (candidates_all_out, fused_pretrim_out, truth_out, train_history_out):
+        for _tmp_df in (candidates_all_out, fused_pretrim_out, truth_out, train_history_out, user_map_out, item_map_out):
             try:
                 _tmp_df.unpersist(blocking=False)
             except Exception:
@@ -5485,6 +5580,7 @@ def main() -> None:
     run_meta = {
         "run_id": run_id,
         "run_profile": RUN_PROFILE,
+        "user_cohort_filter": cohort_meta,
         "recall_profile": RECALL_PROFILE,
         "run_tag": RUN_TAG,
         "output_dir": str(out_dir),
@@ -5495,6 +5591,8 @@ def main() -> None:
         "user_profile_multivector_paths": profile_multivector_paths,
         "user_profile_table": str(profile_table_path) if profile_table_path is not None else "",
         "user_profile_tag_long": str(profile_tag_long_path) if profile_tag_long_path is not None else "",
+        "user_profile_tag_long_extra": str(profile_tag_long_extra_path) if profile_tag_long_extra_path is not None else "",
+        "user_profile_tag_long_extra_weight": float(USER_PROFILE_TAG_LONG_EXTRA_WEIGHT),
         "profile_calibration_json": str(profile_calibration_path) if profile_calibration_path is not None else "",
         "item_semantic_features": str(item_semantic_path) if item_semantic_path is not None else "",
         "item_semantic_tag_long": str(item_semantic_tag_long_path) if item_semantic_tag_long_path is not None else "",
