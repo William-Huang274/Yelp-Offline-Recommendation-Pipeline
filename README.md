@@ -108,6 +108,8 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 
 python tools/run_release_checks.py --skip-pytest
+python tools/run_stage11_model_prompt_smoke.py
+python tools/run_full_chain_smoke.py
 .\tools\run_stage09_local.ps1 -CheckOnly
 .\tools\run_stage10_bucket5_local.ps1 -CheckOnly
 ```
@@ -135,6 +137,17 @@ $env:BDA_CLOUD_USER="root"
 python tools/cloud_stage11.py local-check
 python tools/cloud_stage11.py inventory
 python tools/cloud_stage11.py print-ssh
+```
+
+### D. Stage11 Model / Prompt Surface
+
+The current frozen `Stage11` reward-model line uses `Qwen3.5-9B`. Prompt-only
+user-state probes are tracked separately and use `Qwen3.5-35B-A3B` /
+`Qwen3-30B-A3B` templates and audit scripts.
+
+```powershell
+python -m pip install -r requirements-stage11-qlora.txt
+python tools/run_stage11_model_prompt_smoke.py
 ```
 
 For full reproduction and launcher-based runs, see
@@ -193,6 +206,7 @@ Files you should expect to validate immediately:
 - [Repository map and entry points](./docs/project/repository_map.md)
 - [Stage11 design notes](./docs/stage11/stage11_31_60_only_and_segmented_fusion_20260408.md)
 - [Stage11 case notes](./docs/stage11/stage11_case_notes_20260409.md)
+- [Stage11 model and prompt smoke case](./config/demo/stage11_model_prompt_smoke_case.json)
 - [Reproduction guide](./docs/project/reproduce_mainline.md)
 
 ## Design Choices

@@ -18,6 +18,12 @@
 | `Stage10` 结构化精排 | 作为全局排序骨架，消费结构化、文本和竞争关系特征 | 排序结果、分桶指标、模型产物 |
 | `Stage11` 有边界奖励模型救援重排 | 在受控 shortlist 内对被低估候选做局部救援 | 重排后的 shortlist 和 Stage11 评估摘要 |
 
+当前 Stage11 模型面分成两类：
+
+- 冻结 reward-model 主线：共享 `Qwen3.5-9B` 主干
+- 额外 prompt-only / persona probe：`Qwen3.5-35B-A3B` 和
+  `Qwen3-30B-A3B`，这类实验与当前 freeze 线分开记录
+
 ## 主推理链路
 
 ```mermaid

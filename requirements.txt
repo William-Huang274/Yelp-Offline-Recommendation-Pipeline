@@ -10,6 +10,6 @@ pytest>=8,<9
 # SSH/SFTP helper for Stage11 cloud inventory and explicit artifact pulls.
 paramiko>=3.4
 
-# Optional GPU-heavy dependencies for legacy QLoRA runs and the current
-# Stage11 reward-model training workflow remain in:
+# Optional GPU-heavy dependencies for the current Stage11 Qwen3.5-9B
+# reward-model training workflow and prompt-only probe runs remain in:
 # requirements-stage11-qlora.txt

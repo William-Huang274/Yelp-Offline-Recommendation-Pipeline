@@ -6,6 +6,8 @@ This folder contains lightweight repository-side utilities aligned with the curr
 - `validate_current_release.py`: validates the current curated release summaries under `data/output/current_release`, including the three-expert Stage11 release line
 - `run_release_checks.py`: reviewer-facing one-click check that verifies the project docs, validators, demo CLI, and core pytest surface
 - `run_release_checks.ps1`: thin PowerShell wrapper for `run_release_checks.py`
+- `run_full_chain_smoke.py`: safe `stage01 -> stage11` smoke runner covering canonical help paths, local wrappers, and Stage11 demo/model checks
+- `run_stage11_model_prompt_smoke.py`: verifies the current Stage11 Qwen3.5-9B reward-model surface plus prompt-only probe templates and smoke-case config
 - `demo_recommend.py`: frozen-release demo helper for Stage09/10/11 summaries and canonical case walkthroughs
 - `batch_infer_demo.py`: mock batch inference entry that reads a small JSON request, runs a lightweight Stage09 -> Stage10 -> Stage11 demo pipeline, and returns top-k plus summary metrics
 - `mock_serving_api.py`: stdlib HTTP demo exposing `/health` and `/rank` on top of the mock ranking pipeline

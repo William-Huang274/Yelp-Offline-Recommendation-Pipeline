@@ -43,8 +43,8 @@ INPUT_11_SUFFIX = "_stage11_1_qlora_build_dataset"
 OUTPUT_ROOT = env_or_project_path("OUTPUT_11_MODELS_ROOT_DIR", "data/output/11_qlora_models")
 
 BUCKETS_OVERRIDE = os.getenv("BUCKETS_OVERRIDE", "10").strip()
-BASE_MODEL = os.getenv("QLORA_BASE_MODEL", "Qwen/Qwen3-4B").strip()
-REQUIRED_BASE_MODEL = os.getenv("QLORA_REQUIRED_BASE_MODEL", "Qwen/Qwen3-4B").strip()
+BASE_MODEL = os.getenv("QLORA_BASE_MODEL", "/root/hf_models/Qwen3.5-9B").strip()
+REQUIRED_BASE_MODEL = os.getenv("QLORA_REQUIRED_BASE_MODEL", "/root/hf_models/Qwen3.5-9B").strip()
 ENFORCE_REQUIRED_BASE_MODEL = os.getenv("QLORA_ENFORCE_REQUIRED_BASE_MODEL", "true").strip().lower() == "true"
 TRUST_REMOTE_CODE = os.getenv("QLORA_TRUST_REMOTE_CODE", "true").strip().lower() == "true"
 USE_4BIT = os.getenv("QLORA_USE_4BIT", "true").strip().lower() == "true"

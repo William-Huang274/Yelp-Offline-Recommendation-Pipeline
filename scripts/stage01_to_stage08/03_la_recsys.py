@@ -4,6 +4,12 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+if any(arg in {"-h", "--help"} for arg in sys.argv[1:]):
+    print("Usage: python scripts/stage01_to_stage08/03_la_recsys.py")
+    print("Runs the stage03 LA recommendation baseline and ALS sweep.")
+    print("Set parquet / metrics paths and Spark env vars, then run without --help.")
+    sys.exit(0)
+
 from pyspark import StorageLevel
 from pyspark.ml.evaluation import RegressionEvaluator
 from pyspark.ml.feature import StringIndexer

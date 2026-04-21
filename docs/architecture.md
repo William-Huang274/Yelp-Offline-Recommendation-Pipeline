@@ -21,6 +21,12 @@ The repository is organized around one practical ranking objective:
 | `Stage10` structured reranking | provide the global ordering backbone with structured, text, and competition-aware features | ranked candidate list, bucket metrics, and model artifacts |
 | `Stage11` bounded RM rescue rerank | locally rescue underweighted candidates inside a bounded rerank window | rescue-aware reranked shortlist and Stage11 eval summaries |
 
+Current Stage11 model surface:
+
+- frozen reward-model mainline: one shared `Qwen3.5-9B` backbone
+- optional prompt-only / persona probes: `Qwen3.5-35B-A3B` and `Qwen3-30B-A3B`
+  experiments documented separately from the frozen line
+
 ## Main Inference Path
 
 ```mermaid

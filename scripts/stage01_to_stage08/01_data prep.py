@@ -1,5 +1,12 @@
 import os
+import sys
 from pathlib import Path
+
+if any(arg in {"-h", "--help"} for arg in sys.argv[1:]):
+    print("Usage: python scripts/stage01_to_stage08/01_data prep.py")
+    print("Converts raw Yelp JSON files into parquet foundations for stage01-stage08.")
+    print("Set INPUT_DIR / OUTPUT_DIR and Spark env vars, then run without --help.")
+    sys.exit(0)
 from pyspark.sql import SparkSession
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]

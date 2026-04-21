@@ -105,6 +105,8 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 
 python tools/run_release_checks.py --skip-pytest
+python tools/run_stage11_model_prompt_smoke.py
+python tools/run_full_chain_smoke.py
 .\tools\run_stage09_local.ps1 -CheckOnly
 .\tools\run_stage10_bucket5_local.ps1 -CheckOnly
 ```
@@ -131,6 +133,17 @@ $env:BDA_CLOUD_USER="root"
 python tools/cloud_stage11.py local-check
 python tools/cloud_stage11.py inventory
 python tools/cloud_stage11.py print-ssh
+```
+
+### D. Stage11 模型 / Prompt 检查
+
+当前冻结 `Stage11` 奖励模型主线使用 `Qwen3.5-9B`。与之分开的
+prompt-only 用户状态实验面，则使用 `Qwen3.5-35B-A3B` /
+`Qwen3-30B-A3B` 模板和审计脚本。
+
+```powershell
+python -m pip install -r requirements-stage11-qlora.txt
+python tools/run_stage11_model_prompt_smoke.py
 ```
 
 完整复现路径和 launcher 入口见：
@@ -188,6 +201,7 @@ Current Frozen Yelp Ranking Review Line
 - [仓库地图与推荐入口](./docs/project/repository_map.zh-CN.md)
 - [Stage11 设计说明](./docs/stage11/stage11_31_60_only_and_segmented_fusion_20260408.zh-CN.md)
 - [Stage11 案例说明](./docs/stage11/stage11_case_notes_20260409.zh-CN.md)
+- [Stage11 模型与 prompt smoke case](./config/demo/stage11_model_prompt_smoke_case.json)
 - [主线复现指南](./docs/project/reproduce_mainline.md)
 
 ## 设计取舍

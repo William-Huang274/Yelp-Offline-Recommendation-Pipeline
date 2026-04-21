@@ -1,0 +1,50 @@
+{
+  "case_id": "stage11_model_prompt_smoke_v1",
+  "reward_model_mainline": {
+    "base_model": "Qwen3.5-9B",
+    "requirements_file": "requirements-stage11-qlora.txt",
+    "train_script": "scripts/runtime_sh/run_stage11_bucket5_top250_semantic_compact_rm_train.sh",
+    "eval_script": "scripts/runtime_sh/run_stage11_bucket5_top250_semantic_compact_rm_eval_only.sh",
+    "trainer_source": "scripts/11_2_rm_train.py",
+    "requirements_markers": [
+      "torch>=",
+      "transformers>=",
+      "accelerate>=",
+      "peft>=",
+      "datasets>="
+    ]
+  },
+  "prompt_only_probe_surface": {
+    "probe_launchers": [
+      {
+        "path": "scripts/runtime_sh/run_stage11_persona_sft_v3_qwen35_35b_a3b_probe.sh",
+        "model_marker": "Qwen3.5-35B-A3B-Base"
+      },
+      {
+        "path": "scripts/runtime_sh/run_stage11_persona_sft_v3_qwen3_30b_a3b_probe.sh",
+        "model_marker": "Qwen3-30B-A3B-Base"
+      }
+    ],
+    "audit_script": "scripts/11_4_prompt_only_user_state_audit.py",
+    "queue_infer_script": "scripts/11_10_prompt_only_queue_infer.py",
+    "prompt_templates": [
+      {
+        "path": "docs/stage11/qwen35_prompt_only_user_state_summary_pass2_compact_v2_prompt.md",
+        "markers": [
+          "Hard rules:",
+          "Repair priorities, in order:",
+          "full_allowed_evidence_ids",
+          "Return the repaired JSON object now."
+        ]
+      },
+      {
+        "path": "docs/stage11/qwen35_prompt_only_user_state_summary_v1_20260415.zh-CN.md",
+        "markers": [
+          "Qwen3.5-35B-A3B",
+          "prompt-only",
+          "只有当 prompt-only 审计通过"
+        ]
+      }
+    ]
+  }
+}

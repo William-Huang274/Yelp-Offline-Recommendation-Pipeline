@@ -14,9 +14,13 @@
 ```powershell
 python tools/demo_recommend.py
 python tools/cloud_stage11.py local-check
+python tools/run_stage11_model_prompt_smoke.py
+python tools/run_full_chain_smoke.py
 ```
 
 `demo_recommend.py` 不带参数时默认打印 `summary`，适合 VS Code 直接点击运行。
+`run_stage11_model_prompt_smoke.py` 会检查 `Qwen3.5-9B` 主线和 prompt-only probe 模板是否对齐。
+`run_full_chain_smoke.py` 会安全跑一遍 `stage01 -> stage11` smoke 入口。
 
 ## 当前本地缺口
 

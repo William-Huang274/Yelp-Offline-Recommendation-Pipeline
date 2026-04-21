@@ -4,6 +4,12 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+if any(arg in {"-h", "--help"} for arg in sys.argv[1:]):
+    print("Usage: python scripts/stage01_to_stage08/07_embedding_cluster.py")
+    print("Runs stage07 embedding-based clustering over merchant text / review features.")
+    print("Set model paths, output roots, and Spark env vars, then run without --help.")
+    sys.exit(0)
+
 import numpy as np
 import pandas as pd
 from pyspark import StorageLevel

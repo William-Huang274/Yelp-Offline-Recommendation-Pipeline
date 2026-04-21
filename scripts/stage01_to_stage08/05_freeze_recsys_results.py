@@ -1,4 +1,11 @@
 from pathlib import Path
+import sys
+
+if any(arg in {"-h", "--help"} for arg in sys.argv[1:]):
+    print("Usage: python scripts/stage01_to_stage08/05_freeze_recsys_results.py")
+    print("Reads stage03/04 metrics and writes frozen comparison tables / figures.")
+    print("Update the metrics path constants or env-backed paths, then run without --help.")
+    sys.exit(0)
 
 import matplotlib
 import pandas as pd

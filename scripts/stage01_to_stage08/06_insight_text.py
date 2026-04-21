@@ -2,6 +2,12 @@ import os
 import sys
 from pathlib import Path
 
+if any(arg in {"-h", "--help"} for arg in sys.argv[1:]):
+    print("Usage: python scripts/stage01_to_stage08/06_insight_text.py")
+    print("Builds stage06 insight text and category-level term summaries from review data.")
+    print("Set parquet paths and Spark env vars, then run without --help.")
+    sys.exit(0)
+
 import matplotlib
 import numpy as np
 import pandas as pd

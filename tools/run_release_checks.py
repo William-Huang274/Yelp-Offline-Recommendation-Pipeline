@@ -29,10 +29,12 @@ REQUIRED_DOCS = [
 ]
 
 PYTEST_TARGETS = [
+    "tests/test_full_chain_smoke.py",
     "tests/test_demo_tools.py",
     "tests/test_public_readme_links.py",
     "tests/test_public_release_surface.py",
     "tests/test_release_metrics_surface.py",
+    "tests/test_stage11_model_prompt_surface.py",
     "tests/test_launcher_surface.py",
 ]
 
@@ -84,6 +86,8 @@ def main() -> int:
     ok &= check_required_docs()
     ok &= run_command("public_surface", [PYTHON, "tools/validate_public_surface.py"])
     ok &= run_command("current_release", [PYTHON, "tools/validate_current_release.py"])
+    ok &= run_command("stage11_model_prompt_smoke", [PYTHON, "tools/run_stage11_model_prompt_smoke.py"])
+    ok &= run_command("full_chain_smoke", [PYTHON, "tools/run_full_chain_smoke.py"])
 
     if not args.skip_demo:
         ok &= run_command("demo_cli", [PYTHON, "tools/demo_recommend.py", "summary"])

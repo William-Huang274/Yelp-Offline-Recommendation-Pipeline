@@ -25,12 +25,16 @@ python -m pip install -r requirements.txt
 
 ```bash
 python tools/run_release_checks.py
+python tools/run_stage11_model_prompt_smoke.py
+python tools/run_full_chain_smoke.py
 ```
 
 Expected result:
 
 - public-surface validator passes
 - current-release validator passes
+- stage11 model / prompt smoke passes
+- full chain smoke passes
 - demo CLI smoke step passes
 
 ### Step 3: Inspect The Frozen Summary

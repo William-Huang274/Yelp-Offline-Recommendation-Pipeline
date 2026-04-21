@@ -1,5 +1,12 @@
 import os
+import sys
 from pathlib import Path
+
+if any(arg in {"-h", "--help"} for arg in sys.argv[1:]):
+    print("Usage: python scripts/stage01_to_stage08/02_data_analysis.py")
+    print("Runs exploratory Spark analysis over the parquet foundations from stage01.")
+    print("Configure base parquet paths and analysis toggles, then run without --help.")
+    sys.exit(0)
 
 from pyspark import StorageLevel
 from pyspark.sql import SparkSession, functions as F

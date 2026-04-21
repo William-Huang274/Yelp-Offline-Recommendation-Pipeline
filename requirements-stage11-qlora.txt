@@ -1,6 +1,9 @@
-# GPU-oriented extras used by legacy local QLoRA / DPO experiments and by
-# the repository's reward-model training stack when a GPU environment is
-# available. They are not required for the public CPU smoke surface.
+# GPU-oriented extras used by the current Stage11 reward-model mainline and by
+# prompt-only / persona-SFT probe runs when a GPU environment is available.
+# The current frozen reward-model mainline uses Qwen3.5-9B.
+# Optional prompt-only probe templates in docs/stage11 target
+# Qwen3.5-35B-A3B / Qwen3-30B-A3B cloud experiments.
+# These packages are not required for the public CPU smoke surface.
 
 torch>=2.1
 transformers>=4.40

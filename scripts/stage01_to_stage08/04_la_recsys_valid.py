@@ -5,6 +5,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+if any(arg in {"-h", "--help"} for arg in sys.argv[1:]):
+    print("Usage: python scripts/stage01_to_stage08/04_la_recsys_valid.py")
+    print("Runs stage04 validation / hybrid recommendation experiments on the LA slice.")
+    print("Set parquet, metrics, and Spark env vars, then run without --help.")
+    sys.exit(0)
+
 from pyspark import StorageLevel
 from pyspark.ml.evaluation import RegressionEvaluator
 from pyspark.ml.feature import StringIndexer

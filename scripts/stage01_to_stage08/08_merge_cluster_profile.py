@@ -2,7 +2,14 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
+import sys
 from typing import Optional
+
+if any(arg in {"-h", "--help"} for arg in sys.argv[1:]):
+    print("Usage: python scripts/stage01_to_stage08/08_merge_cluster_profile.py")
+    print("Merges stage08 cluster labels into the final profile / recsys export surface.")
+    print("Set the source run directories, then run without --help.")
+    sys.exit(0)
 
 import pandas as pd
 

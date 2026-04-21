@@ -75,6 +75,18 @@ python -m pip install -r requirements-stage11-qlora.txt
 
 These extras are not required for review-only workflows.
 
+Current Stage11 model surfaces:
+
+- frozen reward-model mainline: `Qwen3.5-9B`
+- optional prompt-only user-state probes: `Qwen3.5-35B-A3B` /
+  `Qwen3-30B-A3B`
+
+The quickest public verification for that split is:
+
+```bash
+python tools/run_stage11_model_prompt_smoke.py
+```
+
 ## 3. Windows-Specific Spark Notes
 
 The older ingest and local Spark scripts assume:
@@ -127,6 +139,8 @@ Use these when you want review-time validation only:
 - [../../tools/validate_public_surface.py](../../tools/validate_public_surface.py)
 - [../../tools/validate_current_release.py](../../tools/validate_current_release.py)
 - [../../tools/run_release_checks.py](../../tools/run_release_checks.py)
+- [../../tools/run_full_chain_smoke.py](../../tools/run_full_chain_smoke.py)
+- [../../tools/run_stage11_model_prompt_smoke.py](../../tools/run_stage11_model_prompt_smoke.py)
 - [../../tools/cloud_stage11.py](../../tools/cloud_stage11.py)
 
 Cloud helper notes:
