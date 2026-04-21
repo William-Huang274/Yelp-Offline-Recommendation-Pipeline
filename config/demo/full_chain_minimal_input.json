@@ -1,0 +1,82 @@
+{
+  "demo_id": "stage01_11_minimal_yelp_demo_v1",
+  "top_k": 3,
+  "user": {
+    "user_id": "demo_user_bucket2_001",
+    "preferred_cuisines": ["ramen", "japanese"],
+    "preferred_price_tier": 2,
+    "preferred_zone": "Mid-City"
+  },
+  "businesses": [
+    {
+      "business_id": "b011",
+      "name": "Mid-City Ramen Lab",
+      "cuisine_tags": ["ramen", "japanese", "asian fusion"],
+      "price_tier": 2,
+      "zone": "Mid-City",
+      "prescore": 0.49,
+      "quality": 0.68,
+      "popularity": 0.28,
+      "novelty": 0.74,
+      "rm_score": 0.97,
+      "route_hints": {"als": 0.36, "profile": 0.92, "context": 0.81, "popular": 0.12}
+    },
+    {
+      "business_id": "b003",
+      "name": "Bayou Noodle House",
+      "cuisine_tags": ["ramen", "japanese"],
+      "price_tier": 2,
+      "zone": "CBD",
+      "prescore": 0.76,
+      "quality": 0.79,
+      "popularity": 0.59,
+      "novelty": 0.38,
+      "rm_score": 0.31,
+      "route_hints": {"als": 0.56, "profile": 0.74, "context": 0.62, "popular": 0.41}
+    },
+    {
+      "business_id": "b010",
+      "name": "Garden District Curry Hall",
+      "cuisine_tags": ["indian", "curry"],
+      "price_tier": 2,
+      "zone": "Lower Garden District",
+      "prescore": 0.60,
+      "quality": 0.71,
+      "popularity": 0.40,
+      "novelty": 0.55,
+      "rm_score": 0.60,
+      "route_hints": {"als": 0.38, "profile": 0.52, "context": 0.43, "popular": 0.25}
+    },
+    {
+      "business_id": "b005",
+      "name": "Midtown Taco Lab",
+      "cuisine_tags": ["mexican", "tacos"],
+      "price_tier": 1,
+      "zone": "Mid-City",
+      "prescore": 0.72,
+      "quality": 0.76,
+      "popularity": 0.66,
+      "novelty": 0.42,
+      "rm_score": 0.24,
+      "route_hints": {"als": 0.62, "profile": 0.33, "context": 0.58, "popular": 0.57}
+    }
+  ],
+  "reviews": [
+    {
+      "user_id": "demo_user_bucket2_001",
+      "business_id": "b011",
+      "stars": 5,
+      "text": "ramen noodles rich broth japanese counter"
+    },
+    {
+      "user_id": "demo_user_bucket2_001",
+      "business_id": "b003",
+      "stars": 4,
+      "text": "noodle soup quick lunch japanese"
+    }
+  ],
+  "holdout_truth": {
+    "user_id": "demo_user_bucket2_001",
+    "business_id": "b011"
+  }
+}

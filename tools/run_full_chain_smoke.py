@@ -68,6 +68,8 @@ def main() -> int:
     for name, command in stage_help_steps:
         ok &= run_step(name, command)
 
+    ok &= run_step("stage01_11_minidemo", [PYTHON, "tools/run_stage01_11_minidemo.py"])
+
     pwsh = powershell_command()
     if pwsh is None:
         print_step("windows_local_wrappers", "WARN", "No PowerShell executable found; skipping stage09/stage10 local wrapper checks.")
@@ -83,7 +85,13 @@ def main() -> int:
 
     ok &= run_step("stage11_model_prompt_smoke", [PYTHON, "tools/run_stage11_model_prompt_smoke.py"])
     ok &= run_step("stage11_demo_summary", [PYTHON, "tools/demo_recommend.py", "summary"])
+    ok &= run_step("serving_batch_baseline", [PYTHON, "tools/batch_infer_demo.py", "--strategy", "baseline"])
+    ok &= run_step("serving_batch_xgboost", [PYTHON, "tools/batch_infer_demo.py", "--strategy", "xgboost"])
     ok &= run_step("stage11_mock_serving_self_test", [PYTHON, "tools/mock_serving_api.py", "--self-test"])
+    ok &= run_step(
+        "mock_serving_load_test",
+        [PYTHON, "tools/load_test_mock_serving.py", "--requests", "6", "--concurrency", "2", "--simulate-fallback-every", "3"],
+    )
 
     if ok:
         print("PASS full_chain_smoke")
