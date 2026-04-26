@@ -6,7 +6,7 @@ This folder contains lightweight repository-side utilities aligned with the curr
 - `validate_current_release.py`: validates the current curated release summaries under `data/output/current_release`, including the three-expert Stage11 release line
 - `run_release_checks.py`: reviewer-facing one-click check that verifies the project docs, validators, demo CLI, and core pytest surface
 - `run_release_checks.ps1`: thin PowerShell wrapper for `run_release_checks.py`
-- `run_full_chain_smoke.py`: safe `stage01 -> stage11` smoke runner covering canonical help paths, local wrappers, mini demo, serving strategies, and Stage11 checks
+- `run_full_chain_smoke.py`: safe `stage01 -> stage11` smoke runner covering canonical help paths, mini demo, serving strategies, and Stage11 checks; full local Stage09/10 artifact checks are strict only with `--strict-local-artifacts`
 - `run_stage01_11_minidemo.py`: contract-level minimal sample that walks one tiny Yelp-like fixture through Stage01 -> Stage11 without Spark/GPU training
 - `run_stage11_model_prompt_smoke.py`: verifies the current Stage11 Qwen3.5-9B reward-model surface and smoke-case config
 - `demo_recommend.py`: frozen-release demo helper for Stage09/10/11 summaries and canonical case walkthroughs
@@ -14,7 +14,8 @@ This folder contains lightweight repository-side utilities aligned with the curr
 - `mock_serving_api.py`: stdlib HTTP demo exposing `/health` and `/rank` on top of the mock ranking pipeline
 - `load_test_mock_serving.py`: local in-process or HTTP load test reporting multi-request traffic mix, p50/p95/p99 latency, per-stage latency, success rate, cache miss, and fallback count
 - `export_serving_validation_report.py`: converts a load-test JSON summary into a Markdown serving validation report
-- demo request payload: `config/demo/batch_infer_demo_input.json`
+- replay-first demo request payload: `config/demo/replay_request_input.json`
+- legacy manual-candidate payload: `config/demo/batch_infer_demo_input.json`
 - full-chain mini fixture: `config/demo/full_chain_minimal_input.json`
 - serving config: `config/serving.yaml`
 - `cloud_stage11.py`: cloud inventory and explicit pull helper for Stage11 artifacts and missing Stage10 source-parity prerequisites

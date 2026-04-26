@@ -28,6 +28,8 @@
   [release_notes.md](./release_notes.md)
 - release / fallback / rollback 说明页：
   [serving_release.zh-CN.md](./serving_release.zh-CN.md)
+- serving validation report：
+  [serving_validation_report.md](./serving_validation_report.md)
 - 详细冻结线说明：
   [project/current_frozen_line.zh-CN.md](./project/current_frozen_line.zh-CN.md)
 - 设计取舍说明：

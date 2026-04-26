@@ -29,6 +29,8 @@ repository line.
   [release_notes.md](./release_notes.md)
 - release, fallback, and rollback surface:
   [serving_release.md](./serving_release.md)
+- serving validation report:
+  [serving_validation_report.md](./serving_validation_report.md)
 - detailed frozen-line summary:
   [project/current_frozen_line.md](./project/current_frozen_line.md)
 - design-choice summary:

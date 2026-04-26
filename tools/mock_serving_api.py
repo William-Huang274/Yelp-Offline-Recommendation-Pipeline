@@ -87,7 +87,6 @@ def run_self_test() -> int:
     replay_store = load_replay_store()
     payload = {
         "health": health_payload(),
-        "legacy_rank_result": rank_payload(sample),
         "replay_rank_result": rank_payload(
             {
                 "request_id": replay_store.sample_request_id,
@@ -97,6 +96,7 @@ def run_self_test() -> int:
                 "stage11_live_mode": "remote_dry_run",
             }
         ),
+        "legacy_manual_candidate_rank_result": rank_payload(sample),
     }
     print(json.dumps(payload, ensure_ascii=True, indent=2))
     return 0

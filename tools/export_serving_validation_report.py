@@ -13,6 +13,7 @@ DEFAULT_OUTPUT = Path("docs/serving_validation_report.md")
 DEFAULT_SERVING_P95_BUDGET_MS = 250.0
 DEFAULT_SERVING_P99_BUDGET_MS = 300.0
 DEFAULT_SUCCESS_RATE_FLOOR = 0.99
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def read_json(path: Path) -> dict[str, Any]:
@@ -38,6 +39,13 @@ def format_counts(counts: Any) -> str:
     if not isinstance(counts, dict) or not counts:
         return "-"
     return ", ".join(f"{key}={value}" for key, value in sorted(counts.items()))
+
+
+def display_path(path: Path) -> str:
+    try:
+        return path.resolve().relative_to(REPO_ROOT).as_posix()
+    except ValueError:
+        return path.as_posix()
 
 
 def stat(summary: dict[str, Any], path: tuple[str, ...], key: str, default: float = 0.0) -> float:
@@ -149,7 +157,7 @@ def build_report(
         "# Serving Validation Report",
         "",
         f"- Generated at: `{generated_at}`",
-        f"- Source JSON: `{input_path.as_posix()}`",
+        f"- Source JSON: `{display_path(input_path)}`",
         f"- Mode: `{summary.get('mode', '-')}`",
         f"- Requests: `{summary.get('requests', 0)}` after `{summary.get('warmup_requests', 0)}` warmup",
         f"- Concurrency: `{summary.get('concurrency', 0)}`",

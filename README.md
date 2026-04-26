@@ -9,6 +9,13 @@ bounded LLM reward-model rescue reranking (`Stage11`).
 Focus: recommendation/search ranking, cold-start portability, structured
 feature learning, and controllable LLM-enhanced reranking.
 
+## 2026-04-26 Update Note
+
+- Serving demo is now replay-first: `request_id -> Stage09 replay/live lookup -> Stage10 replay/live XGBoost -> Stage11 cache-first rescue`.
+- Local load testing now reports mixed traffic, cache misses, fallback counts, and per-stage latency, then exports a Markdown validation report.
+- Public clone portability is improved: if the large frozen replay pack is absent, demo tools fall back to an embedded sample fixture while keeping the same response contract.
+- The older handwritten-candidate batch payload is kept only as a legacy contract smoke path; the recommended demo starts from `config/demo/replay_request_input.json` or `--request-id`.
+
 ## Why This Repo Matters
 
 This repository is designed to demonstrate the core capabilities expected in
@@ -176,20 +183,33 @@ python tools/run_stage01_11_minidemo.py
 .\tools\run_stage10_bucket5_local.ps1 -CheckOnly
 ```
 
-### B. Demo Path
+### B. Replay-First Serving Demo
 
-Use this path to inspect a canonical Stage11 rescue example and summarize the
-current frozen line.
+Use this path to demonstrate the current online-simulation contract. The input
+is a replay request id, not a handwritten candidate list.
 
 ```powershell
-python tools/demo_recommend.py show-case --case boundary_11_30
-python tools/batch_infer_demo.py --strategy baseline
-python tools/batch_infer_demo.py --strategy xgboost
-python tools/batch_infer_demo.py --strategy reward_rerank
+python tools/batch_infer_demo.py --input config/demo/replay_request_input.json --format json
+python tools/batch_infer_demo.py --request-id stage11_b5_u000097 --strategy reward_rerank --debug --include-fallback-demo
+python tools/batch_infer_demo.py --request-id stage11_b5_u000097 --strategy reward_rerank --stage09-mode lookup_live --stage10-mode xgb_live --stage11-mode replay
+python tools/batch_infer_demo.py --request-id stage11_b5_u000097 --strategy reward_rerank --simulate-stage11-cache-miss
 python tools/mock_serving_api.py --self-test
-python tools/load_test_mock_serving.py --requests 20 --concurrency 4 --simulate-fallback-every 5
+python tools/load_test_mock_serving.py --request-sample-size 5 --warmup-requests 5 --requests 20 --concurrency 2 --strategy reward_rerank --stage09-mode lookup_live --stage10-mode xgb_live --stage11-mode replay --traffic-profile mixed --cache-miss-rate 0.2 --strategy-failure-rate 0.1 --xgboost-rate 0.1 --output data/output/serving_validation/latest_summary.json
+python tools/export_serving_validation_report.py --input data/output/serving_validation/latest_summary.json --output docs/serving_validation_report.md --strict
+python tools/demo_recommend.py show-case --case boundary_11_30
 python tools/demo_recommend.py
 ```
+
+The legacy manual-candidate contract is still available for a tiny smoke check:
+
+```powershell
+python tools/batch_infer_demo.py --input config/demo/batch_infer_demo_input.json --strategy reward_rerank
+```
+
+If the large frozen replay artifacts are not present, `tools/replay_store.py`
+and `tools/stage10_live_local.py` use an embedded sample replay fixture so the
+public API shape, fallback behavior, and report generation can still be tested
+on a fresh clone.
 
 ### C. Cloud-Backed Stage11 Checks
 
@@ -232,7 +252,8 @@ Batch Inference Demo
 - stage11_rescued_into_top_k: 1
 Mock Serving Load Test
 - success_rate: 1.0
-- fallback_count: 4
+- serving_latency_p95: <= 250 ms in the generated report
+- fallback_rate and cache_miss_count are reported for mixed traffic
 {
   "status": "ok",
   "service": "mock_serving_api",
@@ -275,6 +296,7 @@ Files you should expect to validate immediately:
 - [Model card](./docs/model_card.md)
 - [Release notes](./docs/release_notes.md)
 - [Serving, fallback, and rollback surface](./docs/serving_release.md)
+- [Serving validation report](./docs/serving_validation_report.md)
 - [Detailed frozen line and data scale](./docs/project/current_frozen_line.md)
 - [Design choices and leakage control](./docs/project/design_choices.md)
 - [Repository map and entry points](./docs/project/repository_map.md)

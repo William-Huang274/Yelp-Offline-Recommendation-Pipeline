@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import argparse
 import shutil
 import subprocess
 import sys
@@ -53,7 +54,20 @@ def powershell_command() -> list[str] | None:
     return None
 
 
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Run the public stage01->stage11 smoke surface without requiring large local training artifacts."
+    )
+    parser.add_argument(
+        "--strict-local-artifacts",
+        action="store_true",
+        help="fail when Stage09/Stage10 local wrapper prerequisites are missing",
+    )
+    return parser
+
+
 def main() -> int:
+    args = build_parser().parse_args()
     ok = True
     stage_help_steps = [
         ("stage01_ingest_help", [PYTHON, "scripts/stage01_to_stage08/01_data prep.py", "--help"]),
@@ -74,8 +88,23 @@ def main() -> int:
     if pwsh is None:
         print_step("windows_local_wrappers", "WARN", "No PowerShell executable found; skipping stage09/stage10 local wrapper checks.")
     else:
-        ok &= run_step("stage09_local_check", [*pwsh, "tools/run_stage09_local.ps1", "-CheckOnly"])
-        ok &= run_step("stage10_bucket5_local_check", [*pwsh, "tools/run_stage10_bucket5_local.ps1", "-CheckOnly"])
+        local_optional = not args.strict_local_artifacts
+        local_hint = (
+            "Large local Stage09/Stage10 artifacts are intentionally not part of the public clone; "
+            "pull them from cloud or rerun with --strict-local-artifacts when validating a full local replay."
+        )
+        ok &= run_step(
+            "stage09_local_check",
+            [*pwsh, "tools/run_stage09_local.ps1", "-CheckOnly"],
+            optional=local_optional,
+            optional_hint=local_hint,
+        )
+        ok &= run_step(
+            "stage10_bucket5_local_check",
+            [*pwsh, "tools/run_stage10_bucket5_local.ps1", "-CheckOnly"],
+            optional=local_optional,
+            optional_hint=local_hint,
+        )
         ok &= run_step(
             "stage10_bucket2_local_check",
             [*pwsh, "tools/run_stage10_bucket2_local.ps1", "-CheckOnly"],
@@ -85,8 +114,40 @@ def main() -> int:
 
     ok &= run_step("stage11_model_prompt_smoke", [PYTHON, "tools/run_stage11_model_prompt_smoke.py"])
     ok &= run_step("stage11_demo_summary", [PYTHON, "tools/demo_recommend.py", "summary"])
-    ok &= run_step("serving_batch_baseline", [PYTHON, "tools/batch_infer_demo.py", "--strategy", "baseline"])
-    ok &= run_step("serving_batch_xgboost", [PYTHON, "tools/batch_infer_demo.py", "--strategy", "xgboost"])
+    sample_request_id = "stage11_b5_u000097"
+    ok &= run_step(
+        "serving_replay_baseline",
+        [PYTHON, "tools/batch_infer_demo.py", "--request-id", sample_request_id, "--strategy", "baseline"],
+    )
+    ok &= run_step(
+        "serving_replay_xgboost_live",
+        [
+            PYTHON,
+            "tools/batch_infer_demo.py",
+            "--request-id",
+            sample_request_id,
+            "--strategy",
+            "xgboost",
+            "--stage09-mode",
+            "lookup_live",
+            "--stage10-mode",
+            "xgb_live",
+            "--stage11-mode",
+            "replay",
+        ],
+    )
+    ok &= run_step(
+        "serving_replay_reward_cache_miss",
+        [
+            PYTHON,
+            "tools/batch_infer_demo.py",
+            "--request-id",
+            sample_request_id,
+            "--strategy",
+            "reward_rerank",
+            "--simulate-stage11-cache-miss",
+        ],
+    )
     ok &= run_step("stage11_mock_serving_self_test", [PYTHON, "tools/mock_serving_api.py", "--self-test"])
     ok &= run_step(
         "mock_serving_load_test",

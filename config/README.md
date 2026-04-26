@@ -10,8 +10,10 @@ These files are part of the current public mainline:
   repository-side food-service labeling flow
 - `serving.yaml`: public mock-serving strategy, release id, fallback order,
   and latency budget
-- `demo/batch_infer_demo_input.json`: small request payload used by the mock
-  `Stage09 -> Stage10 -> Stage11` demo path
+- `demo/replay_request_input.json`: replay-first request payload used by the
+  mock `Stage09 -> Stage10 -> Stage11` serving demo
+- `demo/batch_infer_demo_input.json`: legacy handwritten-candidate payload kept
+  for a tiny contract smoke path
 - `demo/full_chain_minimal_input.json`: tiny Yelp-like fixture used by the
   contract-level `Stage01 -> Stage11` mini demo
 - `demo/stage11_model_prompt_smoke_case.json`: smoke-case contract for the

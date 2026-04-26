@@ -44,23 +44,34 @@
 
 当前主线有两种 batch-style 使用方式。
 
-### Review-First 路径
+### Replay-First Review 路径
 
-直接消费 checked-in 的 compact artifact 和 demo helper：
+使用冻结 Stage11 pack 中的 replay request id。这是 README、老师 demo 和面试交流
+最推荐的路径，因为它保留了 `Stage09 -> Stage10 -> Stage11` 的请求形态。
 
 ```bash
 python tools/run_release_checks.py --skip-pytest
-python tools/batch_infer_demo.py
-python tools/batch_infer_demo.py --strategy baseline
-python tools/batch_infer_demo.py --strategy xgboost
-python tools/batch_infer_demo.py --strategy reward_rerank
+python tools/batch_infer_demo.py --input config/demo/replay_request_input.json --format json
+python tools/batch_infer_demo.py --request-id stage11_b5_u000097 --strategy reward_rerank --debug --include-fallback-demo
+python tools/batch_infer_demo.py --request-id stage11_b5_u000097 --strategy reward_rerank --stage09-mode lookup_live --stage10-mode xgb_live --stage11-mode replay
+python tools/batch_infer_demo.py --request-id stage11_b5_u000097 --strategy reward_rerank --simulate-stage11-cache-miss
 python tools/mock_serving_api.py --self-test
-python tools/load_test_mock_serving.py --requests 20 --concurrency 4 --simulate-fallback-every 5
+python tools/load_test_mock_serving.py --request-sample-size 5 --warmup-requests 5 --requests 20 --concurrency 2 --strategy reward_rerank --stage09-mode lookup_live --stage10-mode xgb_live --stage11-mode replay --traffic-profile mixed --cache-miss-rate 0.2 --strategy-failure-rate 0.1 --xgboost-rate 0.1 --output data/output/serving_validation/latest_summary.json
+python tools/export_serving_validation_report.py --input data/output/serving_validation/latest_summary.json --output docs/serving_validation_report.md --strict
 python tools/demo_recommend.py
 python tools/demo_recommend.py show-case --case boundary_11_30
 ```
 
-这是 README、老师 demo 和面试交流最适合的路径。
+生成的报告位置：
+[serving_validation_report.md](./serving_validation_report.md)
+
+### Legacy 手写 Candidate 路径
+
+旧的手写候选 payload 仍保留为极小 contract smoke，但不再是推荐 serving 叙事：
+
+```bash
+python tools/batch_infer_demo.py --input config/demo/batch_infer_demo_input.json --strategy reward_rerank
+```
 
 ### Stage-Level Batch 路径
 
@@ -75,24 +86,28 @@ python tools/demo_recommend.py show-case --case boundary_11_30
 
 ### Mock Serving 路径
 
-为了把这套离线系统翻译成更像上线服务的形态，仓库现在额外提供两个轻量入口：
+为了把这套离线系统翻译成更像上线服务的形态，仓库现在额外提供这些轻量入口：
 
 - batch inference demo：
   [../tools/batch_infer_demo.py](../tools/batch_infer_demo.py)
 - HTTP mock serving：
   [../tools/mock_serving_api.py](../tools/mock_serving_api.py)
+- local load test：
+  [../tools/load_test_mock_serving.py](../tools/load_test_mock_serving.py)
+- validation-report exporter：
+  [../tools/export_serving_validation_report.py](../tools/export_serving_validation_report.py)
 
 示例：
 
 ```bash
-python tools/batch_infer_demo.py --format json
+python tools/batch_infer_demo.py --request-id stage11_b5_u000097 --format json
 python tools/mock_serving_api.py --host 127.0.0.1 --port 8000
 ```
 
 当前 API surface 只保留最小必要 contract：
 
 - `GET /health`：返回当前 release id 和服务状态
-- `POST /rank`：输入一条 mock 用户画像、候选商户列表和可选策略，输出 Stage09 -> Stage10 -> Stage11 的排序结果
+- `POST /rank`：输入 replay request id 或 legacy mock 用户画像请求，再加可选策略，输出 Stage09 -> Stage10 -> Stage11 的排序结果
 
 当前支持三种策略：
 
@@ -108,6 +123,27 @@ python tools/mock_serving_api.py --host 127.0.0.1 --port 8000
 - `fallback_reason`
 - `serving_metrics.latency_ms`
 - `serving_metrics.fallback_count`
+
+## 可迁移性与 Endpoint 配置
+
+公开仓库不包含原始 Yelp 数据、全量预测 dump 或大体量云端模型权重。因此 serving demo
+分为两层：
+
+- 如果本地存在冻结 `data/output/_prod_runs/...` 或 `data/output/cloud_stage11/...`
+  工件，优先走真实本地 replay。
+- 如果这些大文件不存在，自动使用 embedded sample replay。
+
+这个 fallback sample 是 contract-level 的：它保持 request 字段、top-k 形状、fallback
+计数、cache miss 行为和报告生成稳定，但不替代冻结指标表。
+
+endpoint 和 policy 开关集中在 [../config/serving.yaml](../config/serving.yaml)。
+如果临时云端机器变化，用这些环境变量覆盖：
+
+```bash
+BDA_CLOUD_HOST=connect.westb.seetacloud.com
+BDA_CLOUD_PORT=20804
+BDA_CLOUD_USER=root
+```
 
 如果要看内部 release runner 入口，见：
 

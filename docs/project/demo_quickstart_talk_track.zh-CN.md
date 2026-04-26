@@ -32,7 +32,7 @@
 python tools/run_release_checks.py --skip-pytest
 python tools/demo_recommend.py summary
 python tools/demo_recommend.py show-case --case boundary_11_30
-python tools/batch_infer_demo.py --strategy reward_rerank
+python tools/batch_infer_demo.py --request-id stage11_b5_u000097 --strategy reward_rerank --debug --include-fallback-demo
 ```
 
 这 4 条已经够支撑大部分展示。
@@ -99,19 +99,19 @@ python tools/demo_recommend.py show-case --case boundary_11_30
 
 - `因为 full-list rerank 成本高、延迟不稳、回滚难，我这里故意把它限制在 11-30 / 31-60 / 61-100 这样的 bounded window。`
 
-### 第三步：展示 mock batch inference
+### 第三步：展示 replay-first mock serving
 
 命令：
 
 ```powershell
-python tools/batch_infer_demo.py --strategy reward_rerank
+python tools/batch_infer_demo.py --request-id stage11_b5_u000097 --strategy reward_rerank --debug --include-fallback-demo
 ```
 
 你可以这样说：
 
-- `这一步不是线上 API，只是一个受控 mock batch inference，用来把 release surface、候选 trace 和最终 top-k 串起来。`
-- `你可以看到这里有一个候选从 stage10_rank=12 被救到了 final_rank=5，这正好对应 Stage11 的边界救援设计。`
-- `输出里同时保留了 strategy、latency、fallback_count 和 release reference，这样演示时能把模型结果和发布口径连起来。`
+- `这一步不是生产 API，而是 replay-first mock serving。输入是 request_id，服务端负责恢复用户画像、候选窗口和 Stage10/Stage11 排名。`
+- `输出里会有 stage09_trace、stage10_summary、stage11_policy、offline_truth_audit 和 fallback_demo，所以我能解释线上响应和离线审计分别是什么。`
+- `如果没有本地大体量 replay pack，工具会退到 embedded sample fixture，但响应 contract 不变，fresh clone 也能跑通。`
 
 ### 第四步：如果需要，再补服务和 fallback
 

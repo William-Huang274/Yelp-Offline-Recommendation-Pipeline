@@ -8,6 +8,13 @@
 重点：推荐 / 搜索排序、cold-start portability、结构化特征学习，以及在可控
 成本下使用 LLM 增强的 reranking。
 
+## 2026-04-26 更新说明
+
+- serving demo 已改为 replay-first：`request_id -> Stage09 replay/live lookup -> Stage10 replay/live XGBoost -> Stage11 cache-first rescue`。
+- 本地压测现在会汇总混合流量、cache miss、fallback 次数和分阶段延迟，并导出 Markdown validation report。
+- 为了方便公开仓库迁移，如果本地没有大体量冻结 replay pack，demo 工具会自动使用 embedded sample fixture，但保持同一套响应 contract。
+- 旧的手写 candidate batch payload 只作为 legacy contract smoke 保留；推荐演示入口是 `config/demo/replay_request_input.json` 或 `--request-id`。
+
 ## 为什么这个仓库值得看
 
 这个仓库的目标，不只是展示“我做了一个模型”，而是展示推荐 / 搜索排序岗位常见的
@@ -171,19 +178,32 @@ python tools/run_stage01_11_minidemo.py
 .\tools\run_stage10_bucket5_local.ps1 -CheckOnly
 ```
 
-### B. Demo 路径
+### B. Replay-First Serving Demo
 
-这条路径用于展示一个 canonical Stage11 rescue case，并快速浏览当前冻结线。
+这条路径用于展示当前更接近线上模拟的 contract。输入是一条 replay request id，
+而不是手写候选 JSON。
 
 ```powershell
-python tools/demo_recommend.py show-case --case boundary_11_30
-python tools/batch_infer_demo.py --strategy baseline
-python tools/batch_infer_demo.py --strategy xgboost
-python tools/batch_infer_demo.py --strategy reward_rerank
+python tools/batch_infer_demo.py --input config/demo/replay_request_input.json --format json
+python tools/batch_infer_demo.py --request-id stage11_b5_u000097 --strategy reward_rerank --debug --include-fallback-demo
+python tools/batch_infer_demo.py --request-id stage11_b5_u000097 --strategy reward_rerank --stage09-mode lookup_live --stage10-mode xgb_live --stage11-mode replay
+python tools/batch_infer_demo.py --request-id stage11_b5_u000097 --strategy reward_rerank --simulate-stage11-cache-miss
 python tools/mock_serving_api.py --self-test
-python tools/load_test_mock_serving.py --requests 20 --concurrency 4 --simulate-fallback-every 5
+python tools/load_test_mock_serving.py --request-sample-size 5 --warmup-requests 5 --requests 20 --concurrency 2 --strategy reward_rerank --stage09-mode lookup_live --stage10-mode xgb_live --stage11-mode replay --traffic-profile mixed --cache-miss-rate 0.2 --strategy-failure-rate 0.1 --xgboost-rate 0.1 --output data/output/serving_validation/latest_summary.json
+python tools/export_serving_validation_report.py --input data/output/serving_validation/latest_summary.json --output docs/serving_validation_report.md --strict
+python tools/demo_recommend.py show-case --case boundary_11_30
 python tools/demo_recommend.py
 ```
+
+旧的手写 candidate contract 仍可用于极小 smoke：
+
+```powershell
+python tools/batch_infer_demo.py --input config/demo/batch_infer_demo_input.json --strategy reward_rerank
+```
+
+如果本地没有大体量冻结 replay artifact，`tools/replay_store.py` 和
+`tools/stage10_live_local.py` 会使用内置 sample replay fixture，让 fresh clone
+也能测试公开 API 形状、fallback 行为和 report 生成。
 
 ### C. 云端 Stage11 检查
 
@@ -224,7 +244,8 @@ Batch Inference Demo
 - stage11_rescued_into_top_k: 1
 Mock Serving Load Test
 - success_rate: 1.0
-- fallback_count: 4
+- serving_latency_p95: 在生成报告中应不超过 250 ms
+- mixed traffic 会报告 fallback_rate 和 cache_miss_count
 {
   "status": "ok",
   "service": "mock_serving_api",
@@ -267,6 +288,7 @@ Current Frozen Yelp Ranking Review Line
 - [model card](./docs/model_card.md)
 - [release notes](./docs/release_notes.md)
 - [serving / fallback / rollback 说明](./docs/serving_release.zh-CN.md)
+- [serving validation report](./docs/serving_validation_report.md)
 - [详细冻结线与数据规模](./docs/project/current_frozen_line.zh-CN.md)
 - [设计取舍与泄露控制](./docs/project/design_choices.zh-CN.md)
 - [仓库地图与推荐入口](./docs/project/repository_map.zh-CN.md)

@@ -4,6 +4,13 @@
 
 This is the current public release surface for the Yelp offline recommendation and reranking stack.
 
+## 2026-04-26 Serving Demo Update
+
+- Added replay-first serving demo commands based on `request_id` rather than handwritten candidate JSON.
+- Added mixed-traffic load testing with cache-miss, fallback, and per-stage latency reporting.
+- Added `export_serving_validation_report.py` for turning load-test JSON into a Markdown validation report.
+- Kept the old manual-candidate payload as a legacy contract smoke path.
+
 ## Scope
 
 - Stage09: bucket5 route-aware source-parity recall surface
@@ -27,11 +34,12 @@ This release does not include Stage12 experiments or any A3B model line.
 ## Serving Checks
 
 ```bash
-python tools/batch_infer_demo.py --strategy baseline
-python tools/batch_infer_demo.py --strategy xgboost
-python tools/batch_infer_demo.py --strategy reward_rerank
+python tools/batch_infer_demo.py --input config/demo/replay_request_input.json --format json
+python tools/batch_infer_demo.py --request-id stage11_b5_u000097 --strategy reward_rerank --stage09-mode lookup_live --stage10-mode xgb_live --stage11-mode replay
+python tools/batch_infer_demo.py --request-id stage11_b5_u000097 --strategy reward_rerank --simulate-stage11-cache-miss
 python tools/mock_serving_api.py --self-test
-python tools/load_test_mock_serving.py --requests 20 --concurrency 4 --simulate-fallback-every 5
+python tools/load_test_mock_serving.py --request-sample-size 5 --warmup-requests 5 --requests 20 --concurrency 2 --strategy reward_rerank --stage09-mode lookup_live --stage10-mode xgb_live --stage11-mode replay --traffic-profile mixed --cache-miss-rate 0.2 --strategy-failure-rate 0.1 --xgboost-rate 0.1 --output data/output/serving_validation/latest_summary.json
+python tools/export_serving_validation_report.py --input data/output/serving_validation/latest_summary.json --output docs/serving_validation_report.md --strict
 ```
 
 Expected serving-level signals:
