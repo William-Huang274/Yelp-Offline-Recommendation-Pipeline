@@ -1,0 +1,10 @@
+{
+  "request_id": "stage11_b5_u000097",
+  "strategy": "reward_rerank",
+  "debug": true,
+  "include_fallback_demo": true,
+  "stage09_mode": "replay",
+  "stage10_mode": "replay",
+  "stage11_mode": "remote_dry_run",
+  "top_k": 5
+}

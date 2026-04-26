@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -12,7 +13,15 @@ TOOLS_DIR = Path(__file__).resolve().parent
 if str(TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(TOOLS_DIR))
 
-from batch_infer_demo import DEFAULT_INPUT_PATH, load_release_reference, load_serving_config, rank_payload, read_json
+from batch_infer_demo import (
+    DEFAULT_INPUT_PATH,
+    load_release_reference,
+    load_serving_config,
+    rank_payload,
+    read_json,
+    warm_demo_assets,
+)
+from replay_store import load_replay_store
 
 
 def health_payload() -> dict[str, Any]:
@@ -28,6 +37,7 @@ def health_payload() -> dict[str, Any]:
         "default_strategy": serving_config["default_strategy"],
         "allowed_strategies": serving_config["allowed_strategies"],
         "latency_budget_ms": serving_config["latency_budget_ms"],
+        "stage11_live_default_mode": serving_config.get("stage11_live_default_mode", "off"),
     }
 
 
@@ -74,9 +84,19 @@ class RequestHandler(BaseHTTPRequestHandler):
 
 def run_self_test() -> int:
     sample = read_json(Path(DEFAULT_INPUT_PATH))
+    replay_store = load_replay_store()
     payload = {
         "health": health_payload(),
-        "rank_result": rank_payload(sample),
+        "legacy_rank_result": rank_payload(sample),
+        "replay_rank_result": rank_payload(
+            {
+                "request_id": replay_store.sample_request_id,
+                "strategy": "reward_rerank",
+                "debug": True,
+                "include_fallback_demo": True,
+                "stage11_live_mode": "remote_dry_run",
+            }
+        ),
     }
     print(json.dumps(payload, ensure_ascii=True, indent=2))
     return 0
@@ -93,6 +113,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="print /health and /rank sample payloads without starting the server",
     )
+    parser.add_argument(
+        "--skip-warmup",
+        action="store_true",
+        help="do not preload replay assets before serving",
+    )
     return parser
 
 
@@ -100,6 +125,12 @@ def main() -> int:
     args = build_parser().parse_args()
     if args.self_test:
         return run_self_test()
+
+    if not args.skip_warmup:
+        started = time.perf_counter()
+        warm_demo_assets(include_replay=True)
+        warm_ms = round((time.perf_counter() - started) * 1000.0, 3)
+        print(f"[INFO] warmed demo assets in {warm_ms} ms")
 
     server = ThreadingHTTPServer((args.host, args.port), RequestHandler)
     print(f"[INFO] mock_serving_api listening on http://{args.host}:{args.port}")

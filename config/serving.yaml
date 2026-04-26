@@ -14,6 +14,24 @@ top_k: 5
 stage09_topn: 12
 stage11_topn: 30
 latency_budget_ms: 250
+stage09_default_mode: replay
+stage10_default_mode: replay
+stage11_default_mode: replay
+
+stage11_live_default_mode: off
+stage11_live_topn: 100
+stage11_live_max_rivals: 11
+stage11_live_batch_size: 8
+stage11_live_max_seq_len: 1280
+stage11_live_timeout_s: 1800
+stage11_worker_port: 18080
+stage11_worker_startup_timeout_s: 300
+stage11_worker_poll_interval_s: 5.0
+stage11_worker_http_timeout_s: 180
+stage11_worker_ssh_timeout_s: 240
+stage11_policy_mode: cache_first_bounded_rescue
+stage11_policy_latency_budget_ms: 50
+stage11_cache_ttl_hours: 24
 
 champion_pointer: stage11_release
 aligned_fallback_pointer: stage10_release

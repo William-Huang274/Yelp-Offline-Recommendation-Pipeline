@@ -12,7 +12,8 @@ This folder contains lightweight repository-side utilities aligned with the curr
 - `demo_recommend.py`: frozen-release demo helper for Stage09/10/11 summaries and canonical case walkthroughs
 - `batch_infer_demo.py`: mock batch inference entry that reads a small JSON request, supports `baseline` / `xgboost` / `reward_rerank`, and returns top-k plus serving metrics
 - `mock_serving_api.py`: stdlib HTTP demo exposing `/health` and `/rank` on top of the mock ranking pipeline
-- `load_test_mock_serving.py`: local in-process or HTTP load test reporting p50/p95/p99 latency, success rate, and fallback count
+- `load_test_mock_serving.py`: local in-process or HTTP load test reporting multi-request traffic mix, p50/p95/p99 latency, per-stage latency, success rate, cache miss, and fallback count
+- `export_serving_validation_report.py`: converts a load-test JSON summary into a Markdown serving validation report
 - demo request payload: `config/demo/batch_infer_demo_input.json`
 - full-chain mini fixture: `config/demo/full_chain_minimal_input.json`
 - serving config: `config/serving.yaml`
