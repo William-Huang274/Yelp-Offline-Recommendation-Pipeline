@@ -12,8 +12,8 @@ Two paths are supported:
 
 ## 1. Fastest Path: Review The Frozen Release
 
-This path is sufficient for lecturer review, proposal writing, demo rehearsal,
-and most report work.
+This path is sufficient for inspecting the checked-in release surface and
+running the lightweight demo commands.
 
 ### Step 1: Install Review Dependencies
 
@@ -103,8 +103,11 @@ interaction cohorts), the updated scripts now support explicit cohort scoping:
 - split-aware Stage09 feature builders can also be replayed against the same
   scoped bucket directory and index maps
 
-These finer cold-start cohort replays are script-supported, but they are not
-part of the checked-in `current_release` headline tables yet.
+The checked-in headline remains aggregate `bucket2`. The fixed-eval `bucket2`
+light-user diagnostic has also been frozen at
+`data/metrics/current_release/stage10/stage10_bucket2_light_user_subgroups_fixedeval_20260410.csv`
+for the `0-3`, `4-6`, and `7+` history bands over the same 5,344 eval users.
+Treat it as a diagnostic breakdown, not a replacement for the headline table.
 
 ## 2.4 Canonical Stage Order
 

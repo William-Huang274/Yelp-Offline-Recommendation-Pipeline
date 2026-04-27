@@ -1,7 +1,7 @@
 # Serving Validation Report
 
-- Generated at: `2026-04-26 10:28:22 UTC`
-- Source JSON: `data/output/serving_validation/latest_summary.json`
+- Generated at: `2026-04-25 16:57:38 UTC`
+- Source JSON: `D:/5006_BDA_project/data/output/serving_validation/latest_summary.json`
 - Mode: `in_process`
 - Requests: `20` after `5` warmup
 - Concurrency: `2`
@@ -14,8 +14,8 @@
 | Signal | Observed | Gate | Status |
 | --- | --- | --- | --- |
 | success_rate | 100.00% | >= 99.00% | PASS |
-| serving_latency_p95 | 198.344 ms | <= 250.000 ms | PASS |
-| serving_latency_p99 | 200.856 ms | <= 300.000 ms | PASS |
+| serving_latency_p95 | 216.294 ms | <= 250.000 ms | PASS |
+| serving_latency_p99 | 217.988 ms | <= 300.000 ms | PASS |
 
 ## Traffic Mix
 
@@ -31,27 +31,27 @@
 
 | Metric | p50 | p95 | p99 | max |
 | --- | --- | --- | --- | --- |
-| latency_ms | 133.313 ms | 198.344 ms | 200.856 ms | 201.484 ms |
-| wall_latency_ms | 133.338 ms | 198.364 ms | 200.884 ms | 201.514 ms |
+| latency_ms | 176.892 ms | 216.294 ms | 217.988 ms | 218.411 ms |
+| wall_latency_ms | 176.939 ms | 216.348 ms | 218.056 ms | 218.483 ms |
 | audit_latency_ms | 0.000 ms | 0.000 ms | 0.000 ms | 0.000 ms |
 
 ## Per-Stage Latency
 
 | Stage | p50 | p95 | p99 | avg |
 | --- | --- | --- | --- | --- |
-| request_lookup | 0.728 ms | 11.211 ms | 12.357 ms | 1.888 ms |
-| stage09 | 21.998 ms | 45.069 ms | 56.314 ms | 25.986 ms |
-| stage10 | 54.213 ms | 92.621 ms | 100.622 ms | 57.781 ms |
-| stage11 | 1.329 ms | 2.365 ms | 3.497 ms | 1.405 ms |
-| offline_truth_audit | 0.913 ms | 1.906 ms | 2.823 ms | 1.144 ms |
+| request_lookup | 2.290 ms | 5.700 ms | 26.400 ms | 3.754 ms |
+| stage09 | 4.723 ms | 10.507 ms | 23.143 ms | 5.630 ms |
+| stage10 | 84.689 ms | 113.674 ms | 139.812 ms | 82.831 ms |
+| stage11 | 3.181 ms | 4.890 ms | 7.933 ms | 3.664 ms |
+| offline_truth_audit | 1.329 ms | 3.662 ms | 3.765 ms | 1.620 ms |
 | fallback_demo | 0.000 ms | 0.000 ms | 0.000 ms | 0.000 ms |
 
 ## Stage09/10/11 Serving Scope
 
 - Stage09 modes: `lookup_live=20`
-- Stage09 source alignment: `embedded_sample_fixture=20`
+- Stage09 source alignment: `fallback_local_candidate_pack=20`
 - Stage10 modes: `xgb_live=20`
-- Stage10 source alignment: `embedded_sample_fixture=20`
+- Stage10 source alignment: `fallback_local_candidate_pack=20`
 - Stage11 modes: `cache_first=14, stage10_fallback=6`
 
 ## Audit Path

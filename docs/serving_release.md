@@ -50,36 +50,23 @@ configuration, and metric snapshot.
 
 There are two batch-style ways to interact with the current line.
 
-### Replay-First Review Path
+### Review-First Path
 
-Use replay request ids from the frozen Stage11 pack. This is the recommended
-path for README, interview, and teacher-facing review because it preserves the
-`Stage09 -> Stage10 -> Stage11` request shape.
+Use the checked-in compact artifacts and demo helpers:
 
 ```bash
 python tools/run_release_checks.py --skip-pytest
-python tools/batch_infer_demo.py --input config/demo/replay_request_input.json --format json
-python tools/batch_infer_demo.py --request-id stage11_b5_u000097 --strategy reward_rerank --debug --include-fallback-demo
-python tools/batch_infer_demo.py --request-id stage11_b5_u000097 --strategy reward_rerank --stage09-mode lookup_live --stage10-mode xgb_live --stage11-mode replay
-python tools/batch_infer_demo.py --request-id stage11_b5_u000097 --strategy reward_rerank --simulate-stage11-cache-miss
+python tools/batch_infer_demo.py
+python tools/batch_infer_demo.py --strategy baseline
+python tools/batch_infer_demo.py --strategy xgboost
+python tools/batch_infer_demo.py --strategy reward_rerank
 python tools/mock_serving_api.py --self-test
-python tools/load_test_mock_serving.py --request-sample-size 5 --warmup-requests 5 --requests 20 --concurrency 2 --strategy reward_rerank --stage09-mode lookup_live --stage10-mode xgb_live --stage11-mode replay --traffic-profile mixed --cache-miss-rate 0.2 --strategy-failure-rate 0.1 --xgboost-rate 0.1 --output data/output/serving_validation/latest_summary.json
-python tools/export_serving_validation_report.py --input data/output/serving_validation/latest_summary.json --output docs/serving_validation_report.md --strict
+python tools/load_test_mock_serving.py --requests 20 --concurrency 4 --simulate-fallback-every 5
 python tools/demo_recommend.py
 python tools/demo_recommend.py show-case --case boundary_11_30
 ```
 
-The generated report is checked into:
-[serving_validation_report.md](./serving_validation_report.md)
-
-### Legacy Manual-Candidate Path
-
-The older handwritten-candidate payload remains available for a tiny contract
-smoke, but it is not the recommended serving story:
-
-```bash
-python tools/batch_infer_demo.py --input config/demo/batch_infer_demo_input.json --strategy reward_rerank
-```
+This is the lightweight path used by the README and demo validation commands.
 
 ### Stage-Level Batch Path
 
@@ -94,8 +81,7 @@ Use the launcher or local wrapper surface:
 
 ### Mock Serving Path
 
-For an interview-friendly serving contract, the repository exposes lightweight
-tools on top of the checked-in frozen line:
+The repository exposes lightweight tools on top of the checked-in frozen line:
 
 - batch inference demo:
   [../tools/batch_infer_demo.py](../tools/batch_infer_demo.py)
@@ -103,22 +89,19 @@ tools on top of the checked-in frozen line:
   [../tools/mock_serving_api.py](../tools/mock_serving_api.py)
 - local load test:
   [../tools/load_test_mock_serving.py](../tools/load_test_mock_serving.py)
-- validation-report exporter:
-  [../tools/export_serving_validation_report.py](../tools/export_serving_validation_report.py)
 
 Example:
 
 ```bash
-python tools/batch_infer_demo.py --request-id stage11_b5_u000097 --format json
+python tools/batch_infer_demo.py --format json
 python tools/mock_serving_api.py --host 127.0.0.1 --port 8000
 ```
 
 The API surface is intentionally small:
 
 - `GET /health`: returns the active release id and compact serving status
-- `POST /rank`: accepts a replay request id or legacy mock user-profile
-  request, plus an optional strategy, then returns Stage09 -> Stage10 ->
-  Stage11 ranked output
+- `POST /rank`: accepts one mock user-profile request, candidate list, and
+  optional strategy, then returns Stage09 -> Stage10 -> Stage11 ranked output
 
 Supported strategies:
 
@@ -134,29 +117,6 @@ The response reports:
 - `fallback_reason`
 - `serving_metrics.latency_ms`
 - `serving_metrics.fallback_count`
-
-## Portability And Endpoint Configuration
-
-The public repository does not include raw Yelp data, full prediction dumps, or
-large cloud model weights. The serving demo therefore has two layers:
-
-- real local replay when the frozen `data/output/_prod_runs/...` or
-  `data/output/cloud_stage11/...` artifacts are available
-- embedded sample replay when those large artifacts are absent
-
-The fallback sample is intentionally contract-level. It keeps request fields,
-top-k shape, fallback counters, cache-miss behavior, and report generation
-stable, but it is not a substitute for the frozen metric tables.
-
-Endpoint and policy knobs are centralized in [../config/serving.yaml](../config/serving.yaml).
-For cloud Stage11 verification, override these environment variables when the
-temporary machine changes:
-
-```bash
-BDA_CLOUD_HOST=connect.westb.seetacloud.com
-BDA_CLOUD_PORT=20804
-BDA_CLOUD_USER=root
-```
 
 For the internal release-runner surface, see
 [../scripts/pipeline/internal_pilot_runner.py](../scripts/pipeline/internal_pilot_runner.py).

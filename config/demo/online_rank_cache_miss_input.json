@@ -1,0 +1,11 @@
+{
+  "request_id": "stage11_b5_u006562",
+  "strategy": "reward_rerank",
+  "debug": false,
+  "include_fallback_demo": false,
+  "stage09_mode": "lookup_live",
+  "stage10_mode": "xgb_live",
+  "stage11_mode": "replay",
+  "simulate_stage11_cache_miss": true,
+  "top_k": 5
+}

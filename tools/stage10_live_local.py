@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import time
 from dataclasses import dataclass
 from functools import lru_cache
@@ -80,6 +81,19 @@ CANDIDATE_NUMERIC_COLUMNS = (
     "item_train_pop_count",
     "user_train_count",
 )
+
+
+def _env_positive_int(name: str, default: int) -> int:
+    raw = os.environ.get(name, "").strip()
+    if not raw:
+        return int(default)
+    try:
+        return max(1, int(raw))
+    except ValueError:
+        return int(default)
+
+
+LIVE_USER_CACHE_SIZE = _env_positive_int("BDA_STAGE10_LIVE_USER_CACHE_SIZE", 256)
 
 
 def _first_existing(paths: list[Path]) -> Path:
@@ -256,7 +270,7 @@ def load_stage10_live_assets() -> Stage10LiveAssets:
     )
 
 
-@lru_cache(maxsize=256)
+@lru_cache(maxsize=LIVE_USER_CACHE_SIZE)
 def _load_stage09_user_candidates_cached(user_idx: int) -> pd.DataFrame:
     assets = load_stage10_live_assets()
     pdf = pd.read_parquet(
@@ -268,7 +282,7 @@ def _load_stage09_user_candidates_cached(user_idx: int) -> pd.DataFrame:
     return _normalize_candidate_frame(pdf)
 
 
-@lru_cache(maxsize=256)
+@lru_cache(maxsize=LIVE_USER_CACHE_SIZE)
 def _load_history_user_frame_cached(user_idx: int) -> pd.DataFrame:
     assets = load_stage10_live_assets()
     history_path = assets.stage09_paths.history_parquet
@@ -287,7 +301,7 @@ def _load_history_user_frame_cached(user_idx: int) -> pd.DataFrame:
     return pdf
 
 
-def _load_stage09_live_candidates_real(user_idx: int) -> tuple[pd.DataFrame, dict[str, Any]]:
+def load_stage09_live_candidates(user_idx: int) -> tuple[pd.DataFrame, dict[str, Any]]:
     started = time.perf_counter()
     candidates_pdf = _load_stage09_user_candidates_cached(int(user_idx)).copy()
     elapsed_ms = round((time.perf_counter() - started) * 1000.0, 3)
@@ -300,45 +314,6 @@ def _load_stage09_live_candidates_real(user_idx: int) -> tuple[pd.DataFrame, dic
         "requested_release_stage09_bucket_dir": _safe_relative(assets.stage09_paths.requested_release_bucket_dir),
         "effective_stage09_bucket_dir": _safe_relative(assets.stage09_paths.effective_bucket_dir),
     }
-
-
-def _sample_live_candidates(user_idx: int) -> pd.DataFrame:
-    from replay_store import build_request_id, load_replay_store
-
-    store = load_replay_store()
-    request_id = build_request_id(int(user_idx))
-    pdf = store.get_request_frame(request_id).copy()
-    pdf["source_set"] = [["profile", "popular"] for _ in range(len(pdf))]
-    pdf["signal_score"] = pd.to_numeric(pdf.get("pre_score"), errors="coerce").fillna(0.0)
-    pdf["quality_score"] = pd.to_numeric(pdf.get("pre_score"), errors="coerce").fillna(0.0)
-    pdf["semantic_score"] = pd.to_numeric(pdf.get("reward_score"), errors="coerce").fillna(0.0) / 20.0
-    pdf["semantic_confidence"] = 0.75
-    pdf["semantic_support"] = 1.0
-    pdf["semantic_support_adj"] = 1.0
-    pdf["semantic_tag_richness"] = 0.5
-    pdf["tower_score"] = 0.0
-    pdf["seq_score"] = 0.0
-    pdf["item_train_pop_count"] = 10
-    pdf["user_train_count"] = pd.to_numeric(pdf.get("n_train"), errors="coerce").fillna(1)
-    pdf["user_segment"] = "mid"
-    return _normalize_candidate_frame(pdf)
-
-
-def load_stage09_live_candidates(user_idx: int) -> tuple[pd.DataFrame, dict[str, Any]]:
-    try:
-        return _load_stage09_live_candidates_real(int(user_idx))
-    except Exception:
-        started = time.perf_counter()
-        sample = _sample_live_candidates(int(user_idx))
-        elapsed_ms = round((time.perf_counter() - started) * 1000.0, 3)
-        return sample, {
-            "timings_ms": {"candidate_lookup": elapsed_ms, "total": elapsed_ms},
-            "data_source": "embedded_sample_replay_store",
-            "history_source": "embedded_sample_replay_store",
-            "source_alignment": "embedded_sample_fixture",
-            "requested_release_stage09_bucket_dir": _safe_relative(CURRENT_STAGE09_RELEASE_BUCKET_DIR),
-            "effective_stage09_bucket_dir": "embedded_sample_replay_store",
-        }
 
 
 def _cap_history_rows(pdf: pd.DataFrame, *, min_days: int, max_days: int | None, max_rows: int, label: str) -> pd.DataFrame:
@@ -434,7 +409,7 @@ def _route_count(value: Any) -> float:
     return 0.0
 
 
-@lru_cache(maxsize=256)
+@lru_cache(maxsize=LIVE_USER_CACHE_SIZE)
 def _load_history_flag_frame_cached(user_idx: int) -> pd.DataFrame:
     assets = load_stage10_live_assets()
     history_pdf = _load_history_user_frame_cached(int(user_idx))
@@ -481,7 +456,7 @@ def _prepare_stage10_features(
     return pdf
 
 
-def _score_stage10_live_real(user_idx: int, *, top_k: int = 10) -> tuple[pd.DataFrame, dict[str, Any]]:
+def score_stage10_live(user_idx: int, *, top_k: int = 10) -> tuple[pd.DataFrame, dict[str, Any]]:
     started = time.perf_counter()
     asset_hits_before = load_stage10_live_assets.cache_info().hits
     asset_started = time.perf_counter()
@@ -561,40 +536,3 @@ def _score_stage10_live_real(user_idx: int, *, top_k: int = 10) -> tuple[pd.Data
         "warm_model_cache": load_stage10_live_assets.cache_info().hits > asset_hits_before,
     }
     return prepared, meta
-
-
-def score_stage10_live(user_idx: int, *, top_k: int = 10) -> tuple[pd.DataFrame, dict[str, Any]]:
-    try:
-        return _score_stage10_live_real(int(user_idx), top_k=top_k)
-    except Exception:
-        started = time.perf_counter()
-        prepared = _sample_live_candidates(int(user_idx)).copy()
-        prepared["learned_score"] = pd.to_numeric(prepared.get("learned_blend_score"), errors="coerce").fillna(0.0)
-        prepared = prepared.sort_values(["learned_rank", "item_idx"], kind="stable").reset_index(drop=True)
-        elapsed_ms = round((time.perf_counter() - started) * 1000.0, 3)
-        return prepared, {
-            "mode": "xgb_live",
-            "model_backend": "embedded_sample_xgb_replay",
-            "blend_alpha": _resolve_bucket5_blend_alpha(),
-            "blend_mode": "replay_sample",
-            "feature_count": 0,
-            "topn_preview": max(int(top_k), 10),
-            "data_source": "embedded_sample_replay_store",
-            "history_source": "embedded_sample_replay_store",
-            "model_json": "embedded_sample_replay_store",
-            "model_file": "embedded_sample_replay_store",
-            "source_alignment": "embedded_sample_fixture",
-            "requested_release_stage09_bucket_dir": _safe_relative(CURRENT_STAGE09_RELEASE_BUCKET_DIR),
-            "effective_stage09_bucket_dir": "embedded_sample_replay_store",
-            "timings_ms": {
-                "assets_load": 0.0,
-                "candidate_lookup": elapsed_ms,
-                "history_lookup": 0.0,
-                "history_flag_lookup": 0.0,
-                "feature_build": 0.0,
-                "model_predict": 0.0,
-                "rank_sort": 0.0,
-                "total": elapsed_ms,
-            },
-            "warm_model_cache": False,
-        }
