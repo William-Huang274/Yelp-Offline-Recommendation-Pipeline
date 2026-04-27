@@ -18,10 +18,10 @@ Use these documents to:
 If you only need to review the frozen repository line:
 
 1. Install the CPU review dependencies from [../../requirements.txt](../../requirements.txt).
-2. Run `python tools/run_release_checks.py`.
-3. Run `python tools/demo_recommend.py summary`.
-4. Use `python tools/demo_recommend.py list-cases` and
-   `python tools/demo_recommend.py show-case --case boundary_11_30` for case
+2. Run `python tools/release/run_release_checks.py`.
+3. Run `python tools/demo/demo_recommend.py summary`.
+4. Use `python tools/demo/demo_recommend.py list-cases` and
+   `python tools/demo/demo_recommend.py show-case --case boundary_11_30` for case
    replay.
 
 If you need the full training and evaluation path, start from
@@ -55,14 +55,14 @@ If you need the full training and evaluation path, start from
 ## Canonical Review Commands
 
 ```bash
-python tools/run_release_checks.py
-python tools/demo_recommend.py summary
-python tools/demo_recommend.py list-cases
-python tools/demo_recommend.py show-case --case boundary_11_30
+python tools/release/run_release_checks.py
+python tools/demo/demo_recommend.py summary
+python tools/demo/demo_recommend.py list-cases
+python tools/demo/demo_recommend.py show-case --case boundary_11_30
 ```
 
 For Windows PowerShell reviewers, a thin wrapper is also provided:
 
 ```powershell
-.\tools\run_release_checks.ps1
+.\tools\release\run_release_checks.ps1
 ```

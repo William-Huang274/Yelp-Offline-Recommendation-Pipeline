@@ -13,7 +13,7 @@
 1. [current_frozen_line.zh-CN.md](./current_frozen_line.zh-CN.md)
 2. [data_lineage_and_storage.md](./data_lineage_and_storage.md)
 3. [evaluation_and_casebook.md](./evaluation_and_casebook.md)
-4. `python tools/run_release_checks.py`
+4. `python tools/release/run_release_checks.py`
 
 复现主线时参考 [reproduce_mainline.md](./reproduce_mainline.md)。
 
@@ -45,14 +45,14 @@
 ## 常用命令
 
 ```bash
-python tools/run_release_checks.py
-python tools/demo_recommend.py summary
-python tools/demo_recommend.py list-cases
-python tools/demo_recommend.py show-case --case boundary_11_30
+python tools/release/run_release_checks.py
+python tools/demo/demo_recommend.py summary
+python tools/demo/demo_recommend.py list-cases
+python tools/demo/demo_recommend.py show-case --case boundary_11_30
 ```
 
 PowerShell 也可以直接运行：
 
 ```powershell
-.\tools\run_release_checks.ps1
+.\tools\release\run_release_checks.ps1
 ```

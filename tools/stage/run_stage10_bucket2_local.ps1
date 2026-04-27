@@ -20,7 +20,7 @@ function Require-Path([string]$Label, [string]$PathValue, [string]$Hint) {
     }
 }
 
-$RepoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
+$RepoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 $env:BDA_PROJECT_ROOT = $RepoRoot
 
 $Stage09Root = if ($env:STAGE09_ROOT) { $env:STAGE09_ROOT } else { Join-Path $RepoRoot "data\output\09_candidate_fusion_bucket2_baseline_fixed_sourceparity" }
@@ -29,7 +29,7 @@ $TextMatchRunDir = if ($env:TEXT_MATCH_RUN_DIR) { $env:TEXT_MATCH_RUN_DIR } else
 $GroupGapRunDir = if ($env:GROUP_GAP_RUN_DIR) { $env:GROUP_GAP_RUN_DIR } else { Join-Path $RepoRoot "data\output\09_stage10_group_gap_features_v1\20260323_174757_full_stage09_stage10_group_gap_features_v1_build" }
 $FixedEvalCohortPath = if ($env:FIXED_EVAL_COHORT_PATH) { $env:FIXED_EVAL_COHORT_PATH } else { Join-Path $RepoRoot "data\output\fixed_eval_cohorts\bucket2_gate_eval_users_5344_useridx.csv" }
 
-Require-Path "Stage09 bucket2 source-parity root" $Stage09Root "Run python tools/cloud_stage11.py pull --item stage09_bucket2_sourceparity, or set STAGE09_RUN_DIR to an existing bucket2 Stage09 run."
+Require-Path "Stage09 bucket2 source-parity root" $Stage09Root "Run python tools/stage/cloud_stage11.py pull --item stage09_bucket2_sourceparity, or set STAGE09_RUN_DIR to an existing bucket2 Stage09 run."
 Require-Path "Stage09 bucket2 run dir" $Stage09RunDir "Use STAGE09_RUN_DIR to point to the exact bucket2 Stage09 run you want to replay."
 Require-Path "Text-match run dir" $TextMatchRunDir "This is required by the frozen bucket2 Stage10 feature contract."
 Require-Path "Group-gap run dir" $GroupGapRunDir "This is required by the frozen bucket2 Stage10 feature contract."

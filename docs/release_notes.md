@@ -34,12 +34,12 @@ This release does not include Stage12 experiments or any A3B model line.
 ## Serving Checks
 
 ```bash
-python tools/batch_infer_demo.py --input config/demo/replay_request_input.json --format json
-python tools/batch_infer_demo.py --request-id stage11_b5_u000097 --strategy reward_rerank --stage09-mode lookup_live --stage10-mode xgb_live --stage11-mode replay
-python tools/batch_infer_demo.py --request-id stage11_b5_u000097 --strategy reward_rerank --simulate-stage11-cache-miss
-python tools/mock_serving_api.py --self-test
-python tools/load_test_mock_serving.py --request-sample-size 5 --warmup-requests 5 --requests 20 --concurrency 2 --strategy reward_rerank --stage09-mode lookup_live --stage10-mode xgb_live --stage11-mode replay --traffic-profile mixed --cache-miss-rate 0.2 --strategy-failure-rate 0.1 --xgboost-rate 0.1 --output data/output/serving_validation/latest_summary.json
-python tools/export_serving_validation_report.py --input data/output/serving_validation/latest_summary.json --output docs/serving_validation_report.md --strict
+python tools/serving/batch_infer_demo.py --input config/demo/replay_request_input.json --format json
+python tools/serving/batch_infer_demo.py --request-id stage11_b5_u000097 --strategy reward_rerank --stage09-mode lookup_live --stage10-mode xgb_live --stage11-mode replay
+python tools/serving/batch_infer_demo.py --request-id stage11_b5_u000097 --strategy reward_rerank --simulate-stage11-cache-miss
+python tools/serving/mock_serving_api.py --self-test
+python tools/serving/load_test_mock_serving.py --request-sample-size 5 --warmup-requests 5 --requests 20 --concurrency 2 --strategy reward_rerank --stage09-mode lookup_live --stage10-mode xgb_live --stage11-mode replay --traffic-profile mixed --cache-miss-rate 0.2 --strategy-failure-rate 0.1 --xgboost-rate 0.1 --output data/output/serving_validation/latest_summary.json
+python tools/serving/export_serving_validation_report.py --input data/output/serving_validation/latest_summary.json --output docs/serving_validation_report.md --strict
 ```
 
 Expected serving-level signals:
@@ -62,7 +62,7 @@ Rollback is represented as a pointer change rather than a code rewrite.
 ## Validation
 
 ```bash
-python tools/run_full_chain_smoke.py
-python tools/run_release_checks.py --skip-pytest
+python tools/release/run_full_chain_smoke.py
+python tools/release/run_release_checks.py --skip-pytest
 pytest tests/test_demo_tools.py tests/test_public_release_surface.py
 ```

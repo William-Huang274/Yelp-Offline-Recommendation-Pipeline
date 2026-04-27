@@ -5,7 +5,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$RepoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
+$RepoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 $env:BDA_PROJECT_ROOT = $RepoRoot
 $env:PARQUET_BASE_DIR = if ($env:PARQUET_BASE_DIR) { $env:PARQUET_BASE_DIR } else { Join-Path $RepoRoot "data\parquet" }
 $env:OUTPUT_ROOT_DIR = if ($env:OUTPUT_ROOT_DIR) { $env:OUTPUT_ROOT_DIR } else { Join-Path $RepoRoot "data\output\09_candidate_fusion_structural_v5_sourceparity" }

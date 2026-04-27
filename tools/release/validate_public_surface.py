@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 LINK_RE = re.compile(r"\]\((?!https?://|#)([^)]+)\)")
 
 
@@ -42,11 +42,11 @@ PUBLIC_FILES = [
     REPO_ROOT / "config" / "demo" / "batch_infer_demo_input.json",
     REPO_ROOT / "config" / "demo" / "full_chain_minimal_input.json",
     REPO_ROOT / "config" / "demo" / "stage11_model_prompt_smoke_case.json",
-    REPO_ROOT / "tools" / "export_serving_validation_report.py",
-    REPO_ROOT / "tools" / "load_test_mock_serving.py",
-    REPO_ROOT / "tools" / "run_stage01_11_minidemo.py",
-    REPO_ROOT / "tools" / "run_full_chain_smoke.py",
-    REPO_ROOT / "tools" / "run_stage11_model_prompt_smoke.py",
+    REPO_ROOT / "tools" / "serving" / "export_serving_validation_report.py",
+    REPO_ROOT / "tools" / "serving" / "load_test_mock_serving.py",
+    REPO_ROOT / "tools" / "demo" / "run_stage01_11_minidemo.py",
+    REPO_ROOT / "tools" / "release" / "run_full_chain_smoke.py",
+    REPO_ROOT / "tools" / "stage" / "run_stage11_model_prompt_smoke.py",
     REPO_ROOT / "data" / "output" / "current_release" / "manifest.json",
     REPO_ROOT / "data" / "output" / "current_release" / "stage10" / "stage10_current_mainline_summary.json",
     REPO_ROOT / "data" / "output" / "current_release" / "stage11" / "experts" / "bucket5_11_30_v101_run_meta.json",

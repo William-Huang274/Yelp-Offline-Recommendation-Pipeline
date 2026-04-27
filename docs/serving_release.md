@@ -55,15 +55,15 @@ There are two batch-style ways to interact with the current line.
 Use the checked-in compact artifacts and demo helpers:
 
 ```bash
-python tools/run_release_checks.py --skip-pytest
-python tools/batch_infer_demo.py
-python tools/batch_infer_demo.py --strategy baseline
-python tools/batch_infer_demo.py --strategy xgboost
-python tools/batch_infer_demo.py --strategy reward_rerank
-python tools/mock_serving_api.py --self-test
-python tools/load_test_mock_serving.py --requests 20 --concurrency 4 --simulate-fallback-every 5
-python tools/demo_recommend.py
-python tools/demo_recommend.py show-case --case boundary_11_30
+python tools/release/run_release_checks.py --skip-pytest
+python tools/serving/batch_infer_demo.py
+python tools/serving/batch_infer_demo.py --strategy baseline
+python tools/serving/batch_infer_demo.py --strategy xgboost
+python tools/serving/batch_infer_demo.py --strategy reward_rerank
+python tools/serving/mock_serving_api.py --self-test
+python tools/serving/load_test_mock_serving.py --requests 20 --concurrency 4 --simulate-fallback-every 5
+python tools/demo/demo_recommend.py
+python tools/demo/demo_recommend.py show-case --case boundary_11_30
 ```
 
 This is the lightweight path used by the README and demo validation commands.
@@ -73,28 +73,28 @@ This is the lightweight path used by the README and demo validation commands.
 Use the launcher or local wrapper surface:
 
 - Stage09 local wrapper:
-  [../tools/run_stage09_local.ps1](../tools/run_stage09_local.ps1)
+  [../tools/stage/run_stage09_local.ps1](../tools/stage/run_stage09_local.ps1)
 - Stage10 local wrapper:
-  [../tools/run_stage10_bucket5_local.ps1](../tools/run_stage10_bucket5_local.ps1)
+  [../tools/stage/run_stage10_bucket5_local.ps1](../tools/stage/run_stage10_bucket5_local.ps1)
 - Stage11 cloud inventory / explicit pull helper:
-  [../tools/cloud_stage11.py](../tools/cloud_stage11.py)
+  [../tools/stage/cloud_stage11.py](../tools/stage/cloud_stage11.py)
 
 ### Mock Serving Path
 
 The repository exposes lightweight tools on top of the checked-in frozen line:
 
 - batch inference demo:
-  [../tools/batch_infer_demo.py](../tools/batch_infer_demo.py)
+  [../tools/serving/batch_infer_demo.py](../tools/serving/batch_infer_demo.py)
 - HTTP mock serving surface:
-  [../tools/mock_serving_api.py](../tools/mock_serving_api.py)
+  [../tools/serving/mock_serving_api.py](../tools/serving/mock_serving_api.py)
 - local load test:
-  [../tools/load_test_mock_serving.py](../tools/load_test_mock_serving.py)
+  [../tools/serving/load_test_mock_serving.py](../tools/serving/load_test_mock_serving.py)
 
 Example:
 
 ```bash
-python tools/batch_infer_demo.py --format json
-python tools/mock_serving_api.py --host 127.0.0.1 --port 8000
+python tools/serving/batch_infer_demo.py --format json
+python tools/serving/mock_serving_api.py --host 127.0.0.1 --port 8000
 ```
 
 The API surface is intentionally small:

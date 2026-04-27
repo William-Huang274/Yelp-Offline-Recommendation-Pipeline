@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 PYTHON = sys.executable
 
 
@@ -82,7 +82,7 @@ def main() -> int:
     for name, command in stage_help_steps:
         ok &= run_step(name, command)
 
-    ok &= run_step("stage01_11_minidemo", [PYTHON, "tools/run_stage01_11_minidemo.py"])
+    ok &= run_step("stage01_11_minidemo", [PYTHON, "tools/demo/run_stage01_11_minidemo.py"])
 
     pwsh = powershell_command()
     if pwsh is None:
@@ -95,35 +95,35 @@ def main() -> int:
         )
         ok &= run_step(
             "stage09_local_check",
-            [*pwsh, "tools/run_stage09_local.ps1", "-CheckOnly"],
+            [*pwsh, "tools/stage/run_stage09_local.ps1", "-CheckOnly"],
             optional=local_optional,
             optional_hint=local_hint,
         )
         ok &= run_step(
             "stage10_bucket5_local_check",
-            [*pwsh, "tools/run_stage10_bucket5_local.ps1", "-CheckOnly"],
+            [*pwsh, "tools/stage/run_stage10_bucket5_local.ps1", "-CheckOnly"],
             optional=local_optional,
             optional_hint=local_hint,
         )
         ok &= run_step(
             "stage10_bucket2_local_check",
-            [*pwsh, "tools/run_stage10_bucket2_local.ps1", "-CheckOnly"],
+            [*pwsh, "tools/stage/run_stage10_bucket2_local.ps1", "-CheckOnly"],
             optional=True,
             optional_hint="Pull stage09_bucket2_sourceparity from cloud if you need full bucket2 local replay.",
         )
 
-    ok &= run_step("stage11_model_prompt_smoke", [PYTHON, "tools/run_stage11_model_prompt_smoke.py"])
-    ok &= run_step("stage11_demo_summary", [PYTHON, "tools/demo_recommend.py", "summary"])
+    ok &= run_step("stage11_model_prompt_smoke", [PYTHON, "tools/stage/run_stage11_model_prompt_smoke.py"])
+    ok &= run_step("stage11_demo_summary", [PYTHON, "tools/demo/demo_recommend.py", "summary"])
     sample_request_id = "stage11_b5_u000097"
     ok &= run_step(
         "serving_replay_baseline",
-        [PYTHON, "tools/batch_infer_demo.py", "--request-id", sample_request_id, "--strategy", "baseline"],
+        [PYTHON, "tools/serving/batch_infer_demo.py", "--request-id", sample_request_id, "--strategy", "baseline"],
     )
     ok &= run_step(
         "serving_replay_xgboost_live",
         [
             PYTHON,
-            "tools/batch_infer_demo.py",
+            "tools/serving/batch_infer_demo.py",
             "--request-id",
             sample_request_id,
             "--strategy",
@@ -140,7 +140,7 @@ def main() -> int:
         "serving_replay_reward_cache_miss",
         [
             PYTHON,
-            "tools/batch_infer_demo.py",
+            "tools/serving/batch_infer_demo.py",
             "--request-id",
             sample_request_id,
             "--strategy",
@@ -148,10 +148,10 @@ def main() -> int:
             "--simulate-stage11-cache-miss",
         ],
     )
-    ok &= run_step("stage11_mock_serving_self_test", [PYTHON, "tools/mock_serving_api.py", "--self-test"])
+    ok &= run_step("stage11_mock_serving_self_test", [PYTHON, "tools/serving/mock_serving_api.py", "--self-test"])
     ok &= run_step(
         "mock_serving_load_test",
-        [PYTHON, "tools/load_test_mock_serving.py", "--requests", "6", "--concurrency", "2", "--simulate-fallback-every", "3"],
+        [PYTHON, "tools/serving/load_test_mock_serving.py", "--requests", "6", "--concurrency", "2", "--simulate-fallback-every", "3"],
     )
 
     if ok:

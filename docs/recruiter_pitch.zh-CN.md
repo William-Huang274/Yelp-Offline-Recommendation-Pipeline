@@ -19,9 +19,9 @@
 | 重排 / rescue | Stage11 bounded reward-model rerank，只在 shortlist 上做有边界救援 |
 | 冷启动 | `bucket2` 覆盖冷启动与轻量用户，脚本支持 `0-3` / `4-6` cohort |
 | 发布意识 | `data/output/_prod_runs` 记录 champion / fallback / baseline pointer |
-| 服务意识 | replay-first demo、`tools/mock_serving_api.py`、混合流量压测和 serving validation report |
+| 服务意识 | replay-first demo、`tools/serving/mock_serving_api.py`、混合流量压测和 serving validation report |
 | 稳定性意识 | `config/serving.yaml` 管理策略、版本、fallback 和 latency budget |
-| 可复现性 | `tools/run_full_chain_smoke.py` 和 `tools/run_stage01_11_minidemo.py` |
+| 可复现性 | `tools/release/run_full_chain_smoke.py` 和 `tools/demo/run_stage01_11_minidemo.py` |
 
 ## 当前不是线上经验
 
@@ -37,11 +37,11 @@
 ## 面试演示命令
 
 ```bash
-python tools/run_stage01_11_minidemo.py
-python tools/batch_infer_demo.py --request-id stage11_b5_u000097 --strategy reward_rerank --stage09-mode lookup_live --stage10-mode xgb_live --stage11-mode replay
-python tools/mock_serving_api.py --self-test
-python tools/load_test_mock_serving.py --request-sample-size 5 --warmup-requests 5 --requests 20 --concurrency 2 --strategy reward_rerank --traffic-profile mixed --cache-miss-rate 0.2 --strategy-failure-rate 0.1 --xgboost-rate 0.1
-python tools/run_release_checks.py --skip-pytest
+python tools/demo/run_stage01_11_minidemo.py
+python tools/serving/batch_infer_demo.py --request-id stage11_b5_u000097 --strategy reward_rerank --stage09-mode lookup_live --stage10-mode xgb_live --stage11-mode replay
+python tools/serving/mock_serving_api.py --self-test
+python tools/serving/load_test_mock_serving.py --request-sample-size 5 --warmup-requests 5 --requests 20 --concurrency 2 --strategy reward_rerank --traffic-profile mixed --cache-miss-rate 0.2 --strategy-failure-rate 0.1 --xgboost-rate 0.1
+python tools/release/run_release_checks.py --skip-pytest
 ```
 
 

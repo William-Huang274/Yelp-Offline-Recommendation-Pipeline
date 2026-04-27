@@ -36,7 +36,7 @@ challenges.
 | deliverable from briefing | repository support added in this pack | still manual / outside repository |
 | --- | --- | --- |
 | project proposal | [proposal_template_content.md](./proposal_template_content.md), [teacher_requirement_alignment.md](./teacher_requirement_alignment.md), [data_lineage_and_storage.md](./data_lineage_and_storage.md) | team names, final effort estimates, final project scope wording |
-| demo presentation | [demo_runbook.md](./demo_runbook.md), `python tools/demo_recommend.py ...`, [evaluation_and_casebook.md](./evaluation_and_casebook.md) | final slide design and speaker allocation |
+| demo presentation | [demo_runbook.md](./demo_runbook.md), `python tools/demo/demo_recommend.py ...`, [evaluation_and_casebook.md](./evaluation_and_casebook.md) | final slide design and speaker allocation |
 | final project report | [final_report_outline.md](./final_report_outline.md), [environment_setup.md](./environment_setup.md), [challenges_and_tradeoffs.md](./challenges_and_tradeoffs.md) | final narrative writing, screenshots, and team-authored conclusion |
 | source code submission | repository code, launchers, frozen result surface, validators | none |
 | individual reflection report | not a shared repository artifact | each student must write and submit separately |

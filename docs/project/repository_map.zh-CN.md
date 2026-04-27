@@ -37,11 +37,11 @@
   [../../scripts/launchers/stage11_bucket5_train.sh](../../scripts/launchers/stage11_bucket5_train.sh)，
   [../../scripts/launchers/stage11_bucket5_eval.sh](../../scripts/launchers/stage11_bucket5_eval.sh)
 - 公开校验入口：
-  [../../tools/run_release_checks.py](../../tools/run_release_checks.py)
+  [../../tools/release/run_release_checks.py](../../tools/release/run_release_checks.py)
 - Demo 工具：
-  [../../tools/demo_recommend.py](../../tools/demo_recommend.py)，
-  [../../tools/batch_infer_demo.py](../../tools/batch_infer_demo.py)，
-  [../../tools/mock_serving_api.py](../../tools/mock_serving_api.py)
+  [../../tools/demo/demo_recommend.py](../../tools/demo/demo_recommend.py)，
+  [../../tools/serving/batch_infer_demo.py](../../tools/serving/batch_infer_demo.py)，
+  [../../tools/serving/mock_serving_api.py](../../tools/serving/mock_serving_api.py)
 
 ## 历史材料说明
 

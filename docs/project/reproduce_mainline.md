@@ -24,9 +24,9 @@ python -m pip install -r requirements.txt
 ### Step 2: Run Repository Validation
 
 ```bash
-python tools/run_release_checks.py
-python tools/run_stage11_model_prompt_smoke.py
-python tools/run_full_chain_smoke.py
+python tools/release/run_release_checks.py
+python tools/stage/run_stage11_model_prompt_smoke.py
+python tools/release/run_full_chain_smoke.py
 ```
 
 Expected result:
@@ -40,9 +40,9 @@ Expected result:
 ### Step 3: Inspect The Frozen Summary
 
 ```bash
-python tools/demo_recommend.py summary
-python tools/demo_recommend.py list-cases
-python tools/demo_recommend.py show-case --case boundary_11_30
+python tools/demo/demo_recommend.py summary
+python tools/demo/demo_recommend.py list-cases
+python tools/demo/demo_recommend.py show-case --case boundary_11_30
 ```
 
 This path does not require a GPU.
@@ -176,7 +176,7 @@ Use the frozen repository line when:
 ## 5. Reviewer-Friendly Minimal Command Set
 
 ```bash
-python tools/run_release_checks.py
-python tools/demo_recommend.py summary
-python tools/demo_recommend.py show-case --case mid_31_40
+python tools/release/run_release_checks.py
+python tools/demo/demo_recommend.py summary
+python tools/demo/demo_recommend.py show-case --case mid_31_40
 ```

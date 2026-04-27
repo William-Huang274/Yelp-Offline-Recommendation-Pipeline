@@ -170,12 +170,12 @@ python -m venv .venv
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 
-python tools/run_release_checks.py --skip-pytest
-python tools/run_stage11_model_prompt_smoke.py
-python tools/run_full_chain_smoke.py
-python tools/run_stage01_11_minidemo.py
-.\tools\run_stage09_local.ps1 -CheckOnly
-.\tools\run_stage10_bucket5_local.ps1 -CheckOnly
+python tools/release/run_release_checks.py --skip-pytest
+python tools/stage/run_stage11_model_prompt_smoke.py
+python tools/release/run_full_chain_smoke.py
+python tools/demo/run_stage01_11_minidemo.py
+.\tools\stage\run_stage09_local.ps1 -CheckOnly
+.\tools\stage\run_stage10_bucket5_local.ps1 -CheckOnly
 ```
 
 ### B. Replay-First Serving Demo
@@ -184,21 +184,21 @@ python tools/run_stage01_11_minidemo.py
 而不是手写候选 JSON。
 
 ```powershell
-python tools/batch_infer_demo.py --input config/demo/replay_request_input.json --format json
-python tools/batch_infer_demo.py --request-id stage11_b5_u000097 --strategy reward_rerank --debug --include-fallback-demo
-python tools/batch_infer_demo.py --request-id stage11_b5_u000097 --strategy reward_rerank --stage09-mode lookup_live --stage10-mode xgb_live --stage11-mode replay
-python tools/batch_infer_demo.py --request-id stage11_b5_u000097 --strategy reward_rerank --simulate-stage11-cache-miss
-python tools/mock_serving_api.py --self-test
-python tools/load_test_mock_serving.py --request-sample-size 5 --warmup-requests 5 --requests 20 --concurrency 2 --strategy reward_rerank --stage09-mode lookup_live --stage10-mode xgb_live --stage11-mode replay --traffic-profile mixed --cache-miss-rate 0.2 --strategy-failure-rate 0.1 --xgboost-rate 0.1 --output data/output/serving_validation/latest_summary.json
-python tools/export_serving_validation_report.py --input data/output/serving_validation/latest_summary.json --output docs/serving_validation_report.md --strict
-python tools/demo_recommend.py show-case --case boundary_11_30
-python tools/demo_recommend.py
+python tools/serving/batch_infer_demo.py --input config/demo/replay_request_input.json --format json
+python tools/serving/batch_infer_demo.py --request-id stage11_b5_u000097 --strategy reward_rerank --debug --include-fallback-demo
+python tools/serving/batch_infer_demo.py --request-id stage11_b5_u000097 --strategy reward_rerank --stage09-mode lookup_live --stage10-mode xgb_live --stage11-mode replay
+python tools/serving/batch_infer_demo.py --request-id stage11_b5_u000097 --strategy reward_rerank --simulate-stage11-cache-miss
+python tools/serving/mock_serving_api.py --self-test
+python tools/serving/load_test_mock_serving.py --request-sample-size 5 --warmup-requests 5 --requests 20 --concurrency 2 --strategy reward_rerank --stage09-mode lookup_live --stage10-mode xgb_live --stage11-mode replay --traffic-profile mixed --cache-miss-rate 0.2 --strategy-failure-rate 0.1 --xgboost-rate 0.1 --output data/output/serving_validation/latest_summary.json
+python tools/serving/export_serving_validation_report.py --input data/output/serving_validation/latest_summary.json --output docs/serving_validation_report.md --strict
+python tools/demo/demo_recommend.py show-case --case boundary_11_30
+python tools/demo/demo_recommend.py
 ```
 
 旧的手写 candidate contract 仍可用于极小 smoke：
 
 ```powershell
-python tools/batch_infer_demo.py --input config/demo/batch_infer_demo_input.json --strategy reward_rerank
+python tools/serving/batch_infer_demo.py --input config/demo/batch_infer_demo_input.json --strategy reward_rerank
 ```
 
 如果本地没有大体量冻结 replay artifact，`tools/replay_store.py` 和
@@ -213,9 +213,9 @@ $env:BDA_CLOUD_HOST="connect.westb.seetacloud.com"
 $env:BDA_CLOUD_PORT="20804"
 $env:BDA_CLOUD_USER="root"
 
-python tools/cloud_stage11.py local-check
-python tools/cloud_stage11.py inventory
-python tools/cloud_stage11.py print-ssh
+python tools/stage/cloud_stage11.py local-check
+python tools/stage/cloud_stage11.py inventory
+python tools/stage/cloud_stage11.py print-ssh
 ```
 
 ### D. Stage11 奖励模型检查
@@ -224,7 +224,7 @@ python tools/cloud_stage11.py print-ssh
 
 ```powershell
 python -m pip install -r requirements-stage11-qlora.txt
-python tools/run_stage11_model_prompt_smoke.py
+python tools/stage/run_stage11_model_prompt_smoke.py
 ```
 
 完整复现路径和 launcher 入口见：

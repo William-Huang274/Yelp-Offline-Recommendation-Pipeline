@@ -34,15 +34,15 @@ These dependencies are sufficient for:
 ### Recommended Commands
 
 ```bash
-python tools/run_release_checks.py
-python tools/demo_recommend.py summary
-python tools/cloud_stage11.py local-check
+python tools/release/run_release_checks.py
+python tools/demo/demo_recommend.py summary
+python tools/stage/cloud_stage11.py local-check
 ```
 
 For Windows PowerShell:
 
 ```powershell
-.\tools\run_release_checks.ps1
+.\tools\release\run_release_checks.ps1
 ```
 
 ## 2. Full Pipeline Environment
@@ -83,7 +83,7 @@ Current Stage11 model surfaces:
 The quickest public verification for that split is:
 
 ```bash
-python tools/run_stage11_model_prompt_smoke.py
+python tools/stage/run_stage11_model_prompt_smoke.py
 ```
 
 ## 3. Windows-Specific Spark Notes
@@ -135,12 +135,12 @@ Use these when you want the canonical pipeline entry points:
 
 Use these when you want review-time validation only:
 
-- [../../tools/validate_public_surface.py](../../tools/validate_public_surface.py)
-- [../../tools/validate_current_release.py](../../tools/validate_current_release.py)
-- [../../tools/run_release_checks.py](../../tools/run_release_checks.py)
-- [../../tools/run_full_chain_smoke.py](../../tools/run_full_chain_smoke.py)
-- [../../tools/run_stage11_model_prompt_smoke.py](../../tools/run_stage11_model_prompt_smoke.py)
-- [../../tools/cloud_stage11.py](../../tools/cloud_stage11.py)
+- [../../tools/release/validate_public_surface.py](../../tools/release/validate_public_surface.py)
+- [../../tools/release/validate_current_release.py](../../tools/release/validate_current_release.py)
+- [../../tools/release/run_release_checks.py](../../tools/release/run_release_checks.py)
+- [../../tools/release/run_full_chain_smoke.py](../../tools/release/run_full_chain_smoke.py)
+- [../../tools/stage/run_stage11_model_prompt_smoke.py](../../tools/stage/run_stage11_model_prompt_smoke.py)
+- [../../tools/stage/cloud_stage11.py](../../tools/stage/cloud_stage11.py)
 
 Cloud helper notes:
 

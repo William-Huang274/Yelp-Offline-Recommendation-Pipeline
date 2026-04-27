@@ -18,7 +18,7 @@ function Require-Path([string]$Label, [string]$PathValue, [string]$Hint) {
     }
 }
 
-$RepoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
+$RepoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 $env:BDA_PROJECT_ROOT = $RepoRoot
 
 $Stage09RunDir = if ($env:STAGE09_RUN_DIR) { $env:STAGE09_RUN_DIR } else { Join-Path $RepoRoot "data\output\09_candidate_fusion_structural_v5_sourceparity\20260324_030511_full_stage09_candidate_fusion" }
@@ -30,11 +30,11 @@ $MatchChannelRoot = if ($env:MATCH_CHANNEL_ROOT) { $env:MATCH_CHANNEL_ROOT } els
 $ProfileRunDir = if ($env:PROFILE_RUN_DIR) { $env:PROFILE_RUN_DIR } else { (Latest-RunDir $UserIntentRoot).FullName }
 $MatchChannelRunDir = if ($env:MATCH_CHANNEL_RUN_DIR) { $env:MATCH_CHANNEL_RUN_DIR } else { (Latest-RunDir $MatchChannelRoot).FullName }
 
-Require-Path "Stage09 run dir" $Stage09RunDir "Run .\tools\run_stage09_local.ps1 or pull the canonical run from cloud if needed."
+Require-Path "Stage09 run dir" $Stage09RunDir "Run .\tools\stage\run_stage09_local.ps1 or pull the canonical run from cloud if needed."
 Require-Path "Text-match run dir" $TextMatchRunDir "This is required by the frozen Stage10 feature contract."
 Require-Path "Group-gap run dir" $GroupGapRunDir "This is required by the frozen Stage10 feature contract."
-Require-Path "Source-parity profile root" $UserIntentRoot "Run python tools/cloud_stage11.py pull --item stage10_profile_sourceparity, or rebuild the profile asset locally."
-Require-Path "Source-parity match-channel root" $MatchChannelRoot "Run python tools/cloud_stage11.py pull --item stage10_match_channels_sourceparity, or rebuild the match-channel asset locally."
+Require-Path "Source-parity profile root" $UserIntentRoot "Run python tools/stage/cloud_stage11.py pull --item stage10_profile_sourceparity, or rebuild the profile asset locally."
+Require-Path "Source-parity match-channel root" $MatchChannelRoot "Run python tools/stage/cloud_stage11.py pull --item stage10_match_channels_sourceparity, or rebuild the match-channel asset locally."
 Require-Path "Profile run parquet" (Join-Path $ProfileRunDir "user_intent_profile_v2.parquet") "Use PROFILE_RUN_DIR to point to a valid profile run."
 Require-Path "Match channel parquet" (Join-Path $MatchChannelRunDir "user_business_match_channels_v2_user_item.parquet") "Use MATCH_CHANNEL_RUN_DIR to point to a valid match-channel run."
 

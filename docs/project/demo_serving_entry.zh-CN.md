@@ -28,20 +28,20 @@ Stage09 materialized candidate lookup
 
 | 场景 | 入口 | 作用 |
 | --- | --- | --- |
-| 冻结结果摘要 | `python tools/demo_recommend.py summary` | 展示 Stage09/10/11 当前冻结指标 |
-| 案例回放 | `python tools/demo_recommend.py show-case --case boundary_11_30` | 展示 Stage11 bounded rescue 案例 |
-| 单请求 mock inference | `python tools/batch_infer_demo.py ...` | 回放 Stage09/10/11 request-level ranking path |
-| HTTP mock serving | `python tools/mock_serving_api.py` | 暴露本地 `/health` 和 `/rank` |
-| 短压测 | `python tools/load_test_mock_serving.py ...` | 快速验证 mixed traffic、cache miss 和 fallback |
-| 工程压测 | `python tools/run_serving_engineering_load.py ...` | 生成持续压测 JSON 与 Markdown 报告 |
+| 冻结结果摘要 | `python tools/demo/demo_recommend.py summary` | 展示 Stage09/10/11 当前冻结指标 |
+| 案例回放 | `python tools/demo/demo_recommend.py show-case --case boundary_11_30` | 展示 Stage11 bounded rescue 案例 |
+| 单请求 mock inference | `python tools/serving/batch_infer_demo.py ...` | 回放 Stage09/10/11 request-level ranking path |
+| HTTP mock serving | `python tools/serving/mock_serving_api.py` | 暴露本地 `/health` 和 `/rank` |
+| 短压测 | `python tools/serving/load_test_mock_serving.py ...` | 快速验证 mixed traffic、cache miss 和 fallback |
+| 工程压测 | `python tools/serving/run_serving_engineering_load.py ...` | 生成持续压测 JSON 与 Markdown 报告 |
 
 ## 快速验证
 
 ```powershell
 cd D:\5006_BDA_project
-python tools/run_release_checks.py --skip-pytest
-python tools/demo_recommend.py summary
-python tools/demo_recommend.py show-case --case boundary_11_30
+python tools/release/run_release_checks.py --skip-pytest
+python tools/demo/demo_recommend.py summary
+python tools/demo/demo_recommend.py show-case --case boundary_11_30
 ```
 
 ## 单请求 Replay
@@ -49,19 +49,19 @@ python tools/demo_recommend.py show-case --case boundary_11_30
 Cache hit + Stage11 rescue：
 
 ```powershell
-python tools/batch_infer_demo.py --request-id stage11_b5_u001072 --strategy reward_rerank --stage09-mode lookup_live --stage10-mode xgb_live --stage11-mode replay --include-fallback-demo
+python tools/serving/batch_infer_demo.py --request-id stage11_b5_u001072 --strategy reward_rerank --stage09-mode lookup_live --stage10-mode xgb_live --stage11-mode replay --include-fallback-demo
 ```
 
 另一个 replay 用户：
 
 ```powershell
-python tools/batch_infer_demo.py --request-id stage11_b5_u001940 --strategy reward_rerank --stage09-mode lookup_live --stage10-mode xgb_live --stage11-mode replay --include-fallback-demo
+python tools/serving/batch_infer_demo.py --request-id stage11_b5_u001940 --strategy reward_rerank --stage09-mode lookup_live --stage10-mode xgb_live --stage11-mode replay --include-fallback-demo
 ```
 
 Cache miss + Stage10 fallback：
 
 ```powershell
-python tools/batch_infer_demo.py --request-id stage11_b5_u006562 --strategy reward_rerank --stage09-mode lookup_live --stage10-mode xgb_live --stage11-mode replay --simulate-stage11-cache-miss
+python tools/serving/batch_infer_demo.py --request-id stage11_b5_u006562 --strategy reward_rerank --stage09-mode lookup_live --stage10-mode xgb_live --stage11-mode replay --simulate-stage11-cache-miss
 ```
 
 关键字段：
@@ -77,20 +77,20 @@ python tools/batch_infer_demo.py --request-id stage11_b5_u006562 --strategy rewa
 服务自测：
 
 ```powershell
-python tools/mock_serving_api.py --self-test
+python tools/serving/mock_serving_api.py --self-test
 ```
 
 启动 `/rank`：
 
 ```powershell
-python tools/mock_serving_api.py --host 127.0.0.1 --port 18081
+python tools/serving/mock_serving_api.py --host 127.0.0.1 --port 18081
 ```
 
 短压测与报告导出：
 
 ```powershell
-python tools/load_test_mock_serving.py --url http://127.0.0.1:18081/rank --request-sample-size 5 --warmup-requests 5 --requests 20 --concurrency 2 --strategy reward_rerank --stage09-mode lookup_live --stage10-mode xgb_live --stage11-mode replay --traffic-profile mixed --cache-miss-rate 0.2 --strategy-failure-rate 0.1 --xgboost-rate 0.1 --output data/output/serving_validation/latest_summary.json
-python tools/export_serving_validation_report.py --input data/output/serving_validation/latest_summary.json --output docs/serving_validation_report.md --strict
+python tools/serving/load_test_mock_serving.py --url http://127.0.0.1:18081/rank --request-sample-size 5 --warmup-requests 5 --requests 20 --concurrency 2 --strategy reward_rerank --stage09-mode lookup_live --stage10-mode xgb_live --stage11-mode replay --traffic-profile mixed --cache-miss-rate 0.2 --strategy-failure-rate 0.1 --xgboost-rate 0.1 --output data/output/serving_validation/latest_summary.json
+python tools/serving/export_serving_validation_report.py --input data/output/serving_validation/latest_summary.json --output docs/serving_validation_report.md --strict
 ```
 
 ## 工程压测
@@ -99,20 +99,20 @@ python tools/export_serving_validation_report.py --input data/output/serving_val
 
 ```powershell
 $env:BDA_STAGE10_LIVE_USER_CACHE_SIZE="1024"
-python tools/mock_serving_api.py --host 127.0.0.1 --port 18081
+python tools/serving/mock_serving_api.py --host 127.0.0.1 --port 18081
 ```
 
 Linux shell：
 
 ```bash
 export BDA_STAGE10_LIVE_USER_CACHE_SIZE=1024
-python tools/mock_serving_api.py --host 127.0.0.1 --port 18081
+python tools/serving/mock_serving_api.py --host 127.0.0.1 --port 18081
 ```
 
 30 分钟 HTTP 压测：
 
 ```bash
-python tools/run_serving_engineering_load.py \
+python tools/serving/run_serving_engineering_load.py \
   --url http://127.0.0.1:18081/rank \
   --duration-s 1800 \
   --warmup-requests 600 \

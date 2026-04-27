@@ -10,7 +10,7 @@ from typing import Any
 import pandas as pd
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 REQUEST_ID_TEMPLATE = "stage11_b5_u{user_idx:06d}"
 REQUEST_ID_RE = re.compile(r"^stage11_b5_u(?P<user_idx>\d+)$")
 

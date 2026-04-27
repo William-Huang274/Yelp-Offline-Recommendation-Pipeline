@@ -21,7 +21,7 @@ from stage10_live_local import load_stage09_live_candidates, score_stage10_live
 from stage11_live_remote import maybe_run_stage11_live_verify
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_INPUT_PATH = REPO_ROOT / "config" / "demo" / "batch_infer_demo_input.json"
 SERVING_CONFIG_PATH = REPO_ROOT / "config" / "serving.yaml"
 CURRENT_RELEASE = REPO_ROOT / "data" / "output" / "current_release"

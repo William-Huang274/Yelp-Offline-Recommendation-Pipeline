@@ -7,10 +7,10 @@
 在仓库根目录运行：
 
 ```powershell
-python tools/demo_recommend.py summary
-python tools/cloud_stage11.py local-check
-python tools/run_stage11_model_prompt_smoke.py
-python tools/run_full_chain_smoke.py
+python tools/demo/demo_recommend.py summary
+python tools/stage/cloud_stage11.py local-check
+python tools/stage/run_stage11_model_prompt_smoke.py
+python tools/release/run_full_chain_smoke.py
 ```
 
 这些命令读取当前 release surface、检查本地资产和运行轻量 smoke；不启动完整 Spark/GPU 训练。
@@ -32,7 +32,7 @@ python tools/run_full_chain_smoke.py
 $env:BDA_CLOUD_HOST="<cloud-host>"
 $env:BDA_CLOUD_PORT="<ssh-port>"
 $env:BDA_CLOUD_USER="<ssh-user>"
-python tools/cloud_stage11.py inventory
+python tools/stage/cloud_stage11.py inventory
 ```
 
 如果不设置 `$env:BDA_CLOUD_PASSWORD`，脚本会交互式要求输入密码。不要把密码、token 或私钥写入仓库文件。
@@ -40,7 +40,7 @@ python tools/cloud_stage11.py inventory
 只打印当前 helper 识别的 SSH 配置和路径：
 
 ```powershell
-python tools/cloud_stage11.py print-ssh
+python tools/stage/cloud_stage11.py print-ssh
 ```
 
 ## 可选 Stage11 资产同步
@@ -48,14 +48,14 @@ python tools/cloud_stage11.py print-ssh
 轻量 freeze pack：
 
 ```powershell
-python tools/cloud_stage11.py pull --item stage11_freeze_pack
+python tools/stage/cloud_stage11.py pull --item stage11_freeze_pack
 ```
 
 完整 eval dump：
 
 ```powershell
-python tools/cloud_stage11.py pull --item stage11_v120_eval_full
-python tools/cloud_stage11.py pull --item stage11_v124_eval_full
+python tools/stage/cloud_stage11.py pull --item stage11_v120_eval_full
+python tools/stage/cloud_stage11.py pull --item stage11_v124_eval_full
 ```
 
 Adapter 模型通常较大，默认不拉取；需要本地文件级验证时再显式使用 `--allow-large`。
@@ -65,13 +65,13 @@ Adapter 模型通常较大，默认不拉取；需要本地文件级验证时再
 Windows PowerShell：
 
 ```powershell
-.\tools\run_stage09_local.ps1
+.\tools\stage\run_stage09_local.ps1
 ```
 
 只检查前置路径和环境：
 
 ```powershell
-.\tools\run_stage09_local.ps1 -CheckOnly
+.\tools\stage\run_stage09_local.ps1 -CheckOnly
 ```
 
 默认本地资源配置：
@@ -89,26 +89,26 @@ Windows PowerShell：
 先检查本地资产：
 
 ```powershell
-python tools/cloud_stage11.py local-check
+python tools/stage/cloud_stage11.py local-check
 ```
 
 如果缺少 source-parity 前置资产：
 
 ```powershell
-python tools/cloud_stage11.py pull --item stage10_profile_sourceparity
-python tools/cloud_stage11.py pull --item stage10_match_channels_sourceparity
+python tools/stage/cloud_stage11.py pull --item stage10_profile_sourceparity
+python tools/stage/cloud_stage11.py pull --item stage10_match_channels_sourceparity
 ```
 
 运行 bucket5 wrapper：
 
 ```powershell
-.\tools\run_stage10_bucket5_local.ps1
+.\tools\stage\run_stage10_bucket5_local.ps1
 ```
 
 只检查前置资产：
 
 ```powershell
-.\tools\run_stage10_bucket5_local.ps1 -CheckOnly
+.\tools\stage\run_stage10_bucket5_local.ps1 -CheckOnly
 ```
 
 ## 本地 Stage10 Bucket2 调试入口
@@ -116,20 +116,20 @@ python tools/cloud_stage11.py pull --item stage10_match_channels_sourceparity
 确认 bucket2 Stage09 source-parity 资产：
 
 ```powershell
-python tools/cloud_stage11.py local-check
-python tools/cloud_stage11.py pull --item stage09_bucket2_sourceparity --allow-large
+python tools/stage/cloud_stage11.py local-check
+python tools/stage/cloud_stage11.py pull --item stage09_bucket2_sourceparity --allow-large
 ```
 
 运行 bucket2 wrapper：
 
 ```powershell
-.\tools\run_stage10_bucket2_local.ps1
+.\tools\stage\run_stage10_bucket2_local.ps1
 ```
 
 只检查前置资产：
 
 ```powershell
-.\tools\run_stage10_bucket2_local.ps1 -CheckOnly
+.\tools\stage\run_stage10_bucket2_local.ps1 -CheckOnly
 ```
 
 更细的冷启动 cohort 可通过以下变量限定输入范围：

@@ -10,7 +10,7 @@ from pathlib import Path
 import numpy as np
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_STAGE11_ROOT = Path(
     os.getenv("INPUT_11_ROOT_DIR", str(REPO_ROOT / "data" / "output" / "11_qlora_data"))
 ).expanduser()
@@ -55,7 +55,7 @@ def main() -> int:
         dataset_run = resolve_dataset_run(sys.argv)
     except Exception as exc:
         print(f"[ERROR] {exc}")
-        print("usage: python tools/analyze_stage11_prompt_length.py [<stage11_dataset_run_dir>]")
+        print("usage: python tools/stage/analyze_stage11_prompt_length.py [<stage11_dataset_run_dir>]")
         return 1
 
     tokenizer = load_tokenizer(DEFAULT_TOKENIZER)

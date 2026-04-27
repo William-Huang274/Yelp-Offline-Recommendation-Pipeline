@@ -1,5 +1,5 @@
 # Minimal serving configuration for the public mock ranking service.
-# The parser in tools/batch_infer_demo.py intentionally supports this small
+# The parser in tools/serving/batch_infer_demo.py intentionally supports this small
 # key/value subset so the demo does not require PyYAML.
 
 release_id: release_closeout_20260409

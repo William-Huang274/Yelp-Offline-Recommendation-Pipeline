@@ -9,9 +9,11 @@ from pathlib import Path
 from typing import Any
 
 TOOLS_DIR = Path(__file__).resolve().parent
-REPO_ROOT = TOOLS_DIR.parents[0]
-if str(TOOLS_DIR) not in sys.path:
-    sys.path.insert(0, str(TOOLS_DIR))
+TOOLS_ROOT = TOOLS_DIR.parents[0]
+REPO_ROOT = TOOLS_DIR.parents[1]
+SERVING_TOOLS_DIR = TOOLS_ROOT / "serving"
+if str(SERVING_TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(SERVING_TOOLS_DIR))
 
 from batch_infer_demo import rank_payload, read_json
 

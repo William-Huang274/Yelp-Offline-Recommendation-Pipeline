@@ -23,10 +23,10 @@
 ## 最小检查
 
 ```powershell
-python tools/run_release_checks.py --skip-pytest
-python tools/demo_recommend.py summary
-python tools/demo_recommend.py list-cases
-python tools/demo_recommend.py show-case --case boundary_11_30
+python tools/release/run_release_checks.py --skip-pytest
+python tools/demo/demo_recommend.py summary
+python tools/demo/demo_recommend.py list-cases
+python tools/demo/demo_recommend.py show-case --case boundary_11_30
 ```
 
 ## Batch Inference
@@ -34,19 +34,19 @@ python tools/demo_recommend.py show-case --case boundary_11_30
 默认 fixture：
 
 ```powershell
-python tools/batch_infer_demo.py --strategy reward_rerank
+python tools/serving/batch_infer_demo.py --strategy reward_rerank
 ```
 
 Replay request：
 
 ```powershell
-python tools/batch_infer_demo.py --request-id stage11_b5_u001072 --strategy reward_rerank --stage09-mode lookup_live --stage10-mode xgb_live --stage11-mode replay --include-fallback-demo
+python tools/serving/batch_infer_demo.py --request-id stage11_b5_u001072 --strategy reward_rerank --stage09-mode lookup_live --stage10-mode xgb_live --stage11-mode replay --include-fallback-demo
 ```
 
 Cache miss fallback：
 
 ```powershell
-python tools/batch_infer_demo.py --request-id stage11_b5_u006562 --strategy reward_rerank --stage09-mode lookup_live --stage10-mode xgb_live --stage11-mode replay --simulate-stage11-cache-miss
+python tools/serving/batch_infer_demo.py --request-id stage11_b5_u006562 --strategy reward_rerank --stage09-mode lookup_live --stage10-mode xgb_live --stage11-mode replay --simulate-stage11-cache-miss
 ```
 
 ## HTTP Mock Serving
@@ -54,31 +54,31 @@ python tools/batch_infer_demo.py --request-id stage11_b5_u006562 --strategy rewa
 Self-test：
 
 ```powershell
-python tools/mock_serving_api.py --self-test
+python tools/serving/mock_serving_api.py --self-test
 ```
 
 启动服务：
 
 ```powershell
-python tools/mock_serving_api.py --host 127.0.0.1 --port 18081
+python tools/serving/mock_serving_api.py --host 127.0.0.1 --port 18081
 ```
 
 短压测：
 
 ```powershell
-python tools/load_test_mock_serving.py --url http://127.0.0.1:18081/rank --request-sample-size 5 --warmup-requests 5 --requests 20 --concurrency 2 --strategy reward_rerank --stage09-mode lookup_live --stage10-mode xgb_live --stage11-mode replay --traffic-profile mixed --cache-miss-rate 0.2 --strategy-failure-rate 0.1 --xgboost-rate 0.1 --output data/output/serving_validation/latest_summary.json
+python tools/serving/load_test_mock_serving.py --url http://127.0.0.1:18081/rank --request-sample-size 5 --warmup-requests 5 --requests 20 --concurrency 2 --strategy reward_rerank --stage09-mode lookup_live --stage10-mode xgb_live --stage11-mode replay --traffic-profile mixed --cache-miss-rate 0.2 --strategy-failure-rate 0.1 --xgboost-rate 0.1 --output data/output/serving_validation/latest_summary.json
 ```
 
 报告导出：
 
 ```powershell
-python tools/export_serving_validation_report.py --input data/output/serving_validation/latest_summary.json --output docs/serving_validation_report.md --strict
+python tools/serving/export_serving_validation_report.py --input data/output/serving_validation/latest_summary.json --output docs/serving_validation_report.md --strict
 ```
 
 ## Contract Smoke
 
 ```powershell
-python tools/run_stage01_11_minidemo.py
+python tools/demo/run_stage01_11_minidemo.py
 ```
 
 该命令运行小型内存 fixture，用于验证 Stage01-to-Stage11 的接口 contract，不启动完整 Spark/GPU 训练。

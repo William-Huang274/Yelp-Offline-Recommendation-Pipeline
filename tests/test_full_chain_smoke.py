@@ -7,7 +7,7 @@ from pathlib import Path
 
 def test_full_chain_smoke_tool(repo_root: Path) -> None:
     result = subprocess.run(
-        [sys.executable, "tools/run_full_chain_smoke.py"],
+        [sys.executable, "tools/release/run_full_chain_smoke.py"],
         cwd=repo_root,
         capture_output=True,
         text=True,

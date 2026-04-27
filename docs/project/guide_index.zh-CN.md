@@ -42,19 +42,19 @@
 在仓库根目录运行：
 
 ```powershell
-python tools/run_release_checks.py
+python tools/release/run_release_checks.py
 ```
 
 如果只想快速检查文档、release surface 和 demo CLI，可以运行：
 
 ```powershell
-python tools/run_release_checks.py --skip-pytest
+python tools/release/run_release_checks.py --skip-pytest
 ```
 
 Windows PowerShell 也可以使用包装脚本：
 
 ```powershell
-.\tools\run_release_checks.ps1
+.\tools\release\run_release_checks.ps1
 ```
 
 ## Demo 命令
@@ -62,16 +62,16 @@ Windows PowerShell 也可以使用包装脚本：
 在仓库根目录运行：
 
 ```powershell
-python tools/demo_recommend.py
-python tools/demo_recommend.py summary
-python tools/demo_recommend.py list-cases
-python tools/demo_recommend.py show-case --case boundary_11_30
-python tools/demo_recommend.py show-case --case mid_31_40
-python tools/demo_recommend.py walkthrough
-python tools/cloud_stage11.py local-check
+python tools/demo/demo_recommend.py
+python tools/demo/demo_recommend.py summary
+python tools/demo/demo_recommend.py list-cases
+python tools/demo/demo_recommend.py show-case --case boundary_11_30
+python tools/demo/demo_recommend.py show-case --case mid_31_40
+python tools/demo/demo_recommend.py walkthrough
+python tools/stage/cloud_stage11.py local-check
 ```
 
-`python tools/demo_recommend.py` 不带参数时默认等同于 `summary`。这些命令不重新训练模型，只读取当前冻结结果和案例说明。
+`python tools/demo/demo_recommend.py` 不带参数时默认等同于 `summary`。这些命令不重新训练模型，只读取当前冻结结果和案例说明。
 
 ## 压缩包使用说明
 

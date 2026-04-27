@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 PYTHON = sys.executable
 
 REQUIRED_DOCS = [
@@ -89,17 +89,17 @@ def main() -> int:
     ok = True
 
     ok &= check_required_docs()
-    ok &= run_command("public_surface", [PYTHON, "tools/validate_public_surface.py"])
-    ok &= run_command("current_release", [PYTHON, "tools/validate_current_release.py"])
-    ok &= run_command("stage11_model_prompt_smoke", [PYTHON, "tools/run_stage11_model_prompt_smoke.py"])
-    ok &= run_command("full_chain_smoke", [PYTHON, "tools/run_full_chain_smoke.py"])
+    ok &= run_command("public_surface", [PYTHON, "tools/release/validate_public_surface.py"])
+    ok &= run_command("current_release", [PYTHON, "tools/release/validate_current_release.py"])
+    ok &= run_command("stage11_model_prompt_smoke", [PYTHON, "tools/stage/run_stage11_model_prompt_smoke.py"])
+    ok &= run_command("full_chain_smoke", [PYTHON, "tools/release/run_full_chain_smoke.py"])
 
     if not args.skip_demo:
-        ok &= run_command("demo_cli", [PYTHON, "tools/demo_recommend.py", "summary"])
-        ok &= run_command("stage01_11_minidemo", [PYTHON, "tools/run_stage01_11_minidemo.py"])
-        ok &= run_command("batch_infer_demo", [PYTHON, "tools/batch_infer_demo.py"])
-        ok &= run_command("mock_serving_self_test", [PYTHON, "tools/mock_serving_api.py", "--self-test"])
-        ok &= run_command("mock_serving_load_test", [PYTHON, "tools/load_test_mock_serving.py", "--requests", "6", "--concurrency", "2"])
+        ok &= run_command("demo_cli", [PYTHON, "tools/demo/demo_recommend.py", "summary"])
+        ok &= run_command("stage01_11_minidemo", [PYTHON, "tools/demo/run_stage01_11_minidemo.py"])
+        ok &= run_command("batch_infer_demo", [PYTHON, "tools/serving/batch_infer_demo.py"])
+        ok &= run_command("mock_serving_self_test", [PYTHON, "tools/serving/mock_serving_api.py", "--self-test"])
+        ok &= run_command("mock_serving_load_test", [PYTHON, "tools/serving/load_test_mock_serving.py", "--requests", "6", "--concurrency", "2"])
 
     if not args.skip_pytest:
         ok &= run_command("pytest_core", [PYTHON, "-m", "pytest", "-q", *PYTEST_TARGETS])

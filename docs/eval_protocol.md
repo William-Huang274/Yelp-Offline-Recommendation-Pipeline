@@ -49,9 +49,9 @@ Release-quality metrics:
 ## Acceptance Commands
 
 ```bash
-python tools/run_stage01_11_minidemo.py
-python tools/run_full_chain_smoke.py
-python tools/run_release_checks.py --skip-pytest
+python tools/demo/run_stage01_11_minidemo.py
+python tools/release/run_full_chain_smoke.py
+python tools/release/run_release_checks.py --skip-pytest
 pytest tests/test_release_metrics_surface.py tests/test_demo_tools.py
 ```
 

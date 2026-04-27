@@ -35,7 +35,7 @@ Confirm the compact release surfaces exist:
 Primary command:
 
 ```bash
-python tools/run_release_checks.py
+python tools/release/run_release_checks.py
 ```
 
 Expected result:
@@ -50,7 +50,7 @@ Expected result:
 Windows PowerShell wrapper:
 
 ```powershell
-.\tools\run_release_checks.ps1
+.\tools\release\run_release_checks.ps1
 ```
 
 ## 4. Minimal Demo Checks
@@ -58,11 +58,11 @@ Windows PowerShell wrapper:
 Run:
 
 ```bash
-python tools/demo_recommend.py summary
-python tools/demo_recommend.py list-cases
-python tools/demo_recommend.py show-case --case boundary_11_30
-python tools/batch_infer_demo.py
-python tools/mock_serving_api.py --self-test
+python tools/demo/demo_recommend.py summary
+python tools/demo/demo_recommend.py list-cases
+python tools/demo/demo_recommend.py show-case --case boundary_11_30
+python tools/serving/batch_infer_demo.py
+python tools/serving/mock_serving_api.py --self-test
 ```
 
 Expected reviewer-visible outcomes:

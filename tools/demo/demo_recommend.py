@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 CURRENT_RELEASE = REPO_ROOT / "data" / "output" / "current_release"
 CURRENT_METRICS = REPO_ROOT / "data" / "metrics" / "current_release"
 
@@ -157,8 +157,8 @@ def print_summary() -> None:
     )
     print("")
     print("Next demo commands")
-    print("- python tools/demo_recommend.py list-cases")
-    print("- python tools/demo_recommend.py show-case --case boundary_11_30")
+    print("- python tools/demo/demo_recommend.py list-cases")
+    print("- python tools/demo/demo_recommend.py show-case --case boundary_11_30")
 
 
 def list_cases() -> None:
@@ -209,11 +209,11 @@ def show_case(case_id: str | None, user_idx: int | None) -> None:
 
 def print_walkthrough() -> None:
     print("Suggested live walkthrough")
-    print("- python tools/run_release_checks.py --skip-pytest")
-    print("- python tools/demo_recommend.py summary")
-    print("- python tools/demo_recommend.py list-cases")
-    print("- python tools/demo_recommend.py show-case --case boundary_11_30")
-    print("- python tools/demo_recommend.py show-case --case mid_31_40")
+    print("- python tools/release/run_release_checks.py --skip-pytest")
+    print("- python tools/demo/demo_recommend.py summary")
+    print("- python tools/demo/demo_recommend.py list-cases")
+    print("- python tools/demo/demo_recommend.py show-case --case boundary_11_30")
+    print("- python tools/demo/demo_recommend.py show-case --case mid_31_40")
 
 
 def build_parser() -> argparse.ArgumentParser:

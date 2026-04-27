@@ -18,7 +18,7 @@ except Exception:
     XGBClassifier = None
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 PRIMARY_STAGE09_BUCKET_DIRS = [
     REPO_ROOT

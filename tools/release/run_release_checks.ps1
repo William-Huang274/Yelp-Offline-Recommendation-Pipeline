@@ -7,7 +7,7 @@ $ErrorActionPreference = "Stop"
 
 $python = if ($env:PYTHON_BIN) { $env:PYTHON_BIN } else { "python" }
 
-$argList = @("tools/run_release_checks.py")
+$argList = @("tools/release/run_release_checks.py")
 if ($SkipPytest) {
     $argList += "--skip-pytest"
 }

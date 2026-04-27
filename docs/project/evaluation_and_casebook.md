@@ -122,10 +122,10 @@ Interpretation:
 The checked-in demo CLI exposes these review helpers:
 
 ```bash
-python tools/demo_recommend.py summary
-python tools/demo_recommend.py list-cases
-python tools/demo_recommend.py show-case --case boundary_11_30
-python tools/demo_recommend.py show-case --case mid_31_40
+python tools/demo/demo_recommend.py summary
+python tools/demo/demo_recommend.py list-cases
+python tools/demo/demo_recommend.py show-case --case boundary_11_30
+python tools/demo/demo_recommend.py show-case --case mid_31_40
 ```
 
 ## 9. Recommended Reporting Usage

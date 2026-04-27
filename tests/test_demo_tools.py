@@ -5,9 +5,9 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-TOOLS_DIR = REPO_ROOT / "tools"
-if str(TOOLS_DIR) not in sys.path:
-    sys.path.insert(0, str(TOOLS_DIR))
+for tool_dir in (REPO_ROOT / "tools" / "serving", REPO_ROOT / "tools" / "demo"):
+    if str(tool_dir) not in sys.path:
+        sys.path.insert(0, str(tool_dir))
 
 from batch_infer_demo import DEFAULT_INPUT_PATH, SERVING_CONFIG_PATH, load_release_reference, load_serving_config, rank_payload, read_json
 from export_serving_validation_report import build_report

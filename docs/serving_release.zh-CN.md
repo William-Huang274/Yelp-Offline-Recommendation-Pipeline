@@ -49,15 +49,15 @@
 直接消费 checked-in 的 compact artifact 和 demo helper：
 
 ```bash
-python tools/run_release_checks.py --skip-pytest
-python tools/batch_infer_demo.py
-python tools/batch_infer_demo.py --strategy baseline
-python tools/batch_infer_demo.py --strategy xgboost
-python tools/batch_infer_demo.py --strategy reward_rerank
-python tools/mock_serving_api.py --self-test
-python tools/load_test_mock_serving.py --requests 20 --concurrency 4 --simulate-fallback-every 5
-python tools/demo_recommend.py
-python tools/demo_recommend.py show-case --case boundary_11_30
+python tools/release/run_release_checks.py --skip-pytest
+python tools/serving/batch_infer_demo.py
+python tools/serving/batch_infer_demo.py --strategy baseline
+python tools/serving/batch_infer_demo.py --strategy xgboost
+python tools/serving/batch_infer_demo.py --strategy reward_rerank
+python tools/serving/mock_serving_api.py --self-test
+python tools/serving/load_test_mock_serving.py --requests 20 --concurrency 4 --simulate-fallback-every 5
+python tools/demo/demo_recommend.py
+python tools/demo/demo_recommend.py show-case --case boundary_11_30
 ```
 
 这是 README 和 demo 验证命令使用的轻量路径。
@@ -67,26 +67,26 @@ python tools/demo_recommend.py show-case --case boundary_11_30
 使用 launcher 或本地 wrapper：
 
 - Stage09 本地 wrapper：
-  [../tools/run_stage09_local.ps1](../tools/run_stage09_local.ps1)
+  [../tools/stage/run_stage09_local.ps1](../tools/stage/run_stage09_local.ps1)
 - Stage10 本地 wrapper：
-  [../tools/run_stage10_bucket5_local.ps1](../tools/run_stage10_bucket5_local.ps1)
+  [../tools/stage/run_stage10_bucket5_local.ps1](../tools/stage/run_stage10_bucket5_local.ps1)
 - Stage11 云端 inventory / pull helper：
-  [../tools/cloud_stage11.py](../tools/cloud_stage11.py)
+  [../tools/stage/cloud_stage11.py](../tools/stage/cloud_stage11.py)
 
 ### Mock Serving 路径
 
 为了把这套离线系统翻译成更像上线服务的形态，仓库现在额外提供两个轻量入口：
 
 - batch inference demo：
-  [../tools/batch_infer_demo.py](../tools/batch_infer_demo.py)
+  [../tools/serving/batch_infer_demo.py](../tools/serving/batch_infer_demo.py)
 - HTTP mock serving：
-  [../tools/mock_serving_api.py](../tools/mock_serving_api.py)
+  [../tools/serving/mock_serving_api.py](../tools/serving/mock_serving_api.py)
 
 示例：
 
 ```bash
-python tools/batch_infer_demo.py --format json
-python tools/mock_serving_api.py --host 127.0.0.1 --port 8000
+python tools/serving/batch_infer_demo.py --format json
+python tools/serving/mock_serving_api.py --host 127.0.0.1 --port 8000
 ```
 
 当前 API surface 只保留最小必要 contract：

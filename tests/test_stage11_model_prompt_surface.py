@@ -8,7 +8,7 @@ from pathlib import Path
 
 def test_stage11_model_prompt_smoke_tool(repo_root: Path) -> None:
     result = subprocess.run(
-        [sys.executable, "tools/run_stage11_model_prompt_smoke.py"],
+        [sys.executable, "tools/stage/run_stage11_model_prompt_smoke.py"],
         cwd=repo_root,
         capture_output=True,
         text=True,

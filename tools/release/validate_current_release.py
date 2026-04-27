@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 CURRENT_RELEASE = REPO_ROOT / "data" / "output" / "current_release"
 CURRENT_METRICS = REPO_ROOT / "data" / "metrics" / "current_release"
 
